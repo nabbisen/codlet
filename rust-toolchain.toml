@@ -1,0 +1,5 @@
+[toolchain]
+channel = "stable"
+components = ["rustfmt", "clippy"]
+# Adapter crates targeting Cloudflare Workers add the wasm target locally:
+#   rustup target add wasm32-unknown-unknown

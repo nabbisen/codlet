@@ -1,0 +1,90 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  fmt:
+    name: rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - run: cargo fmt --all --check
+
+  clippy:
+    name: clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --workspace
+
+  core-feature-matrix:
+    name: codlet-core feature matrix
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      # RFC-002 acceptance: core must build without adapter features and in
+      # representative feature combinations.
+      - run: cargo build -p codlet-core --no-default-features
+      - run: cargo build -p codlet-core
+      - run: cargo build -p codlet-core --features serde,test-utils
+
+  core-deps:
+    name: core dependency gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      # RFC-002 §10.5: codlet-core must not pull in framework, DB, or executor
+      # crates. Fail the build if any forbidden crate appears in its tree.
+      - name: assert no framework/db/executor crates in codlet-core
+        run: |
+          tree="$(cargo tree -p codlet-core -e normal --prefix none | sort -u)"
+          echo "$tree"
+          if echo "$tree" | grep -Eiq '^(axum|tower|tower-http|sqlx|tokio|async-std|worker|hyper|reqwest)( |$)'; then
+            echo "::error::forbidden runtime/db/framework crate found in codlet-core"
+            exit 1
+          fi
+
+  release-check:
+    name: release gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo run -p xtask -- release-check
+
+  docs:
+    name: doc build
+    runs-on: ubuntu-latest
+    env:
+      RUSTDOCFLAGS: "-D warnings"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo doc --workspace --no-deps

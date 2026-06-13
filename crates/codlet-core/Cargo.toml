@@ -1,0 +1,35 @@
+[package]
+name = "codlet-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Core authentication primitives for codlet: code policy, generation, normalization, keyed lookup derivation, lifecycle state machines, and storage traits."
+readme = "README.md"
+categories = ["authentication", "cryptography", "no-std::no-alloc"]
+keywords = ["authentication", "one-time-code", "session", "csrf", "hmac"]
+
+[lints]
+workspace = true
+
+[features]
+default = ["std"]
+std = []
+# Serializable representation of public record types. Pure representation
+# (RFC-002 §10.3 "Pure representation" class): must never serialize a secret.
+serde = ["dep:serde"]
+# Deterministic fake clock/RNG and in-memory stores for tests and examples.
+# NOT enabled by default and visibly non-production (RFC-002 §10.3 "Test-only").
+test-utils = []
+
+[dependencies]
+hmac = { workspace = true }
+sha2 = { workspace = true }
+subtle = { workspace = true }
+getrandom = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true, optional = true }
+
+[dev-dependencies]

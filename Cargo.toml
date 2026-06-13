@@ -1,0 +1,39 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/codlet-core",
+    "xtask",
+]
+
+[workspace.package]
+version    = "0.0.0"
+edition    = "2024"
+rust-version = "1.85"
+license    = "Apache-2.0"
+authors    = ["nabbisen"]
+repository = "https://github.com/nabbisen/codlet"
+description = "Embedded one-time-code authentication primitives for Rust web services."
+
+# Candidate core dependencies (RFC-002 §4, RFC-NFR-3). Pinned here so every
+# crate shares one version. Adapters add their own platform deps in their own
+# manifests; none of these are web-framework, database, or async-executor crates.
+[workspace.dependencies]
+hmac      = { version = "0.12" }
+sha2      = { version = "0.10" }
+subtle    = { version = "2" }
+getrandom = { version = "0.2" }
+thiserror = { version = "2" }
+serde     = { version = "1", features = ["derive"] }
+
+[profile.release]
+opt-level = "s"   # smaller artifacts; adapters targeting WASM benefit
+
+# Shared lint policy. forbid(unsafe_code) is also asserted in each crate root
+# (implementation handoff §5) so it is visible at the top of the source file.
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+
