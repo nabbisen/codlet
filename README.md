@@ -1,7 +1,9 @@
 # codlet
 
-[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](./LICENSE)
-[![Status: pre-release](https://img.shields.io/badge/status-pre--release-orange.svg)](#status)
+[![codlet-core](https://img.shields.io/crates/v/codlet-core?label=codlet-core)](https://crates.io/crates/codlet-core)
+[![codlet-core Docs](https://docs.rs/codlet-core/badge.svg?version=latest)](https://docs.rs/codlet-core)
+[![codlet-core Deps Status](https://deps.rs/crate/codlet-core/latest/status.svg)](https://deps.rs/crate/codlet-core)
+[![License](https://img.shields.io/github/license/nabbisen/codlet)](LICENSE)
 
 **Embedded one-time-code authentication primitives for Rust web services.**
 
@@ -80,12 +82,12 @@ let _ = lookup_key; // store this + key_version; never store `code`
 
 ## Status
 
-Pre-release (v0.4.0). The complete primitive and orchestration layers are
-implemented in `codlet-core`: 13 RFCs accepted, 122 tests. A host can now run a
-full authentication flow — issue → find → claim → session — using the `auth`
-module managers. What remains before v1.0: production storage adapters
-(Cloudflare Workers/D1, SQLx), the Axum framework helper, and the adapter
-conformance suite under real concurrency.
+Pre-release (v0.5.0). 16 RFCs implemented, 130 tests. The complete primitive,
+orchestration, and first adapter layers are in place: `codlet-core` (all
+security primitives and managers), `codlet-conformance` (parameterised
+conformance suite), and `codlet-sqlx` (SQLite adapter passing all conformance
+tests including the concurrent race). Next: Axum integration helper and
+PostgreSQL support.
 
 ## License
 

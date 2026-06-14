@@ -8,6 +8,53 @@ semantic versioning once it reaches a stable release.
 
 Nothing yet.
 
+## [0.5.0] — 2026-06-14
+
+First production adapter: SQLite via SQLx. A new shared conformance test suite
+verifies that all adapters — in-memory and SQLite — satisfy the single-winner
+claim/consume contracts under real concurrency. 130 tests total across the
+workspace.
+
+### Added
+
+- **`codlet-conformance`** (new crate, RFC-023): parameterised async conformance
+  test suite. Contains `run_code_store_conformance`, `run_session_store_conformance`,
+  and `run_form_token_store_conformance` — each takes a factory function and
+  runs the full RFC-023 required test list against any store implementation.
+  The code-store suite includes the concurrent-claim race test (RFC-022):
+  8 tasks hit a `tokio::Barrier` simultaneously and exactly one must win.
+  Split into four modules: `fixtures`, `code`, `session`, `token`.
+
+- **`codlet-sqlx`** (new crate, RFC-011): SQLite adapter implementing all three
+  store traits using a single embedded migration (`0001_initial.sql`). Code claim
+  and form-token consume use a conditional `UPDATE … WHERE … AND <guard>` with
+  affected-row count check (RFC-022). Uses WAL mode for concurrent access.
+  Passes all five conformance tests including the concurrent race test.
+
+- `codlet-sqlx`: migration runner (`run_migrations`) embedded via `include_str!`,
+  idempotent (`IF NOT EXISTS`), safe to call on startup.
+
+- `codlet-sqlx`: `SqliteStore` — a cheaply-clonable pool wrapper implementing
+  `CodeStore + SessionStore + FormTokenStore`.
+
+- `.gitignore` updated to the standard Cargo template (covers `debug/`, `target`,
+  `*.rs.bk`, `*.pdb`, `mutants.out*/`, RustRover hints).
+
+### Changed
+
+- RFC-011, RFC-022, RFC-023 moved `proposed/ → done/` (Implemented v0.5.0).
+  16 RFCs total implemented.
+
+### Security
+
+- The SQLite conditional UPDATE pattern is documented in `codlet-sqlx/src/code.rs`
+  and `token.rs` to make the atomicity requirement visible at the implementation
+  site, not just in the trait docs.
+- `changed > 1` in code claim and form-token consume returns
+  `StoreError::InvariantViolation` — same as the in-memory adapter.
+- The conformance suite's race test is run under `tokio::task::LocalSet` with
+  a `Barrier`, so it works with both `Send` and `!Send` store implementations.
+
 ## [0.4.0] — 2026-06-14
 
 High-level orchestration layer (`auth` module). A host can now implement a
@@ -249,7 +296,8 @@ establishes the repository, process, and an empty `codlet-core` skeleton.
   or async-executor crates (RFC-002 acceptance gate): only `hmac`, `sha2`,
   `subtle`, `getrandom`, `thiserror`.
 
-[Unreleased]: https://github.com/nabbisen/codlet/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/nabbisen/codlet/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/nabbisen/codlet/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/nabbisen/codlet/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/nabbisen/codlet/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/nabbisen/codlet/compare/v0.1.0...v0.2.0

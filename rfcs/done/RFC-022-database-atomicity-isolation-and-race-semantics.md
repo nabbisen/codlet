@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft. This RFC is intended for review before implementation.
+Implemented (v0.5.0). This RFC is intended for review before implementation.
 
 ## Context
 

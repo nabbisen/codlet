@@ -2,11 +2,13 @@
 resolver = "2"
 members = [
     "crates/codlet-core",
+    "crates/codlet-conformance",
+    "crates/codlet-sqlx",
     "xtask",
 ]
 
 [workspace.package]
-version    = "0.4.0"
+version    = "0.5.0"
 edition    = "2024"
 rust-version = "1.85"
 license    = "Apache-2.0"
@@ -18,6 +20,11 @@ description = "Embedded one-time-code authentication primitives for Rust web ser
 # crate shares one version. Adapters add their own platform deps in their own
 # manifests; none of these are web-framework, database, or async-executor crates.
 [workspace.dependencies]
+codlet-core = { version = "0.5.0", path = "crates/codlet-core" }
+
+sqlx    = { version = "0.8", default-features = false }
+tokio   = { version = "1" }
+
 hmac      = { version = "0.12" }
 sha2      = { version = "0.10" }
 subtle    = { version = "2" }

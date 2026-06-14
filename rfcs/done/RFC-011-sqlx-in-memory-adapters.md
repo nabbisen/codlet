@@ -1,6 +1,6 @@
 # RFC-011: SQLx and In-Memory Adapters
 
-- **Status:** Proposed
+- **Status:** Implemented (v0.5.0)
 - **Target milestone:** M4
 - **Primary crate(s):** codlet-sqlx + codlet-test
 - **Source basis:** zinnias-ciao v0.36.1 service handoff
