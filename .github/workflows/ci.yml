@@ -66,20 +66,14 @@ jobs:
       - run: cargo build -p codlet-worker --target wasm32-unknown-unknown
 
   # RFC-033 §14: Miniflare integration tests (local D1 + KV, no credentials).
-  # Disabled until the Node/wrangler build pipeline is set up; tracked as a
-  # pre-v1 task.  Uncomment when ready:
-  #
-  # wrangler-test:
-  #   name: codlet-worker Miniflare integration tests (RFC-033 §14)
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-node@v4
-  #       with: { node-version: "20" }
-  #     - uses: dtolnay/rust-toolchain@stable
-  #       with: { targets: wasm32-unknown-unknown }
-  #     - run: cargo build -p codlet-worker --target wasm32-unknown-unknown --release
-  #     - run: cd crates/codlet-worker/tests && npm ci && npx vitest run
+  wrangler-test:
+    name: codlet-worker Miniflare integration tests (RFC-033 §14)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - run: cd crates/codlet-worker/tests && npm ci && npx vitest run
 
   # RFC-009 item 3: a Send+Sync store satisfies the trait without adapter
   # shims — proven by the rfc_009_compile test in codlet-core.

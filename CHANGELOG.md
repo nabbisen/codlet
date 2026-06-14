@@ -8,6 +8,46 @@ semantic versioning once it reaches a stable release.
 
 Nothing yet.
 
+## [0.14.0] — 2026-06-14
+
+Miniflare integration tests complete (RFC-033 §14 fully resolved). All 10
+RFC-033 acceptance checklist items now ticked. The `wrangler-test` CI job
+is active. 151 Rust tests + 12 Miniflare tests passing.
+
+### Added
+
+- **Miniflare integration test suite** (`crates/codlet-worker/tests/`):
+  - `worker.js` — test harness Worker that mirrors the SQL executed by
+    the Rust D1 stores, exposed as HTTP endpoints for `SELF.fetch()` calls.
+    Runs inside Miniflare's V8 Workers runtime with real D1 and KV bindings.
+  - `conformance.test.ts` — 12 integration tests via `@cloudflare/vitest-pool-workers`:
+    migration idempotency, code insert/find, REAL timestamp comparison
+    (D1Type::Real semantics), concurrent claim race (INV-5, exactly 1 winner
+    out of 4), post-claim not-found, session insert/find, session expiry,
+    token consume race (INV-6), token replay, KV record_failure increment,
+    KV clear_failures delete.
+  - `vitest.config.ts` — `defineWorkersConfig` wrangler integration.
+  - `wrangler.toml` — updated `main = "worker.js"`.
+  - `package.json` — `@cloudflare/vitest-pool-workers@^0.6`.
+
+- CI `wrangler-test` job (previously commented out): `npm ci && npx vitest
+  run` under Node 22. No Cloudflare account required; Miniflare runs fully
+  locally.
+
+### Changed
+
+- RFC-033 §14 checklist item: `[~]` → `[x]`. RFC-033 is now 10/10.
+  All RFC-033 acceptance criteria satisfied.
+
+### Notes
+
+The test harness (`worker.js`) uses JavaScript rather than compiled Rust
+for the following reason: `codlet-worker` is a library crate with no fetch
+handler; adding one to the production crate would pollute its API. The
+JavaScript harness executes the exact same SQL as the Rust implementations,
+running in the live Miniflare D1/KV runtime — which is what these tests
+uniquely verify over the wasm32 compile check and the SQLite conformance suite.
+
 ## [0.13.0] — 2026-06-14
 
 Feature-flag audit: all cargo features now gate their code correctly.
@@ -671,7 +711,8 @@ establishes the repository, process, and an empty `codlet-core` skeleton.
   or async-executor crates (RFC-002 acceptance gate): only `hmac`, `sha2`,
   `subtle`, `getrandom`, `thiserror`.
 
-[Unreleased]: https://github.com/nabbisen/codlet/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/nabbisen/codlet/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/nabbisen/codlet/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/nabbisen/codlet/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/nabbisen/codlet/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/nabbisen/codlet/compare/v0.10.0...v0.11.0

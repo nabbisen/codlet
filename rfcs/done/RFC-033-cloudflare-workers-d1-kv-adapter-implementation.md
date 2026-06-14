@@ -1,6 +1,6 @@
 # RFC-033: Cloudflare Workers / D1 / KV Adapter (`codlet-worker`)
 
-- **Status:** Implemented (v0.11.0)
+- **Status:** Implemented (v0.11.0; Miniflare tests completed v0.14.0)
 - **Target milestone:** M6
 - **Primary crate(s):** `codlet-worker` (new)
 - **Depends on:** RFC-010 (accepted design), RFC-022 (atomicity contract),
@@ -312,7 +312,7 @@ All invariants from RFC-022 apply:
 - [x] `KvRateLimitStore` docs mention eventual consistency.
 - [x] `extract_rate_limit_key` documents which headers are trusted and warns
       about spoofing risk.
-- [~] D1 conformance suite passes under Miniflare without production credentials. *(Note: test scaffold in tests/conformance.test.ts; CI job commented out pending Node/wrangler pipeline setup — pre-v1 task.)*
+- [x] D1 conformance suite passes under Miniflare without production credentials. *(12 tests; `SELF.fetch()` integration via @cloudflare/vitest-pool-workers 0.6; worker.js test harness executes Rust-identical SQL through live D1 and KV bindings.)*
 - [x] `D1TableConfig` defaults match the migration schema names; custom names
       are documented as a host responsibility.
 

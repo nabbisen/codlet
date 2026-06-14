@@ -1,161 +1,168 @@
 /**
  * codlet-worker Miniflare integration tests (RFC-033 §14).
  *
- * Tests the D1 and KV adapters via Cloudflare's vitest-pool-workers harness,
- * which provides a real local D1 (SQLite-backed) and KV without any
- * Cloudflare account or production credentials.
+ * Runs inside the Workers runtime via @cloudflare/vitest-pool-workers.
+ * SELF.fetch() calls worker.js which executes the same SQL as the Rust stores.
  *
- * Run:   npx vitest run (from this directory)
- * CI:    see ../.github/workflows/ci.yml  wrangler-test job
- *
- * These tests are the Miniflare counterpart of the codlet-conformance Rust
- * suite. They exercise the full HTTP-to-D1 path rather than the Rust trait
- * implementations in isolation.
+ * Coverage unique to these tests:
+ *   - D1 binding API (prepare/bind/run/meta.changes) in the live Workers runtime
+ *   - REAL timestamp storage and comparison in D1 (D1Type::Real semantics)
+ *   - KV put/get/delete with TTL
+ *   - COALESCE(bound_resource,'') in form-token consume
+ *   - Concurrent UPDATE race → exactly one winner (INV-5, INV-6)
  */
 
-import { env } from "cloudflare:test";
-import { describe, it, expect, beforeAll } from "vitest";
+import { SELF } from "cloudflare:test";
+import { describe, it, expect, beforeEach } from "vitest";
 
-// The WASM module built from codlet-worker exposes test helpers compiled
-// from Rust. Build with: cargo build -p codlet-worker --target wasm32-unknown-unknown
-// and place the output at worker_shim.js + codlet_worker_bg.wasm.
-// For CI this is handled by the wrangler build step.
+const NOW = Math.floor(Date.now() / 1000);
+const LATER = NOW + 3600;
 
-const NOW_S = Math.floor(Date.now() / 1000);
-const LATER_S = NOW_S + 3600;
+async function post(path: string, body: unknown): Promise<unknown> {
+  const res = await SELF.fetch(`http://worker${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`${path} => ${res.status}: ${await res.text()}`);
+  return res.json();
+}
 
 // ── Migration ─────────────────────────────────────────────────────────────────
 
-describe("migrations", () => {
-  it("run without error and are idempotent", async () => {
-    // The migration SQL is applied by the Worker on startup via run_d1_migrations.
-    // We verify the tables exist by querying them.
-    for (const table of ["codlet_codes", "codlet_sessions", "codlet_form_tokens"]) {
-      const result = await env.DB.prepare(
-        `SELECT key_version FROM ${table} LIMIT 0`
-      ).all();
-      expect(result.success).toBe(true);
-    }
+describe("migration", () => {
+  it("creates all three tables", async () => {
+    const res = await post("/migrate", {}) as { ok: boolean };
+    expect(res.ok).toBe(true);
+  });
+
+  it("is idempotent (IF NOT EXISTS semantics in D1)", async () => {
+    // Run twice — must not throw
+    await post("/migrate", {});
+    const res = await post("/migrate", {}) as { ok: boolean };
+    expect(res.ok).toBe(true);
   });
 });
 
-// ── D1CodeStore — atomic claim ────────────────────────────────────────────────
+// ── D1CodeStore ───────────────────────────────────────────────────────────────
 
 describe("D1CodeStore", () => {
-  const CODE_ID = "ci-test-code-1";
-  const LOOKUP_KEY = "a".repeat(64);  // 64-char hex placeholder
+  beforeEach(async () => { await post("/migrate", {}); });
 
-  beforeAll(async () => {
-    await env.DB.prepare(
-      `INSERT OR IGNORE INTO codlet_codes
-       (id, lookup_key, key_version, created_at, expires_at)
-       VALUES (?, ?, 'v1', ?, ?)`
-    ).bind(CODE_ID, LOOKUP_KEY, NOW_S, LATER_S).run();
+  it("inserts and finds a redeemable code", async () => {
+    const id = `code-find-${Date.now()}`;
+    const lk = id.padEnd(64, "x");
+    await post("/codes/insert", { id, lookup_key: lk, key_version: "v1", created_at: NOW, expires_at: LATER });
+    const row = await post("/codes/find", { lookup_key: lk, now: NOW }) as { id: string } | null;
+    expect(row?.id).toBe(id);
   });
 
-  it("find_redeemable returns the inserted code", async () => {
-    const row = await env.DB.prepare(
-      `SELECT id FROM codlet_codes WHERE lookup_key = ?
-       AND used_at IS NULL AND revoked_at IS NULL AND expires_at > ?`
-    ).bind(LOOKUP_KEY, NOW_S).first();
-    expect(row?.id).toBe(CODE_ID);
+  it("expired code not returned — REAL timestamp comparison (D1Type::Real)", async () => {
+    const lk = `exp-${Date.now()}`.padEnd(64, "x");
+    await post("/codes/insert", {
+      id: `exp-${Date.now()}`, lookup_key: lk, key_version: "v1",
+      created_at: NOW - 7200,
+      expires_at: NOW - 1,   // stored as REAL (f64) per RFC-033 §6
+    });
+    const row = await post("/codes/find", { lookup_key: lk, now: NOW });
+    expect(row).toBeNull();
   });
 
-  it("claim_code: exactly one winner (INV-5, RFC-022)", async () => {
-    // Simulate 4 concurrent claims. Only one should write (changes == 1).
+  it("claim_code: exactly one winner under concurrency (INV-5)", async () => {
+    const id = `code-claim-${Date.now()}`;
+    const lk = id.padEnd(64, "x");
+    await post("/codes/insert", { id, lookup_key: lk, key_version: "v1", created_at: NOW, expires_at: LATER });
+
     const results = await Promise.all(
       Array.from({ length: 4 }, (_, i) =>
-        env.DB.prepare(
-          `UPDATE codlet_codes
-           SET used_at = ?, used_by_subject = ?
-           WHERE id = ? AND used_at IS NULL AND revoked_at IS NULL AND expires_at > ?`
-        ).bind(NOW_S, `subject-${i}`, CODE_ID, NOW_S).run()
+        post("/codes/claim", { id, subject: `user-${i}`, now: NOW })
       )
-    );
-    const winners = results.filter((r) => r.meta.changes === 1).length;
-    expect(winners).toBe(1);
+    ) as Array<{ changes: number }>;
+
+    expect(results.filter(r => r.changes === 1).length).toBe(1);
+    expect(results.filter(r => r.changes === 0).length).toBe(3);
   });
 
-  it("timestamp stored and compared as REAL (RFC-033 §6)", async () => {
-    // Insert a code with a float timestamp and verify comparison works.
-    const id = "ts-test-code";
-    const ts = NOW_S + 0.5;  // fractional seconds — still REAL in SQLite
-    await env.DB.prepare(
-      `INSERT OR IGNORE INTO codlet_codes (id, lookup_key, key_version, created_at, expires_at)
-       VALUES (?, ?, 'v1', ?, ?)`
-    ).bind(id, "b".repeat(64), NOW_S, ts).run();
-    // ts is in the past (NOW_S + 0.5 < NOW_S + 1) — should not be redeemable
-    // if we query with NOW_S + 1 as `now`.
-    const row = await env.DB.prepare(
-      `SELECT id FROM codlet_codes WHERE lookup_key = ?
-       AND used_at IS NULL AND revoked_at IS NULL AND expires_at > ?`
-    ).bind("b".repeat(64), NOW_S + 1).first();
+  it("claimed code is not findable afterward", async () => {
+    const id = `code-after-claim-${Date.now()}`;
+    const lk = id.padEnd(64, "x");
+    await post("/codes/insert", { id, lookup_key: lk, key_version: "v1", created_at: NOW, expires_at: LATER });
+    await post("/codes/claim", { id, subject: "u1", now: NOW });
+    const row = await post("/codes/find", { lookup_key: lk, now: NOW });
     expect(row).toBeNull();
   });
 });
 
-// ── D1FormTokenStore — atomic consume ─────────────────────────────────────────
+// ── D1SessionStore ────────────────────────────────────────────────────────────
 
-describe("D1FormTokenStore", () => {
-  const TOKEN_KEY = "c".repeat(64);
+describe("D1SessionStore", () => {
+  beforeEach(async () => { await post("/migrate", {}); });
 
-  beforeAll(async () => {
-    await env.DB.prepare(
-      `INSERT OR IGNORE INTO codlet_form_tokens
-       (lookup_key, key_version, subject_kind, purpose, issued_at, expires_at)
-       VALUES (?, 'v1', 'anon', 'logout', ?, ?)`
-    ).bind(TOKEN_KEY, NOW_S, LATER_S).run();
+  it("inserts and finds an active session", async () => {
+    const id = `sess-${Date.now()}`;
+    const lk = id.padEnd(64, "x");
+    await post("/sessions/insert", { id, lookup_key: lk, key_version: "v1", subject: "alice", created_at: NOW, expires_at: LATER });
+    const row = await post("/sessions/find", { lookup_key: lk, now: NOW }) as { id: string; subject: string } | null;
+    expect(row?.id).toBe(id);
+    expect(row?.subject).toBe("alice");
   });
 
-  it("consume: exactly one Proceed under concurrency (INV-6, RFC-022)", async () => {
-    const results = await Promise.all(
-      Array.from({ length: 4 }, () =>
-        env.DB.prepare(
-          `UPDATE codlet_form_tokens
-           SET consumed_at = ?
-           WHERE lookup_key = ? AND subject_kind = 'anon' AND purpose = 'logout'
-             AND COALESCE(bound_resource, '') = ''
-             AND expires_at > ? AND consumed_at IS NULL`
-        ).bind(NOW_S, TOKEN_KEY, NOW_S).run()
-      )
-    );
-    const proceeds = results.filter((r) => r.meta.changes === 1).length;
-    expect(proceeds).toBe(1);
-  });
-
-  it("second consume is Replay (changes == 0, consumed_at set)", async () => {
-    const result = await env.DB.prepare(
-      `UPDATE codlet_form_tokens
-       SET consumed_at = ?
-       WHERE lookup_key = ? AND subject_kind = 'anon' AND purpose = 'logout'
-         AND COALESCE(bound_resource, '') = ''
-         AND expires_at > ? AND consumed_at IS NULL`
-    ).bind(NOW_S, TOKEN_KEY, NOW_S).run();
-    // Token already consumed by previous test — changes must be 0.
-    expect(result.meta.changes).toBe(0);
-
-    // Follow-up SELECT classifies as Replay (consumed_at IS NOT NULL).
-    const row = await env.DB.prepare(
-      `SELECT consumed_at FROM codlet_form_tokens WHERE lookup_key = ?`
-    ).bind(TOKEN_KEY).first();
-    expect(row?.consumed_at).not.toBeNull();
+  it("expired session not returned", async () => {
+    const lk = `exp-sess-${Date.now()}`.padEnd(64, "x");
+    await post("/sessions/insert", { id: `exp-${Date.now()}`, lookup_key: lk, key_version: "v1", subject: "bob", created_at: NOW - 7200, expires_at: NOW - 1 });
+    const row = await post("/sessions/find", { lookup_key: lk, now: NOW });
+    expect(row).toBeNull();
   });
 });
 
-// ── KV RateLimitStore ─────────────────────────────────────────────────────────
+// ── D1FormTokenStore ──────────────────────────────────────────────────────────
 
-describe("KvRateLimitStore", () => {
-  const KV_KEY = "codlet:rl:192.0.2.";  // fingerprint of a test IP
+describe("D1FormTokenStore", () => {
+  beforeEach(async () => { await post("/migrate", {}); });
 
-  it("check returns Allow before threshold", async () => {
-    await env.CODLET_RL.put(KV_KEY, "3", { expirationTtl: 300 });
-    const val = await env.CODLET_RL.get(KV_KEY);
-    expect(parseInt(val ?? "0")).toBeLessThan(10);
+  it("consume: exactly one Proceed under concurrency (INV-6)", async () => {
+    const lk = `tok-${Date.now()}`.padEnd(64, "x");
+    await post("/tokens/insert", { lookup_key: lk, key_version: "v1", subject_kind: "anon", purpose: "logout", issued_at: NOW, expires_at: LATER });
+
+    const results = await Promise.all(
+      Array.from({ length: 4 }, () =>
+        post("/tokens/consume", { lookup_key: lk, subject_kind: "anon", purpose: "logout", now: NOW })
+      )
+    ) as Array<{ changes: number }>;
+
+    expect(results.filter(r => r.changes === 1).length).toBe(1);
+    expect(results.filter(r => r.changes === 0).length).toBe(3);
   });
 
-  it("clear_failures deletes the counter", async () => {
-    await env.CODLET_RL.delete(KV_KEY);
-    const val = await env.CODLET_RL.get(KV_KEY);
-    expect(val).toBeNull();
+  it("second consume is a replay — changes == 0", async () => {
+    const lk = `tok-replay-${Date.now()}`.padEnd(64, "x");
+    await post("/tokens/insert", { lookup_key: lk, key_version: "v1", subject_kind: "anon", purpose: "logout", issued_at: NOW, expires_at: LATER });
+    // First consume
+    const r1 = await post("/tokens/consume", { lookup_key: lk, subject_kind: "anon", purpose: "logout", now: NOW }) as { changes: number };
+    expect(r1.changes).toBe(1);
+    // Second consume must be 0
+    const r2 = await post("/tokens/consume", { lookup_key: lk, subject_kind: "anon", purpose: "logout", now: NOW }) as { changes: number };
+    expect(r2.changes).toBe(0);
+  });
+});
+
+// ── KvRateLimitStore ──────────────────────────────────────────────────────────
+
+describe("KvRateLimitStore", () => {
+  const KEY = `rl-${Date.now()}`;
+
+  it("record_failure increments counter with TTL", async () => {
+    await post("/kv/clear", { key: KEY });
+    const r1 = await post("/kv/record_failure", { key: KEY }) as { count: number };
+    const r2 = await post("/kv/record_failure", { key: KEY }) as { count: number };
+    expect(r1.count).toBe(1);
+    expect(r2.count).toBe(2);
+  });
+
+  it("clear_failures deletes counter", async () => {
+    await post("/kv/record_failure", { key: KEY });
+    await post("/kv/clear", { key: KEY });
+    const r = await post("/kv/check", { key: KEY }) as { count: number };
+    expect(r.count).toBe(0);
   });
 });
