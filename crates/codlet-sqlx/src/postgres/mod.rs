@@ -67,16 +67,19 @@ impl PostgresStore {
 pub async fn run_postgres_migrations(pool: &sqlx::PgPool) -> Result<(), sqlx::Error> {
     let migration_sql = include_str!("../../migrations/0002_postgres.sql");
     for stmt in migration_sql.split(';') {
-        let code_lines: String = stmt
+        let trimmed: String = stmt
             .lines()
             .filter(|l| !l.trim_start().starts_with("--"))
             .collect::<Vec<_>>()
             .join("\n");
-        let trimmed = code_lines.trim();
+        let trimmed = trimmed.trim().to_owned();
         if trimmed.is_empty() {
             continue;
         }
-        sqlx::query(trimmed).execute(pool).await?;
+        // Safety: SQL comes from our own static migration files, not user input.
+        sqlx::query(sqlx::AssertSqlSafe(trimmed.as_str()))
+            .execute(pool)
+            .await?;
     }
     Ok(())
 }

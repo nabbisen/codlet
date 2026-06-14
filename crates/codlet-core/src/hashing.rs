@@ -21,7 +21,7 @@
 //! or prefix); the migration adapter (RFC-014) supplies a legacy mode for
 //! existing rows.
 
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit, Mac};
 use sha2::Sha256;
 use subtle::ConstantTimeEq;
 

@@ -72,10 +72,11 @@ mod sqlite_tests {
         run_migrations(&pool).await.unwrap();
 
         for table in ["codlet_codes", "codlet_sessions", "codlet_form_tokens"] {
-            let result: Result<Vec<(String,)>, _> =
-                sqlx::query_as(&format!("SELECT key_version FROM {table} LIMIT 0"))
-                    .fetch_all(&pool)
-                    .await;
+            let result: Result<Vec<(String,)>, _> = sqlx::query_as(sqlx::AssertSqlSafe(
+                format!("SELECT key_version FROM {table} LIMIT 0").as_str(),
+            ))
+            .fetch_all(&pool)
+            .await;
             assert!(
                 result.is_ok(),
                 "table {table} must have a key_version column"

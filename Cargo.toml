@@ -10,7 +10,7 @@ members = [
 ]
 
 [workspace.package]
-version    = "0.15.0"
+version    = "0.15.1"
 edition    = "2024"
 rust-version = "1.85"
 license    = "Apache-2.0"
@@ -22,24 +22,24 @@ description = "Embedded one-time-code authentication primitives for Rust web ser
 # crate shares one version. Adapters add their own platform deps in their own
 # manifests; none of these are web-framework, database, or async-executor crates.
 [workspace.dependencies]
-codlet-core = { version = "0.15.0", path = "crates/codlet-core" }
-codlet-sqlx = { version = "0.15.0", path = "crates/codlet-sqlx" }
+codlet-core = { version = "0.15.1", path = "crates/codlet-core" }
+codlet-sqlx = { version = "0.15.1", path = "crates/codlet-sqlx" }
 
 worker      = { version = "0.8" }
 worker-kv   = { version = "0.9" }
 
-sqlx    = { version = "0.8", default-features = false }
+sqlx    = { version = "0.9", default-features = false }
 tokio   = { version = "1" }
 
-hmac      = { version = "0.12" }
-sha2      = { version = "0.10" }
+hmac      = { version = "0.13" }
+sha2      = { version = "0.11" }
 subtle    = { version = "2" }
 # getrandom: the `js` feature is required on wasm32-unknown-unknown (Workers
 # target) to route through wasm-bindgen's crypto API.  It must NOT be enabled
 # on native targets — it adds wasm-bindgen glue that has no effect but
 # increases binary size.  Per-target activation is done in codlet-core's
 # Cargo.toml, not here.
-getrandom = { version = "0.2" }
+getrandom = { version = "0.4" }
 thiserror = { version = "2" }
 serde      = { version = "1", features = ["derive"] }
 serde_json = { version = "1" }

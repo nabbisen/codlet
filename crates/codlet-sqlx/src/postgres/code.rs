@@ -237,7 +237,9 @@ impl CodeAdminStore for PostgresStore {
              {limit_clause}"
         );
 
-        let mut query = sqlx::query_as::<_, AdminRow>(&sql);
+        // Safety: `sql` is built from constant strings and $N placeholders only.
+        // No user input is interpolated — values go through .bind().
+        let mut query = sqlx::query_as::<_, AdminRow>(sqlx::AssertSqlSafe(sql.as_str()));
         if let Some(s) = &scope_val {
             query = query.bind(s.as_str());
         }

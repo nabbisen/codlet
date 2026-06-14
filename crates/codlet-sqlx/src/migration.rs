@@ -34,16 +34,19 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         // (e.g. the preamble before the first real statement) is silently
         // skipped; a segment that starts with comments but contains SQL is
         // executed with the comments stripped.
-        let code_lines: String = stmt
+        let trimmed: String = stmt
             .lines()
             .filter(|l| !l.trim_start().starts_with("--"))
             .collect::<Vec<_>>()
             .join("\n");
-        let trimmed = code_lines.trim();
+        let trimmed = trimmed.trim().to_owned();
         if trimmed.is_empty() {
             continue;
         }
-        sqlx::query(trimmed).execute(pool).await?;
+        // Safety: SQL comes from our own static migration files, not user input.
+        sqlx::query(sqlx::AssertSqlSafe(trimmed.as_str()))
+            .execute(pool)
+            .await?;
     }
 
     Ok(())

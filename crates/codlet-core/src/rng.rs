@@ -42,7 +42,7 @@ impl RandomSource for SystemRandom {
         // the source service's `random_token` used `.expect("getrandom failed")`
         // which would panic rather than fail closed gracefully; codlet returns
         // a typed error so callers can map it to a generic public failure.
-        getrandom::getrandom(dest).map_err(|_| RandomError)
+        getrandom::fill(dest).map_err(|_| RandomError)
     }
 }
 
