@@ -8,6 +8,52 @@ semantic versioning once it reaches a stable release.
 
 Nothing yet.
 
+## [0.3.0] — 2026-06-14
+
+M3 complete: rate limiting, two-layer error model, and audit events.
+`codlet-core` now contains the full primitive layer — every security-critical
+concept has a type, a classifier, a store trait, and a test. 111 tests total.
+
+### Added
+
+- `audit` module: `CodeAuthEvent` enum (10 variants, stable `noun.verb.outcome`
+  keys), `AuditSink` trait, `NoopAuditSink`, and (under `test-utils`)
+  `CollectingAuditSink`. All event fields are **redacted by construction**: no
+  plaintext code, token, session secret, lookup key, or raw IP address appears
+  in any variant (RFC-012).
+- `store::ratelimit`: `RateLimitKey`, `RateLimitPolicy` (with
+  `default_invite()`: 10 failures / 5 min / key), `RateLimitUnavailable`
+  (`FailOpen` / `FailClosed` / `SoftDenyAfterThreshold`), `RateLimitOutcome`,
+  and `RateLimitStore` trait with `check` / `record_failure` / `clear_failures`
+  (RFC-008).
+- `mem::MemRateLimitStore` — in-memory rate-limit store (`test-utils`, RFC-008
+  in-memory portion). Documents its best-effort counter atomicity.
+- Error model extensions in `error` module (RFC-012/021):
+  - `RedemptionFailReason` — 7 internal variants for logging/metrics.
+  - `PublicRedemptionError` — `InvalidOrExpired` / `RateLimited` /
+    `TemporarilyUnavailable`, with `from_reason()` mapping.
+  - `PublicFormError` — `ExpiredOrInvalid` / `TemporarilyUnavailable`.
+  - `PublicSessionError` — `MissingOrExpired` / `TemporarilyUnavailable`.
+- 18 new acceptance integration tests covering all RFC-008 and RFC-012
+  checklist items: enumeration collapse, rate-limit threshold/clear/isolation,
+  fail-open default, fingerprint privacy, audit-event key stability, no-secret
+  in event debug output.
+
+### Changed
+
+- RFC-008, RFC-012, RFC-020, RFC-021 moved `proposed/ → done/`
+  (Implemented v0.3.0). RFC index regenerated.
+
+### Security
+
+- All enumeration-sensitive redemption states (`NotFound`, `Expired`,
+  `Revoked`, `AlreadyUsed`, `InvalidFormat`) map to `InvalidOrExpired` — a
+  single public error — via `PublicRedemptionError::from_reason()`. Test-
+  enforced exhaustively.
+- `RateLimitKey::fingerprint()` returns a prefix safe for audit events and
+  metrics labels; the full key is never emitted in `CodeAuthEvent::RateLimitHit`.
+- `CodeAuthEvent` is `#[non_exhaustive]` so adding variants is non-breaking.
+
 ## [0.2.0] — 2026-06-14
 
 Lifecycle state machines, storage traits, cookie policy, in-memory stores, and
@@ -151,7 +197,8 @@ establishes the repository, process, and an empty `codlet-core` skeleton.
   or async-executor crates (RFC-002 acceptance gate): only `hmac`, `sha2`,
   `subtle`, `getrandom`, `thiserror`.
 
-[Unreleased]: https://github.com/nabbisen/codlet/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/nabbisen/codlet/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/nabbisen/codlet/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/nabbisen/codlet/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/nabbisen/codlet/compare/v0.0.0...v0.1.0
 [0.0.0]: https://github.com/nabbisen/codlet/releases/tag/v0.0.0

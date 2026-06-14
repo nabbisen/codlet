@@ -7,9 +7,11 @@
 //! be used in multi-instance deployments.
 
 pub mod code;
+pub mod ratelimit;
 pub mod session;
 pub mod token;
 
 pub use code::MemCodeStore;
+pub use ratelimit::MemRateLimitStore;
 pub use session::MemSessionStore;
 pub use token::MemFormTokenStore;

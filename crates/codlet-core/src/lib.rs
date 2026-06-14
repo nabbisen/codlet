@@ -5,8 +5,8 @@
 //!
 //! Runtime-neutral authentication primitives. This crate contains pure types,
 //! policy objects, cryptographic lookup-key derivation, lifecycle state
-//! machines, and storage *traits*. It deliberately contains no web framework,
-//! database, or async-executor dependencies (RFC-002).
+//! machines, storage traits, and audit events. It deliberately contains no web
+//! framework, database, or async-executor dependencies (RFC-002).
 //!
 //! ## Boundary
 //!
@@ -16,7 +16,7 @@
 //!
 //! ## Status
 //!
-//! This release adds lifecycle state machines and storage traits:
+//! This release completes the M3 primitive layer:
 //!
 //! - [`code`]    — code policy, generation, normalization, validation (RFC-003)
 //! - [`hashing`] — HMAC lookup-key derivation, key providers, domain
@@ -26,11 +26,13 @@
 //! - [`clock`]   — `Clock` trait for testable time (RFC-020)
 //! - [`state`]   — pure lifecycle classifiers: claim, session, form-token
 //!                 consume (RFC-005/006/007)
-//! - [`store`]   — `CodeStore`, `SessionStore`, `FormTokenStore` traits
-//!                 (RFC-005/006/007)
+//! - [`store`]   — `CodeStore`, `SessionStore`, `FormTokenStore`,
+//!                 `RateLimitStore` traits (RFC-005/006/007/008)
 //! - [`cookie`]  — secure cookie policy and builder (RFC-006)
-//! - [`error`]   — internal error layer (RFC-021)
-//! - `mem`      — in-memory stores (`test-utils` feature only, RFC-011)
+//! - [`audit`]   — `CodeAuthEvent` vocabulary and `AuditSink` trait (RFC-012)
+//! - [`error`]   — two-layer error model: internal causes + public-safe
+//!                 failures (RFC-012/021)
+//! - `mem`       — in-memory stores (`test-utils` feature only, RFC-011/008)
 
 /// The codlet wire/format version embedded in domain-separated HMAC inputs.
 ///
@@ -38,6 +40,7 @@
 /// accompanied by a key-version migration (RFC-004).
 pub const FORMAT_VERSION: &str = "codlet/v1";
 
+pub mod audit;
 pub mod clock;
 pub mod code;
 pub mod cookie;
@@ -55,10 +58,14 @@ pub mod store;
 pub mod mem;
 
 // Convenience re-exports for the most common types.
+pub use audit::{AuditSink, CodeAuthEvent, NoopAuditSink};
 pub use clock::{Clock, SystemClock};
 pub use code::{Alphabet, CodePolicy, generate_code, normalize, validate_code_input};
 pub use cookie::{CookiePolicy, CookieProfile, SameSitePolicy};
-pub use error::{CodeInputError, KeyError, PolicyError, RandomError};
+pub use error::{
+    CodeInputError, KeyError, PolicyError, PublicFormError, PublicRedemptionError,
+    PublicSessionError, RandomError, RedemptionFailReason,
+};
 pub use hashing::{
     HmacKeyRef, KeyProvider, KeyVersion, LookupKey, SecretDomain, SecretHasher, StaticKeyProvider,
 };
@@ -72,6 +79,9 @@ pub use state::{
 };
 pub use store::{
     error::{PublicAuthError, StoreError},
+    ratelimit::{
+        RateLimitKey, RateLimitOutcome, RateLimitPolicy, RateLimitStore, RateLimitUnavailable,
+    },
     token::TokenSubject,
 };
 

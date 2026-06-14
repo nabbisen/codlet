@@ -1,6 +1,6 @@
 # RFC-012: Error Model, Privacy, and Audit Events
 
-- **Status:** Proposed
+- **Status:** Implemented (v0.3.0)
 - **Target milestone:** M3
 - **Primary crate(s):** codlet-core + adapters
 - **Source basis:** zinnias-ciao v0.36.1 service handoff

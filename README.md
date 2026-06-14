@@ -80,12 +80,11 @@ let _ = lookup_key; // store this + key_version; never store `code`
 
 ## Status
 
-Pre-release (v0.2.0). `codlet-core` now contains the full set of pure
-primitives: cryptographic derivation (RFC-003/004), lifecycle classifiers
-(RFC-005/006/007), storage traits, cookie policy, and in-memory stores for
-testing (RFC-011 in-memory portion). What remains before v1.0: orchestration
-helpers, the high-level API (RFC-013), SQLx/Workers adapters, and full
-conformance testing under real concurrency.
+Pre-release (v0.3.0). The complete M3 primitive layer is implemented in
+`codlet-core`: cryptographic derivation, lifecycle classifiers, storage traits,
+cookie policy, in-memory stores, rate-limit model, two-layer error model, and
+audit events. 11 RFCs accepted and implemented. Next: the high-level
+orchestration API (RFC-013) and production adapters.
 
 ## License
 

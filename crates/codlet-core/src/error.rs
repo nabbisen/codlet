@@ -79,3 +79,87 @@ pub enum CodeInputError {
     #[error("code input contains unsupported characters")]
     UnsupportedCharacters,
 }
+
+// ── RFC-012/021: two-layer error model ──────────────────────────────────────
+
+/// Internal reason a code redemption failed. Rich enough for logs and metrics;
+/// never shown to the user (INV-8, RFC-012 §10.1).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RedemptionFailReason {
+    /// Code input was malformed (too long, wrong length, unsupported chars).
+    InvalidFormat,
+    /// No redeemable record matched the lookup key(s).
+    NotFound,
+    /// A matching record exists but `expires_at` has passed.
+    Expired,
+    /// A matching record exists but it was explicitly revoked.
+    Revoked,
+    /// A matching record exists but was already claimed.
+    AlreadyUsed,
+    /// The rate-limit threshold was exceeded before the lookup.
+    RateLimited,
+    /// The store could not be reached; the operation was not attempted.
+    StoreUnavailable,
+    /// Key material was unavailable or invalid.
+    KeyFailure,
+}
+
+/// Public-safe redemption failure (RFC-012 §4, RFC-021).
+///
+/// All enumeration-sensitive reasons (`NotFound`, `Expired`, `Revoked`,
+/// `AlreadyUsed`, `InvalidFormat`) collapse to `InvalidOrExpired`. The caller
+/// must not expose the internal [`RedemptionFailReason`] to end users.
+#[derive(Debug, Error, Clone, PartialEq, Eq)]
+pub enum PublicRedemptionError {
+    /// The code was not accepted. Reason intentionally omitted.
+    #[error("invalid or expired code")]
+    InvalidOrExpired,
+    /// The caller has exceeded the rate limit. Safe to surface as a throttle
+    /// hint (does not reveal code existence).
+    #[error("too many attempts — please wait and try again")]
+    RateLimited,
+    /// A transient problem prevented the check. The code was not consumed.
+    #[error("service temporarily unavailable")]
+    TemporarilyUnavailable,
+}
+
+impl PublicRedemptionError {
+    /// Map an internal reason to its public-safe equivalent (RFC-012 §4).
+    #[must_use]
+    pub fn from_reason(reason: &RedemptionFailReason) -> Self {
+        match reason {
+            RedemptionFailReason::InvalidFormat
+            | RedemptionFailReason::NotFound
+            | RedemptionFailReason::Expired
+            | RedemptionFailReason::Revoked
+            | RedemptionFailReason::AlreadyUsed => Self::InvalidOrExpired,
+            RedemptionFailReason::RateLimited => Self::RateLimited,
+            RedemptionFailReason::StoreUnavailable | RedemptionFailReason::KeyFailure => {
+                Self::TemporarilyUnavailable
+            }
+        }
+    }
+}
+
+/// Public-safe form-token / CSRF failure (RFC-012, RFC-021).
+#[derive(Debug, Error, Clone, PartialEq, Eq)]
+pub enum PublicFormError {
+    /// The form could not be submitted. The token was missing, expired, or
+    /// already consumed. No distinction is made between these states.
+    #[error("form expired or invalid — please reload the page and try again")]
+    ExpiredOrInvalid,
+    /// A transient problem prevented the check.
+    #[error("service temporarily unavailable")]
+    TemporarilyUnavailable,
+}
+
+/// Public-safe session failure (RFC-012, RFC-021).
+#[derive(Debug, Error, Clone, PartialEq, Eq)]
+pub enum PublicSessionError {
+    /// No valid session — missing cookie, expired, or revoked. No distinction.
+    #[error("session missing or expired — please sign in again")]
+    MissingOrExpired,
+    /// A transient problem prevented the check.
+    #[error("service temporarily unavailable")]
+    TemporarilyUnavailable,
+}

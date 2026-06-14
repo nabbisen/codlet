@@ -1,6 +1,6 @@
 # RFC-008: Rate Limiting and Abuse Resistance
 
-- **Status:** Proposed
+- **Status:** Implemented (v0.3.0)
 - **Target milestone:** M3
 - **Primary crate(s):** codlet-core + adapters
 - **Source basis:** zinnias-ciao v0.36.1 service handoff
