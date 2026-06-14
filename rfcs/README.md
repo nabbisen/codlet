@@ -5,10 +5,8 @@ Design proposals for codlet, governed by the RFC lifecycle policy in
 truth for its state; the `Status` field inside each RFC mirrors its folder.
 
 - `proposed/` — open for review; implementer should not yet rely on the design.
-- `done/`     — accepted and in effect (Implemented).
+- `done/`     — accepted and Implemented.
 - `archive/`  — withdrawn or superseded.
-
-Milestone and dependency context: see `05-RFC-MILESTONES.md` in the design package.
 
 ## Implemented
 
@@ -18,14 +16,14 @@ Milestone and dependency context: see `05-RFC-MILESTONES.md` in the design packa
 | RFC-002 | [Crate Architecture, Feature Flags, and Runtime Matrix](./done/RFC-002-crate-architecture-feature-flags-runtime-matrix.md) | Implemented (v0.0.0) |
 | RFC-003 | [One-Time Code Policy, Generation, Normalization, and Validation](./done/RFC-003-one-time-code-policy-generation-normalization-validation.md) | Implemented (v0.1.0) |
 | RFC-004 | [Secret Hashing, Key Providers, Domain Separation, and Key Versioning](./done/RFC-004-secret-hashing-key-providers-domain-separation-key-versioning.md) | Implemented (v0.1.0) |
+| RFC-005 | [Code Lifecycle, Storage Contract, and Atomic Redemption](./done/RFC-005-code-lifecycle-storage-contract-atomic-redemption.md) | Implemented (v0.2.0) |
+| RFC-006 | [Session Issuance, Validation, Revocation, and Cookie Policy](./done/RFC-006-session-issuance-validation-revocation-cookie-policy.md) | Implemented (v0.2.0) |
+| RFC-007 | [Form Tokens, CSRF Protection, and Idempotency Replay](./done/RFC-007-form-tokens-csrf-protection-idempotency-replay.md) | Implemented (v0.2.0) |
 
 ## Proposed
 
 | ID | Title |
 |----|-------|
-| RFC-005 | [Code Lifecycle, Storage Contract, and Atomic Redemption](./proposed/RFC-005-code-lifecycle-storage-contract-atomic-redemption.md) |
-| RFC-006 | [Session Issuance, Validation, Revocation, and Cookie Policy](./proposed/RFC-006-session-issuance-validation-revocation-cookie-policy.md) |
-| RFC-007 | [Form Tokens, CSRF Protection, and Idempotency Replay](./proposed/RFC-007-form-tokens-csrf-protection-idempotency-replay.md) |
 | RFC-008 | [Rate Limiting and Abuse Resistance](./proposed/RFC-008-rate-limiting-abuse-resistance.md) |
 | RFC-009 | [Async Trait Strategy, Runtime Matrix, and Adapter Contracts](./proposed/RFC-009-async-trait-strategy-runtime-matrix-adapter-contracts.md) |
 | RFC-010 | [Cloudflare Workers, D1, and KV Adapter](./proposed/RFC-010-cloudflare-workers-d1-kv-adapter.md) |

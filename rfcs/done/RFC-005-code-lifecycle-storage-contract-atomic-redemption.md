@@ -1,6 +1,6 @@
 # RFC-005: Code Lifecycle, Storage Contract, and Atomic Redemption
 
-- **Status:** Proposed
+- **Status:** Implemented (v0.2.0)
 - **Target milestone:** M2
 - **Primary crate(s):** codlet-core + adapters
 - **Source basis:** zinnias-ciao v0.36.1 service handoff

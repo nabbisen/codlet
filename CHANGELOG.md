@@ -8,6 +8,71 @@ semantic versioning once it reaches a stable release.
 
 Nothing yet.
 
+## [0.2.0] — 2026-06-14
+
+Lifecycle state machines, storage traits, cookie policy, in-memory stores, and
+a `Clock` abstraction. `codlet-core` now has all the primitives needed to
+express a complete authentication flow at the type level; adapters and
+orchestration come next.
+
+### Added
+
+- `clock` module: `Clock` trait + `SystemClock` (production) + `FixedClock`
+  (deterministic, `test-utils`) (RFC-020).
+- `state` module with three pure classifiers (no I/O, no `async`):
+  - `classify_claim` / `ClaimOutcome` — atomic single-winner code claim
+    (RFC-005);
+  - `classify_token_consume` / `TokenConsumeOutcome` — form-token
+    idempotency/CSRF classifier, ported verbatim from `zinnias-ciao`
+    `contracts::auth` with its full regression suite (RFC-007);
+  - `classify_session` / `SessionValidationOutcome` — session lookup result
+    with `Authenticated`/`Unauthenticated` variants (RFC-006).
+- `store` module with async traits and supporting types:
+  - `CodeStore` (`find_redeemable`, `claim_code`, `insert_code`,
+    `revoke_code`) plus `RedeemableCode`, `CodeRecord`, `ClaimRequest`, and
+    helpers `expires_at_from_ttl`, `code_lookup_candidates` (RFC-005);
+  - `SessionStore` (`find_active_session`, `insert_session`,
+    `revoke_session`) plus `ActiveSessionRecord`, `SessionRecord` (RFC-006);
+  - `FormTokenStore` (`insert_form_token`, `consume_form_token`,
+    `set_token_result`) plus `FormTokenRecord`, `TokenSubject`
+    (RFC-007). `TokenSubject::Anonymous/Authenticated/Flow` replaces the
+    empty-string anti-pattern from the source service.
+  - `store::error`: `StoreError` (internal) and `PublicAuthError`
+    (single-variant public-safe collapse per INV-8).
+- `cookie` module: `CookiePolicy` with named profiles (`ProductionStrict`,
+  `ProductionLax`, `LocalDevelopment`), `build_set_cookie`,
+  `build_clear_cookie` (RFC-006). `HttpOnly` is always set; `Secure` is
+  mandatory in all production profiles; `Domain` omitted by default.
+- `mem` module (`test-utils` feature only): `MemCodeStore`,
+  `MemSessionStore`, `MemFormTokenStore` — in-memory implementations of
+  the three store traits for tests and local dev. Non-production; documented
+  clearly as such (RFC-011 in-memory portion).
+- `tokio` as a dev-dependency for async integration tests.
+- 21 new acceptance integration tests covering all RFC checklist items:
+  find/claim/revoke/expiry for codes; session issuance/validation/revocation;
+  form-token winner/replay/invalid/binding-mismatch/purpose-mismatch/expiry;
+  `changed == 0` never-proceeds exhaustive check; anonymous vs authenticated
+  subject separation; cookie attribute assertions.
+
+### Changed
+
+- RFC-005, RFC-006, RFC-007 moved `proposed/ → done/` (Implemented v0.2.0);
+  RFC index regenerated. RFC-011 remains `proposed/` (SQLx adapter is M4;
+  only the in-memory portion landed here).
+
+### Security
+
+- `changed == 0` never-proceeds invariant is both a classifier contract
+  (`classify_token_consume`) and enforced in `MemFormTokenStore::consume_form_token`.
+- `changed > 1` in code claim or form-token consume returns
+  `StoreError::InvariantViolation`, never silently maps to `Lost`/`Invalid`.
+- `TokenSubject` enum prevents the empty-string anonymous collision present in
+  the source service (RFC-007 §13.3).
+- Cookie `Domain` omitted by default; subdomain sharing requires explicit opt-in.
+
+[Unreleased]: https://github.com/nabbisen/codlet/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/nabbisen/codlet/compare/v0.1.0...v0.2.0
+
 ## [0.1.0] — 2026-06-13
 
 First functional primitives in `codlet-core`. Implements RFC-003 (one-time code
@@ -86,6 +151,7 @@ establishes the repository, process, and an empty `codlet-core` skeleton.
   or async-executor crates (RFC-002 acceptance gate): only `hmac`, `sha2`,
   `subtle`, `getrandom`, `thiserror`.
 
-[Unreleased]: https://github.com/nabbisen/codlet/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/nabbisen/codlet/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/nabbisen/codlet/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/nabbisen/codlet/compare/v0.0.0...v0.1.0
 [0.0.0]: https://github.com/nabbisen/codlet/releases/tag/v0.0.0

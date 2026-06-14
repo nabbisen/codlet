@@ -80,11 +80,12 @@ let _ = lookup_key; // store this + key_version; never store `code`
 
 ## Status
 
-Early pre-release (v0.1.0). `codlet-core` implements the cryptographic
-primitives: code policy, generation, normalization, validation (RFC-003), and
-HMAC lookup-key derivation with key providers, domain separation, and key
-versioning (RFC-004). RFC-001/002 (scope, architecture) are accepted. Next:
-lifecycle state machines and storage traits (RFC-005/006/007).
+Pre-release (v0.2.0). `codlet-core` now contains the full set of pure
+primitives: cryptographic derivation (RFC-003/004), lifecycle classifiers
+(RFC-005/006/007), storage traits, cookie policy, and in-memory stores for
+testing (RFC-011 in-memory portion). What remains before v1.0: orchestration
+helpers, the high-level API (RFC-013), SQLx/Workers adapters, and full
+conformance testing under real concurrency.
 
 ## License
 

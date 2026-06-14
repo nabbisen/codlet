@@ -1,6 +1,6 @@
 # RFC-006: Session Issuance, Validation, Revocation, and Cookie Policy
 
-- **Status:** Proposed
+- **Status:** Implemented (v0.2.0)
 - **Target milestone:** M2
 - **Primary crate(s):** codlet-core + adapters
 - **Source basis:** zinnias-ciao v0.36.1 service handoff

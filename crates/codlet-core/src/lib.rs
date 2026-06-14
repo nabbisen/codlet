@@ -16,46 +16,21 @@
 //!
 //! ## Status
 //!
-//! This release implements the first cryptographic primitives:
+//! This release adds lifecycle state machines and storage traits:
 //!
 //! - [`code`]    — code policy, generation, normalization, validation (RFC-003)
 //! - [`hashing`] — HMAC lookup-key derivation, key providers, domain
 //!                 separation, key versioning (RFC-004)
 //! - [`rng`]     — fail-closed randomness abstraction (RFC-020)
 //! - [`secret`]  — redacted secret newtypes and opaque IDs (RFC-019 foundation)
+//! - [`clock`]   — `Clock` trait for testable time (RFC-020)
+//! - [`state`]   — pure lifecycle classifiers: claim, session, form-token
+//!                 consume (RFC-005/006/007)
+//! - [`store`]   — `CodeStore`, `SessionStore`, `FormTokenStore` traits
+//!                 (RFC-005/006/007)
+//! - [`cookie`]  — secure cookie policy and builder (RFC-006)
 //! - [`error`]   — internal error layer (RFC-021)
-//!
-//! Forthcoming modules (added with their RFCs):
-//!
-//! - `state` — pure lifecycle classifiers (RFC-005/006/007)
-//! - `store` — storage traits (RFC-005..008)
-//!
-//! ## Example
-//!
-//! Generate a code and derive the value that would be stored (never the
-//! plaintext). End-to-end redemption needs the storage traits, still to come.
-//!
-//! ```
-//! use codlet_core::{CodePolicy, SecretDomain, SecretHasher, StaticKeyProvider};
-//! use codlet_core::{generate_code, validate_code_input};
-//! use codlet_core::rng::SystemRandom;
-//! use std::time::Duration;
-//!
-//! let policy = CodePolicy::default_human(Duration::from_secs(24 * 3600)).unwrap();
-//!
-//! let mut rng = SystemRandom::new();
-//! let code = generate_code(&policy, &mut rng).unwrap();
-//!
-//! let hasher = SecretHasher::new(
-//!     StaticKeyProvider::single("v1", b"real-key-from-secret-manager".to_vec()).unwrap(),
-//! );
-//! let normalized = validate_code_input(code.expose(), &policy).unwrap();
-//! let (lookup_key, key_version) =
-//!     hasher.lookup_key(SecretDomain::Code, &normalized).unwrap();
-//! assert_eq!(key_version.as_str(), "v1");
-//! assert_eq!(lookup_key.as_str().len(), 64);
-//! // Persist `lookup_key` + `key_version`; never persist `code`.
-//! ```
+//! - `mem`      — in-memory stores (`test-utils` feature only, RFC-011)
 
 /// The codlet wire/format version embedded in domain-separated HMAC inputs.
 ///
@@ -63,14 +38,26 @@
 /// accompanied by a key-version migration (RFC-004).
 pub const FORMAT_VERSION: &str = "codlet/v1";
 
+pub mod clock;
 pub mod code;
+pub mod cookie;
 pub mod error;
 pub mod hashing;
 pub mod rng;
 pub mod secret;
+pub mod state;
+pub mod store;
+
+/// In-memory store implementations for tests and local development.
+///
+/// **Not for production.** Gated behind the `test-utils` feature.
+#[cfg(any(test, feature = "test-utils"))]
+pub mod mem;
 
 // Convenience re-exports for the most common types.
+pub use clock::{Clock, SystemClock};
 pub use code::{Alphabet, CodePolicy, generate_code, normalize, validate_code_input};
+pub use cookie::{CookiePolicy, CookieProfile, SameSitePolicy};
 pub use error::{CodeInputError, KeyError, PolicyError, RandomError};
 pub use hashing::{
     HmacKeyRef, KeyProvider, KeyVersion, LookupKey, SecretDomain, SecretHasher, StaticKeyProvider,
@@ -78,6 +65,14 @@ pub use hashing::{
 pub use rng::{RandomSource, SystemRandom};
 pub use secret::{
     CodeId, FormTokenSecret, PlainCode, SecretString, SessionId, SessionSecret, SubjectId,
+};
+pub use state::{
+    ClaimOutcome, SessionValidationOutcome, TokenConsumeOutcome, classify_claim, classify_session,
+    classify_token_consume,
+};
+pub use store::{
+    error::{PublicAuthError, StoreError},
+    token::TokenSubject,
 };
 
 #[cfg(test)]
