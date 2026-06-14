@@ -122,6 +122,7 @@ where
             purpose,
             scope,
             grant,
+            created_at: now,
             expires_at,
         };
         self.store

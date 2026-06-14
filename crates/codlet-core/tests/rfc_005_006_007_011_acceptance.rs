@@ -57,6 +57,7 @@ fn basic_code_record(id: CodeId, lk: codlet_core::LookupKey, expires_at: u64) ->
         purpose: None,
         scope: None,
         grant: Some("grant-payload".to_string()),
+        created_at: NOW,
         expires_at,
     }
 }
@@ -254,6 +255,7 @@ async fn wrong_scope_does_not_revoke() {
             purpose: None,
             scope: Some("community-A".to_string()),
             grant: None,
+            created_at: NOW,
             expires_at: LATER,
         })
         .await

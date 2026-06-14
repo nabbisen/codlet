@@ -39,6 +39,8 @@ pub struct CodeRecord {
     pub scope: Option<String>,
     /// Optional opaque grant returned to the host after a won claim.
     pub grant: Option<String>,
+    /// Record creation time as Unix seconds (UTC).
+    pub created_at: u64,
     /// Expiry as Unix seconds (UTC).
     pub expires_at: u64,
 }

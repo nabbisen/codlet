@@ -53,6 +53,7 @@ pub fn code_record(id: &str, secret: &str, expires_at: u64, scope: Option<&str>)
         purpose: None,
         scope: scope.map(str::to_string),
         grant: Some(format!("grant-{id}")),
+        created_at: NOW,
         expires_at,
     }
 }

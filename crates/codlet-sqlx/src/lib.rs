@@ -1,20 +1,25 @@
 //! SQLite storage adapters for codlet (RFC-011).
 //!
-//! Each adapter is a thin wrapper around a [`sqlx::SqlitePool`] that
-//! implements the corresponding `codlet-core` store trait using SQLite's
-//! conditional `UPDATE` semantics for atomic single-winner operations
-//! (RFC-022).
+//! `SqliteStore` wraps a [`sqlx::SqlitePool`] and implements all three
+//! core store traits plus the admin extension:
 //!
-//! ## Usage
+//! - [`codlet_core::store::code::CodeStore`] — code issue, lookup, claim, revoke
+//! - [`codlet_core::store::session::SessionStore`] — session issue, validate, revoke
+//! - [`codlet_core::store::token::FormTokenStore`] — form-token issue, consume, replay
+//! - [`codlet_core::admin::CodeAdminStore`] — metadata listing and lookup (RFC-030)
 //!
-//! ```rust,ignore
-//! use codlet_sqlx::{SqliteStore, run_migrations};
+//! ## Backend options
 //!
-//! let pool = sqlx::SqlitePool::connect("sqlite::memory:").await?;
-//! run_migrations(&pool).await?;
-//! let store = SqliteStore::new(pool);
-//! // store implements CodeStore + SessionStore + FormTokenStore
+//! SQLx supports three SQLite connection strings:
+//!
+//! ```text
+//! "sqlite::memory:"          — ephemeral, in-process only (tests / local dev)
+//! "sqlite:path/to/codlet.db" — persistent file on disk (single-server production)
+//! "sqlite::memory:?cache=shared&uri=true" — named shared memory (advanced)
 //! ```
+//!
+//! For production use a file-backed database and set WAL mode (applied
+//! automatically by [`run_migrations`]).
 //!
 //! ## Atomicity guarantee
 //!
@@ -22,16 +27,17 @@
 //! `UPDATE … WHERE … AND <guard condition>` followed by an affected-row count
 //! check. SQLite's serialised write mode ensures these are atomic under
 //! concurrent access from multiple threads within the same process. For
-//! multi-process deployments (rare for codlet's target use case), WAL mode
-//! and appropriate busy-timeout settings are recommended.
+//! multi-process deployments, WAL mode and an appropriate busy-timeout are
+//! recommended.
 //!
 //! ## Conformance
 //!
-//! All three stores pass the full `codlet-conformance` suite, including the
+//! All stores pass the full `codlet-conformance` suite, including the
 //! concurrent-claim race test (RFC-022, RFC-023).
 
 #![forbid(unsafe_code)]
 
+pub mod admin;
 pub mod code;
 pub mod migration;
 pub mod session;

@@ -72,7 +72,7 @@ impl CodeStore for SqliteStore {
         .bind(record.purpose.as_deref())
         .bind(record.scope.as_deref())
         .bind(record.grant.as_deref())
-        .bind(record.expires_at as i64 - 3600_i64) // created_at = expires_at - TTL (approx)
+        .bind(record.created_at as i64)
         .bind(record.expires_at as i64)
         .execute(&self.pool)
         .await

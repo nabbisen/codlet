@@ -19,7 +19,7 @@ requirement are not production-safe for codlet's core use case.
 | Adapter | Atomic claim | Atomic consume | Multi-process | Notes |
 |---------|:-----------:|:--------------:|:-------------:|-------|
 | `MemCodeStore` (test-utils) | ✓ (Mutex) | ✓ (Mutex) | ✗ | In-process only; not for production. |
-| `SqliteStore` (codlet-sqlx) | ✓ (cond. UPDATE) | ✓ (cond. UPDATE) | ✓ (WAL mode) | SQLite serialises writes; WAL recommended for concurrent reads. |
+| `SqliteStore` (codlet-sqlx) | ✓ (cond. UPDATE) | ✓ (cond. UPDATE) | ✓ (WAL mode) | SQLite serialises writes; WAL recommended for concurrent reads. Also implements `CodeAdminStore`. |
 | D1 (codlet-worker, planned) | ✓ (cond. UPDATE) | ✓ (cond. UPDATE) | ✓ (D1 global) | Per-PoP write serialisation. |
 
 ## Rate-limit adapters

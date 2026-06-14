@@ -8,6 +8,40 @@ semantic versioning once it reaches a stable release.
 
 Nothing yet.
 
+## [0.9.0] — 2026-06-14
+
+Completes `codlet-sqlx`: `CodeAdminStore` is now fully implemented for
+`SqliteStore`, the `created_at` bug in `insert_code` is fixed, and the
+admin tests are written. SQLite is now the complete production-ready backend
+for all three store traits plus admin listing. 150 tests total.
+
+### Added
+
+- `codlet-sqlx::admin` — full `CodeAdminStore` implementation for `SqliteStore`
+  (RFC-030): `list_codes` with scope/active/limit filtering, `get_code_meta`
+  by record ID. Never returns plaintext codes or HMAC lookup keys.
+- 8 new `CodeAdminStore` tests in `codlet-sqlx/tests/conformance.rs`: all,
+  active-only, scoped, limit, get-found, get-not-found, used-state-after-claim,
+  no-lookup-key-in-metadata.
+
+### Fixed
+
+- `CodeRecord` now carries a `created_at: u64` field. Previously `codlet-sqlx`
+  approximated it as `expires_at - 3600` (wrong for any TTL other than 1 hour).
+  `CodeRecord` construction sites in `auth/code.rs`, the conformance fixtures,
+  and the acceptance tests all updated.
+- `codlet-sqlx::lib.rs` doc updated: backend options (`:memory:`, file path,
+  named shared memory) are now explicitly listed with guidance on which to use.
+
+### Changed
+
+- `SqliteStore` now also implements `CodeAdminStore`. The adapter guarantee
+  matrix in `docs/src/adapter-matrix-and-config.md` should be updated to
+  reflect this (doc-only follow-up).
+- `MemCodeStore::list_codes` (in `admin::mem_admin`) remains a stub that
+  always returns empty — this is intentional and documented. Production code
+  using listing must use `SqliteStore`.
+
 ## [0.8.0] — 2026-06-14
 
 Final planned RFC sprint: observability hooks, admin API, security policy, and
@@ -430,7 +464,8 @@ establishes the repository, process, and an empty `codlet-core` skeleton.
   or async-executor crates (RFC-002 acceptance gate): only `hmac`, `sha2`,
   `subtle`, `getrandom`, `thiserror`.
 
-[Unreleased]: https://github.com/nabbisen/codlet/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/nabbisen/codlet/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/nabbisen/codlet/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/nabbisen/codlet/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/nabbisen/codlet/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/nabbisen/codlet/compare/v0.5.0...v0.6.0
