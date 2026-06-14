@@ -167,10 +167,10 @@ fn gate_no_debug_prints() -> Result<(), String> {
     let banned = ["println!", "eprintln!", "dbg!", "print!"];
     let mut hits = Vec::new();
     for (path, src) in library_sources() {
-        // Allow prints inside integration tests: they never ship and the vector
-        // printer is intentional. (Unit `#[cfg(test)]` prints would also be
-        // stripped from release builds; this gate targets shipping code.)
-        if path.contains("/tests/") {
+        // Allow prints inside integration tests and example binaries:
+        // tests never ship; example binaries are demonstration programs
+        // that intentionally produce terminal output.
+        if path.contains("/tests/") || path.contains("codlet-examples") {
             continue;
         }
         for (i, line) in src.lines().enumerate() {

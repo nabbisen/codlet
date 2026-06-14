@@ -1,6 +1,6 @@
 # RFC-016: Documentation, Examples, and Non-Technical UX Guidance
 
-- **Status:** Proposed
+- **Status:** Implemented (v0.7.0)
 - **Target milestone:** M5
 - **Primary crate(s):** workspace-wide
 - **Source basis:** zinnias-ciao v0.36.1 service handoff

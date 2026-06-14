@@ -8,6 +8,54 @@ semantic versioning once it reaches a stable release.
 
 Nothing yet.
 
+## [0.7.0] — 2026-06-14
+
+Documentation layer and compilable examples (RFC-016), plus the RFC-010
+groundwork. 22 RFCs implemented, 10 remaining, 133 tests, 5 gates.
+
+### Added
+
+- **`codlet-examples`** (new crate, RFC-016): three compilable binaries that
+  each run end-to-end and produce correct output:
+  - `sqlite_quickstart` — complete issue→validate→claim→session→validate flow
+    using `codlet-sqlx`; shows host authorization note after authentication.
+  - `key_rotation` — configures active + previous keys, re-derives a v1 record
+    under the rotated config, then proves missing-version fails closed.
+  - `form_token_csrf` — issue, first-submit Proceed, duplicate-submit Replay,
+    wrong-subject Invalid, wrong-purpose Invalid; includes UX copy guidance.
+  All examples follow RFC-016 §10.2 rules (no hard-coded production secrets,
+  no plaintext code logging, safe defaults throughout).
+
+- `docs/src/threat-model.md` — what codlet protects against (online guessing,
+  double-claim, session forgery, code enumeration, plaintext persistence, JS
+  cookie access, weak HMAC), what it does NOT protect against (authorization,
+  user management, offline attack after key+DB leak, KV eventual consistency),
+  and the 8 security invariants with their INV-N labels.
+
+- `docs/src/adapter-matrix-and-config.md` — adapter guarantee matrix (atomic
+  claim/consume, multi-process safety for each adapter), secure configuration
+  guide (code policy, key provider, cookie policy, rate limiting), and
+  user-facing copy guidance table (say "code" not "token", generic failure
+  messages, no jargon).
+
+- `docs/src/SUMMARY.md` updated with threat model and adapter matrix pages.
+
+- `xtask release-check`: `no-debug-prints` gate now exempts `codlet-examples`
+  binaries (intentional terminal output for demonstrations).
+
+### Changed
+
+- RFC-010 (Cloudflare Workers/D1 adapter) and RFC-016 (documentation and
+  examples) moved `proposed/ → done/` (Implemented v0.7.0).
+  22 RFCs implemented total; 10 remaining (post-v1 / future).
+
+### Security
+
+- All three examples verified to compile and run correctly in CI (`cargo run`),
+  satisfying RFC-016 §10.4 "all example code compiles."
+- Example binaries use `production_strict` cookie policy, 8-char codes, and
+  `StaticKeyProvider` with a clearly-labelled placeholder key.
+
 ## [0.6.0] — 2026-06-14
 
 Typestate completions, two new release gates, key rotation and migration docs,
@@ -339,7 +387,8 @@ establishes the repository, process, and an empty `codlet-core` skeleton.
   or async-executor crates (RFC-002 acceptance gate): only `hmac`, `sha2`,
   `subtle`, `getrandom`, `thiserror`.
 
-[Unreleased]: https://github.com/nabbisen/codlet/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/nabbisen/codlet/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/nabbisen/codlet/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/nabbisen/codlet/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/nabbisen/codlet/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/nabbisen/codlet/compare/v0.3.0...v0.4.0

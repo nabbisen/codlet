@@ -82,7 +82,7 @@ let _ = lookup_key; // store this + key_version; never store `code`
 
 ## Status
 
-Pre-release (v0.6.0). 20 RFCs implemented, 133 tests, 5 static release gates.
+Pre-release (v0.7.0). 22 RFCs implemented, 133 tests, 5 static release gates.
 The full stack is in place: primitive layer (`codlet-core`), orchestration
 managers (`auth` module), conformance suite (`codlet-conformance`), SQLite
 adapter (`codlet-sqlx`), key rotation guide, and zinnias-ciao migration plan.
