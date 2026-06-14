@@ -6,7 +6,7 @@ Governed by `000-rfc-lifecycle-policy.md`. The folder is the source of truth.
 - `done/`     — Implemented
 - `archive/`  — withdrawn or superseded
 
-## Implemented
+## Implemented (13)
 
 | ID | Title | Version |
 |----|-------|---------|
@@ -18,18 +18,18 @@ Governed by `000-rfc-lifecycle-policy.md`. The folder is the source of truth.
 | RFC-006 | Session Issuance, Validation, Revocation, and Cookie Policy | v0.2.0 |
 | RFC-007 | Form Tokens, CSRF Protection, and Idempotency Replay | v0.2.0 |
 | RFC-008 | Rate Limiting and Abuse Resistance | v0.3.0 |
+| RFC-009 | Async Trait Strategy, Runtime Matrix, and Adapter Contracts | v0.4.0 |
 | RFC-012 | Error Model, Privacy, and Audit Events | v0.3.0 |
-| RFC-020 | Randomness, Clock, and Deterministic Testing |  |
-| RFC-021 | Error Taxonomy and User-Facing Copy Contract |  |
+| RFC-013 | High-Level Orchestration API and Host Application Boundary | v0.4.0 |
+| RFC-020 | Randomness, Clock, and Deterministic Testing | (arch) |
+| RFC-021 | Error Taxonomy and User-Facing Copy Contract | (arch) |
 
-## Proposed
+## Proposed (19)
 
 | ID | Title |
 |----|-------|
-| RFC-009 | Async Trait Strategy, Runtime Matrix, and Adapter Contracts |
 | RFC-010 | Cloudflare Workers, D1, and KV Adapter |
 | RFC-011 | SQLx and In-Memory Adapters |
-| RFC-013 | High-Level Orchestration API and Host Application Boundary |
 | RFC-014 | zinnias-ciao Migration and Compatibility Plan |
 | RFC-015 | Test Strategy, Fuzzing, Release Gates, and Security Regression Tests |
 | RFC-016 | Documentation, Examples, and Non-Technical UX Guidance |

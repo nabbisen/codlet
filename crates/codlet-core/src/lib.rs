@@ -41,6 +41,7 @@
 pub const FORMAT_VERSION: &str = "codlet/v1";
 
 pub mod audit;
+pub mod auth;
 pub mod clock;
 pub mod code;
 pub mod cookie;
@@ -59,6 +60,10 @@ pub mod mem;
 
 // Convenience re-exports for the most common types.
 pub use audit::{AuditSink, CodeAuthEvent, NoopAuditSink};
+pub use auth::{
+    CodeAuth, FormTokenError, FormTokenManager, IssuedSession, NoRateLimit, RedeemError,
+    RedeemSuccess, SessionError, SessionManager,
+};
 pub use clock::{Clock, SystemClock};
 pub use code::{Alphabet, CodePolicy, generate_code, normalize, validate_code_input};
 pub use cookie::{CookiePolicy, CookieProfile, SameSitePolicy};

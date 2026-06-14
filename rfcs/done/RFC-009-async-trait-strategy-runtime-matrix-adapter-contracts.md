@@ -1,6 +1,6 @@
 # RFC-009: Async Trait Strategy, Runtime Matrix, and Adapter Contracts
 
-- **Status:** Proposed
+- **Status:** Implemented (v0.4.0)
 - **Target milestone:** M4
 - **Primary crate(s):** codlet-core + all adapters
 - **Source basis:** zinnias-ciao v0.36.1 service handoff

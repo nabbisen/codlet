@@ -80,11 +80,12 @@ let _ = lookup_key; // store this + key_version; never store `code`
 
 ## Status
 
-Pre-release (v0.3.0). The complete M3 primitive layer is implemented in
-`codlet-core`: cryptographic derivation, lifecycle classifiers, storage traits,
-cookie policy, in-memory stores, rate-limit model, two-layer error model, and
-audit events. 11 RFCs accepted and implemented. Next: the high-level
-orchestration API (RFC-013) and production adapters.
+Pre-release (v0.4.0). The complete primitive and orchestration layers are
+implemented in `codlet-core`: 13 RFCs accepted, 122 tests. A host can now run a
+full authentication flow — issue → find → claim → session — using the `auth`
+module managers. What remains before v1.0: production storage adapters
+(Cloudflare Workers/D1, SQLx), the Axum framework helper, and the adapter
+conformance suite under real concurrency.
 
 ## License
 

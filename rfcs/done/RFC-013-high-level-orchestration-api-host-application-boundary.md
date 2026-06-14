@@ -1,6 +1,6 @@
 # RFC-013: High-Level Orchestration API and Host Application Boundary
 
-- **Status:** Proposed
+- **Status:** Implemented (v0.4.0)
 - **Target milestone:** M5
 - **Primary crate(s):** codlet-core + adapters
 - **Source basis:** zinnias-ciao v0.36.1 service handoff

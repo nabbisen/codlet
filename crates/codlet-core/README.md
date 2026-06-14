@@ -9,11 +9,11 @@ framework, database, or async-executor dependencies.
 codlet authenticates a subject; the host application authorizes that subject.
 This crate never decides membership, roles, permissions, or resource access.
 
-> **Status: pre-release (v0.2.0).** The full set of pure primitives is
-> implemented: code generation/normalization/validation, HMAC lookup-key
-> derivation, lifecycle classifiers (claim, session, form-token), storage
-> traits, cookie policy, and in-memory stores for testing. Orchestration
-> helpers, high-level API, and production adapters are still to come.
+> **Status: pre-release (v0.4.0).** The complete primitive and orchestration
+> layers are implemented: code generation/HMAC derivation, lifecycle
+> classifiers, storage traits, cookie policy, rate limiting, error model,
+> audit events, and the `auth` managers for complete end-to-end flows.
+> Production adapters (Workers/D1, SQLx) are the next step.
 
 ## License
 

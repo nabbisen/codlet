@@ -129,6 +129,12 @@ impl CookiePolicy {
         &self.name
     }
 
+    /// The configured max-age as a [`Duration`].
+    #[must_use]
+    pub fn max_age_duration(&self) -> std::time::Duration {
+        self.max_age
+    }
+
     /// Whether this policy requires the `Secure` attribute.
     #[must_use]
     pub fn is_secure(&self) -> bool {

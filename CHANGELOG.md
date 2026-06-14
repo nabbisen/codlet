@@ -8,6 +8,58 @@ semantic versioning once it reaches a stable release.
 
 Nothing yet.
 
+## [0.4.0] — 2026-06-14
+
+High-level orchestration layer (`auth` module). A host can now implement a
+complete authentication flow end-to-end — issue, find, claim, session — without
+writing glue code against every primitive individually. 122 tests total.
+
+### Added
+
+- `auth` module with five sub-modules (RFC-013, RFC-009):
+  - `auth::code`: `CodeAuth<CS, RL, K, C, A>` manager with `issue_code`,
+    `find` (rate-limit check → input validation → store lookup), `claim`
+    (atomic won/lost with rate-limit record/clear), `redeem_with_callback`
+    (full RFC-013 §10.3 8-step flow order), and `revoke_code`. Session
+    issuance is only possible after `claim` or `redeem_with_callback` returns
+    `RedeemSuccess` — enforced at the type level via `ClaimProof`.
+  - `auth::session`: `SessionManager<SS, K, C, A>` with `issue` (requires
+    `RedeemSuccess` proof), `validate`, and `revoke` (returns clear-cookie
+    header string). Generates 32-byte session secrets; stores only the HMAC
+    lookup key; plaintext leaves only in the `Set-Cookie` value.
+  - `auth::token`: `FormTokenManager<TS, K, C, A>` with `issue`, `consume`
+    (idempotency replay with `result_ref`), and `set_result`.
+  - `auth::norate`: `NoRateLimit` — zero-cost opt-out `RateLimitStore` for
+    hosts that handle rate limiting at the network layer.
+  - `auth::error`: `RedeemError` (5 variants, each carrying internal reason +
+    public mapping), `SessionError`, `FormTokenError`, `IssuedSession`,
+    `RedeemSuccess`, `ClaimProof` (zero-size proof token).
+- 11 new acceptance integration tests covering every RFC-013 checklist item:
+  complete two-step issue→find→claim→session round trip; callback-based flow;
+  lost claim has no proof (`Err`, not a session); host callback error leaves
+  claim consumed but no session issued; public errors are generic regardless of
+  internal cause; expired session returns `Unauthenticated`; logout clears
+  session and returns `Max-Age=0` cookie; wrong-subject form-token rejected.
+
+### Changed
+
+- RFC-013 and RFC-009 moved `proposed/ → done/` (Implemented v0.4.0).
+- `auth/code.rs` split: `NoRateLimit` extracted to `auth/norate.rs` to keep
+  all source files within the 300-ELOC guideline.
+
+### Security
+
+- Session issuance is structurally gated: `SessionManager::issue` accepts only
+  a `RedeemSuccess`, which wraps a `ClaimProof` that is only constructible when
+  `claim_code` returns `ClaimOutcome::Won`. The compiler prevents issuing a
+  session without a confirmed won claim (RFC-013 §5).
+- `redeem_with_callback` enforces RFC-013 §10.3 step order: rate-limit check
+  and input validation happen before the claim; the host callback runs only
+  after a confirmed won claim; if the callback fails, no session is issued and
+  the code is consumed (host must compensate — documented).
+- Public errors from all orchestration paths return generic messages regardless
+  of the internal cause, verified by test.
+
 ## [0.3.0] — 2026-06-14
 
 M3 complete: rate limiting, two-layer error model, and audit events.
@@ -197,7 +249,8 @@ establishes the repository, process, and an empty `codlet-core` skeleton.
   or async-executor crates (RFC-002 acceptance gate): only `hmac`, `sha2`,
   `subtle`, `getrandom`, `thiserror`.
 
-[Unreleased]: https://github.com/nabbisen/codlet/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/nabbisen/codlet/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/nabbisen/codlet/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/nabbisen/codlet/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/nabbisen/codlet/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/nabbisen/codlet/compare/v0.0.0...v0.1.0
