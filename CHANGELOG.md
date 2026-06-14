@@ -6,7 +6,61 @@ semantic versioning once it reaches a stable release.
 
 ## [Unreleased]
 
-Two new concrete implementation RFCs added.
+Nothing yet.
+
+## [0.11.0] — 2026-06-14
+
+`codlet-worker` — first production adapter for Cloudflare Workers. D1-backed
+stores, KV rate limiting, `WorkerKeyProvider`, HTTP helpers. Compiles for
+`wasm32-unknown-unknown`. RFC-033 implemented (9/10 checklist items; Miniflare
+CI job is scaffolded but pending Node/wrangler pipeline). 152 tests.
+
+### Added
+
+- **`crates/codlet-worker`** (new crate, RFC-033):
+  - `D1CodeStore` — `CodeStore` + `CodeAdminStore` backed by Cloudflare D1.
+    Conditional UPDATE + `meta().changes` for atomic claim (INV-5).
+    Timestamps as `D1Type::Real(f64)` (RFC-033 §6). `Rc<D1Database>` for
+    single-threaded Workers.
+  - `D1SessionStore` — `SessionStore` backed by D1.
+  - `D1FormTokenStore` — `FormTokenStore` backed by D1. Conditional UPDATE +
+    classify follow-up SELECT (INV-6). `changes > 1` returns
+    `StoreError::InvariantViolation`.
+  - `KvRateLimitStore` — `RateLimitStore` backed by Cloudflare KV.
+    GET → increment → PUT with TTL. Documents eventual-consistency caveat.
+  - `WorkerKeyProvider` — `KeyProvider` from `Env` secrets. Fails closed on
+    missing or empty binding (INV-2).
+  - `run_d1_migrations` — applies `0001_initial.sql` via `db.exec()`.
+  - `D1TableConfig` — `default()` (codlet schema) + `zinnias_ciao_compat()`.
+  - HTTP helpers: `extract_cookie`, `set_cookie_header`, `clear_cookie_header`,
+    `extract_rate_limit_key` (CF-Connecting-IP, trust model documented,
+    `"unknown"` fallback explicitly rejected per RFC-010 §12.4).
+  - `tests/conformance.test.ts` — Miniflare integration test scaffold
+    (TypeScript/Vitest) with migrations, atomic claim race, timestamp check,
+    atomic consume race, and KV counter tests. Runs without Cloudflare account.
+  - `README.md` with usage, wrangler.toml setup, KV caveat, zinnias-ciao
+    migration note.
+
+- CI `wasm32-worker-compile` job: `cargo build -p codlet-worker --target
+  wasm32-unknown-unknown` on every push (RFC-033 §16 item 1).
+- CI `wrangler-test` job: commented-in configuration; uncomment when
+  Node/wrangler pipeline is ready.
+
+### Changed
+
+- RFC-033 moved `proposed/ → done/` (Implemented v0.11.0). 9/10 acceptance
+  items satisfied; Miniflare CI job is the one remaining pre-v1 item.
+
+### Security
+
+- All D1 queries use parameterised `bind_refs` — no raw SQL interpolation.
+- `WorkerKeyProvider::from_env` returns `Err` on missing or empty secret
+  (INV-2; not a silent default).
+- `extract_rate_limit_key` refuses the `"unknown"` fallback (RFC-010 §12.4).
+
+## [0.10.0-rfc] — 2026-06-14
+
+Added RFC-033 and RFC-034 specifications. No code changes.
 
 ### Added
 
@@ -529,7 +583,8 @@ establishes the repository, process, and an empty `codlet-core` skeleton.
   or async-executor crates (RFC-002 acceptance gate): only `hmac`, `sha2`,
   `subtle`, `getrandom`, `thiserror`.
 
-[Unreleased]: https://github.com/nabbisen/codlet/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/nabbisen/codlet/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/nabbisen/codlet/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/nabbisen/codlet/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/nabbisen/codlet/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/nabbisen/codlet/compare/v0.7.0...v0.8.0

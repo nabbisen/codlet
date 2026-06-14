@@ -1,6 +1,6 @@
 # RFC-033: Cloudflare Workers / D1 / KV Adapter (`codlet-worker`)
 
-- **Status:** Proposed
+- **Status:** Implemented (v0.11.0)
 - **Target milestone:** M6
 - **Primary crate(s):** `codlet-worker` (new)
 - **Depends on:** RFC-010 (accepted design), RFC-022 (atomicity contract),
@@ -301,19 +301,19 @@ All invariants from RFC-022 apply:
 
 ## 16. Concrete acceptance checklist
 
-- [ ] `cargo build -p codlet-worker --target wasm32-unknown-unknown` succeeds.
-- [ ] `D1CodeStore::claim_code` uses conditional UPDATE and checks `meta().changes`.
-- [ ] `D1FormTokenStore::consume_form_token` uses conditional UPDATE and
+- [x] `cargo build -p codlet-worker --target wasm32-unknown-unknown` succeeds.
+- [x] `D1CodeStore::claim_code` uses conditional UPDATE and checks `meta().changes`.
+- [x] `D1FormTokenStore::consume_form_token` uses conditional UPDATE and
       checks `meta().changes`.
-- [ ] `changes > 1` in either operation returns `StoreError::InvariantViolation`.
-- [ ] Timestamps are bound as `D1Type::Real(t as f64)` throughout.
-- [ ] `WorkerKeyProvider::from_env` returns `Err` if any secret binding is
+- [x] `changes > 1` in either operation returns `StoreError::InvariantViolation`.
+- [x] Timestamps are bound as `D1Type::Real(t as f64)` throughout.
+- [x] `WorkerKeyProvider::from_env` returns `Err` if any secret binding is
       missing or empty.
-- [ ] `KvRateLimitStore` docs mention eventual consistency.
-- [ ] `extract_rate_limit_key` documents which headers are trusted and warns
+- [x] `KvRateLimitStore` docs mention eventual consistency.
+- [x] `extract_rate_limit_key` documents which headers are trusted and warns
       about spoofing risk.
-- [ ] D1 conformance suite passes under Miniflare without production credentials.
-- [ ] `D1TableConfig` defaults match the migration schema names; custom names
+- [~] D1 conformance suite passes under Miniflare without production credentials. *(Note: test scaffold in tests/conformance.test.ts; CI job commented out pending Node/wrangler pipeline setup — pre-v1 task.)*
+- [x] `D1TableConfig` defaults match the migration schema names; custom names
       are documented as a host responsibility.
 
 ## 17. Open questions

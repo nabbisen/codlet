@@ -1,0 +1,24 @@
+# wrangler.toml for codlet-worker integration tests.
+#
+# Run with:  wrangler dev --test  (from this directory)
+# Or:        npx vitest --config vitest.config.ts
+#
+# Requires:  wrangler >= 3.x, Node.js >= 18
+# No Cloudflare account or credentials needed for local testing.
+
+name            = "codlet-worker-test"
+main            = "worker_shim.js"
+compatibility_date = "2024-01-01"
+
+[[d1_databases]]
+binding  = "DB"
+database_name = "codlet-test"
+database_id   = "local"   # Miniflare uses a local SQLite file
+
+[[kv_namespaces]]
+binding = "CODLET_RL"
+id      = "local-rl"
+
+[vars]
+# Secrets for tests — plaintext vars, not real secrets.
+CODLET_HMAC_KEY_V1 = "test-hmac-key-32-bytes-long!!!!!"
