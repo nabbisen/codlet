@@ -13,9 +13,12 @@ readme = "README.md"
 workspace = true
 
 [features]
-default = ["sqlite"]
-sqlite  = ["sqlx/sqlite"]
-# postgres = ["sqlx/postgres"]  # future
+default      = ["sqlite"]
+sqlite       = ["sqlx/sqlite"]
+postgres     = ["sqlx/postgres"]
+# Enable for postgres integration tests (requires Docker).
+# CI adds this flag in the test-postgres job.
+postgres-test = ["postgres", "dep:testcontainers-modules"]
 
 [dependencies]
 codlet-core = { workspace = true }
@@ -26,3 +29,8 @@ tokio = { workspace = true, features = ["rt"] }
 codlet-conformance = { path = "../codlet-conformance" }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros", "sync"] }
 tempfile = "3"
+
+[dependencies.testcontainers-modules]
+version = "0.11"
+features = ["postgres"]
+optional = true

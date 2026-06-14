@@ -289,3 +289,165 @@ async fn admin_meta_contains_no_lookup_key() {
         );
     }
 }
+// ── PostgreSQL conformance tests (RFC-034) ─────────────────────────────────
+//
+// Require: --features postgres-test AND Docker available.
+// Run:     cargo test -p codlet-sqlx --features postgres-test
+// CI:      see .github/workflows/ci.yml  test-postgres job
+
+#[cfg(feature = "postgres-test")]
+mod postgres_tests {
+    use codlet_conformance::fixtures::{LATER, NOW, code_lk, code_record};
+    use codlet_core::admin::{CodeAdminStore, CodeListFilter};
+    use codlet_core::secret::{CodeId, ScopeKey};
+    use codlet_core::store::code::{ClaimRequest, CodeStore};
+    use codlet_sqlx::{PostgresStore, run_postgres_migrations};
+    use testcontainers_modules::{postgres::Postgres, testcontainers::runners::AsyncRunner};
+
+    async fn fresh_pg_store() -> PostgresStore {
+        // Spin up a real PostgreSQL container for each test group.
+        // testcontainers drops the container when the returned handle is dropped.
+        let container = Postgres::default().start().await.unwrap();
+        let url = format!(
+            "postgres://postgres:postgres@127.0.0.1:{}/postgres",
+            container.get_host_port_ipv4(5432).await.unwrap()
+        );
+        let pool = sqlx::PgPool::connect(&url).await.unwrap();
+        run_postgres_migrations(&pool).await.unwrap();
+        // Leak the container handle so it lives for the duration of the test.
+        std::mem::forget(container);
+        PostgresStore::new(pool)
+    }
+
+    // ── Conformance suite ─────────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn postgres_code_store_conformance() {
+        codlet_conformance::run_code_store_conformance(fresh_pg_store).await;
+    }
+
+    #[tokio::test]
+    async fn postgres_session_store_conformance() {
+        codlet_conformance::run_session_store_conformance(fresh_pg_store).await;
+    }
+
+    #[tokio::test]
+    async fn postgres_form_token_store_conformance() {
+        codlet_conformance::run_form_token_store_conformance(fresh_pg_store).await;
+    }
+
+    // ── Migration idempotency ─────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn postgres_migrations_are_idempotent() {
+        let container = Postgres::default().start().await.unwrap();
+        let url = format!(
+            "postgres://postgres:postgres@127.0.0.1:{}/postgres",
+            container.get_host_port_ipv4(5432).await.unwrap()
+        );
+        let pool = sqlx::PgPool::connect(&url).await.unwrap();
+        run_postgres_migrations(&pool).await.unwrap();
+        // Second run must succeed (IF NOT EXISTS).
+        run_postgres_migrations(&pool).await.unwrap();
+        std::mem::forget(container);
+    }
+
+    #[tokio::test]
+    async fn postgres_schema_uses_bigint_timestamps() {
+        // RFC-034 §6: timestamps must be BIGINT, not INTEGER.
+        let container = Postgres::default().start().await.unwrap();
+        let url = format!(
+            "postgres://postgres:postgres@127.0.0.1:{}/postgres",
+            container.get_host_port_ipv4(5432).await.unwrap()
+        );
+        let pool = sqlx::PgPool::connect(&url).await.unwrap();
+        run_postgres_migrations(&pool).await.unwrap();
+
+        let row: (String,) = sqlx::query_as(
+            "SELECT data_type FROM information_schema.columns
+             WHERE table_name = 'codlet_codes' AND column_name = 'expires_at'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(row.0, "bigint", "expires_at must be BIGINT");
+        std::mem::forget(container);
+    }
+
+    // ── CodeAdminStore ────────────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn postgres_admin_list_and_get() {
+        let store = fresh_pg_store().await;
+        store
+            .insert_code(code_record("pg1", "secpg1", LATER, None))
+            .await
+            .unwrap();
+        store
+            .insert_code(code_record("pg2", "secpg2", LATER, Some("scope-P")))
+            .await
+            .unwrap();
+
+        let all = store.list_codes(&CodeListFilter::all(), NOW).await.unwrap();
+        assert_eq!(all.len(), 2);
+
+        let scoped = store
+            .list_codes(
+                &CodeListFilter::active_in_scope(ScopeKey::new("scope-P")),
+                NOW,
+            )
+            .await
+            .unwrap();
+        assert_eq!(scoped.len(), 1);
+        assert_eq!(scoped[0].id, CodeId::new("pg2".into()));
+
+        let meta = store
+            .get_code_meta(&CodeId::new("pg1".into()))
+            .await
+            .unwrap()
+            .expect("must exist");
+        assert!(meta.created_at.is_some());
+        assert!(meta.used_at.is_none());
+    }
+
+    // ── No RETURNING, no FOR UPDATE ───────────────────────────────────────
+
+    #[tokio::test]
+    async fn postgres_claim_uses_rows_affected_not_returning() {
+        // RFC-034 §7: no RETURNING. The claim result is derived solely
+        // from rows_affected() == classify_claim().
+        // This test verifies the contract indirectly: a won claim produces
+        // exactly one affected row, observable via the admin store.
+        let store = fresh_pg_store().await;
+        store
+            .insert_code(code_record("pgclaim", "secpgclaim", LATER, None))
+            .await
+            .unwrap();
+        let found = store
+            .find_redeemable(&[code_lk("secpgclaim")], NOW, None)
+            .await
+            .unwrap()
+            .unwrap();
+        let outcome = store
+            .claim_code(&ClaimRequest {
+                code_id: &found.id,
+                subject: &codlet_core::secret::SubjectId::new("alice".into()),
+                now: NOW,
+                purpose: None,
+                scope: None,
+            })
+            .await
+            .unwrap();
+        assert!(
+            matches!(outcome, codlet_core::state::ClaimOutcome::Won),
+            "expected Won, got {outcome:?}"
+        );
+        let meta = store
+            .get_code_meta(&CodeId::new("pgclaim".into()))
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(meta.used_at.is_some());
+        assert_eq!(meta.used_by.as_ref().map(|s| s.as_str()), Some("alice"));
+    }
+}

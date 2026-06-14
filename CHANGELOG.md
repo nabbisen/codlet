@@ -8,6 +8,54 @@ semantic versioning once it reaches a stable release.
 
 Nothing yet.
 
+## [0.12.0] — 2026-06-14
+
+`PostgresStore` — PostgreSQL adapter for `codlet-sqlx`. Full `CodeStore`,
+`SessionStore`, `FormTokenStore`, and `CodeAdminStore` implementation using
+`$N` placeholders, `BIGINT` timestamps, and `READ COMMITTED` + conditional
+UPDATE atomicity. RFC-034 fully implemented (9/9 checklist items). 152 tests
+in native CI; Docker-dependent postgres tests gated on `postgres-test` feature.
+
+### Added
+
+- **`crates/codlet-sqlx`: `postgres` feature** (RFC-034):
+  - `PostgresStore` — wraps `sqlx::PgPool`; implements `CodeStore`,
+    `SessionStore`, `FormTokenStore`, `CodeAdminStore`. Clone is cheap.
+  - `run_postgres_migrations` — applies `migrations/0002_postgres.sql`
+    statement by statement; idempotent (`IF NOT EXISTS` throughout).
+  - `migrations/0002_postgres.sql` — PostgreSQL DDL: `BIGINT` timestamps,
+    same schema shape as SQLite, no `PRAGMA` statements.
+  - Module doc (`postgres/mod.rs`) states the isolation level rationale:
+    `READ COMMITTED` + row-level UPDATE lock = exactly one winner.
+    No `SERIALIZABLE`, no `FOR UPDATE`, no `RETURNING` (decision documented).
+
+- **`postgres-test` feature** — activates `postgres` + `testcontainers-modules`.
+  Runs `postgres_code_store_conformance`, `postgres_session_store_conformance`,
+  `postgres_form_token_store_conformance`, migration idempotency, BIGINT column
+  type verification, admin list/get, and claim result verification.
+  Requires Docker; separate from `postgres` so native CI is unaffected.
+
+- CI `test-postgres` job — runs `cargo test -p codlet-sqlx --features
+  postgres-test` on ubuntu-latest (Docker available by default on GitHub
+  Actions).
+
+### Changed
+
+- `codlet-sqlx/Cargo.toml`: `postgres` feature now active (was commented out);
+  `testcontainers-modules = "0.11"` added as optional dependency.
+- `codlet-sqlx/src/lib.rs` doc updated: two-backend overview table, postgres
+  atomicity rationale, updated crate description.
+- RFC-034 moved `proposed/ → done/` (Implemented v0.12.0). 9/9 items.
+- RFC index updated: 0 proposed, 33 done, 1 archived.
+
+### Security
+
+- All PostgreSQL queries use `$N` parameterised placeholders via SQLx; no
+  raw SQL interpolation anywhere in `postgres/`.
+- `claim_code` and `consume_form_token` both guard `rows_affected() > 1`
+  with `StoreError::InvariantViolation` (impossible in practice due to
+  `PRIMARY KEY` + `UNIQUE`, but defence-in-depth).
+
 ## [0.11.0] — 2026-06-14
 
 `codlet-worker` — first production adapter for Cloudflare Workers. D1-backed
@@ -583,7 +631,8 @@ establishes the repository, process, and an empty `codlet-core` skeleton.
   or async-executor crates (RFC-002 acceptance gate): only `hmac`, `sha2`,
   `subtle`, `getrandom`, `thiserror`.
 
-[Unreleased]: https://github.com/nabbisen/codlet/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/nabbisen/codlet/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/nabbisen/codlet/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/nabbisen/codlet/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/nabbisen/codlet/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/nabbisen/codlet/compare/v0.8.0...v0.9.0

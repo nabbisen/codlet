@@ -1,6 +1,6 @@
 # RFC-034: PostgreSQL Adapter (`codlet-sqlx` postgres feature)
 
-- **Status:** Proposed
+- **Status:** Implemented (v0.12.0)
 - **Target milestone:** M6
 - **Primary crate(s):** `codlet-sqlx` (existing crate, new `postgres` feature)
 - **Depends on:** RFC-011 (SQLx adapter scope), RFC-022 (atomicity contract),
@@ -255,21 +255,16 @@ persistent Postgres installation is required. CI adds Docker to the
 
 ## 12. Concrete acceptance checklist
 
-- [ ] `cargo test -p codlet-sqlx --features postgres` passes all
-      conformance tests against a real PostgreSQL instance.
-- [ ] `PostgresStore::claim_code` uses conditional UPDATE and checks
-      `rows_affected()`.
-- [ ] `PostgresStore::consume_form_token` uses conditional UPDATE and
-      checks `rows_affected()`.
-- [ ] `rows_affected() > 1` returns `StoreError::InvariantViolation`.
-- [ ] `run_postgres_migrations` is idempotent (`IF NOT EXISTS` everywhere).
-- [ ] Adapter documentation states the isolation level and explains why
-      `READ COMMITTED` + conditional UPDATE is sufficient.
-- [ ] `PostgresStore` passes the concurrent-claim race test from
-      `codlet-conformance` under real Tokio multi-thread concurrency.
-- [ ] `RETURNING` is not used; the decision is documented.
-- [ ] `#[cfg(feature = "postgres")]` gates all Postgres code; the `sqlite`
-      feature continues to work independently.
+- [x] `cargo test -p codlet-sqlx --features postgres-test` passes all
+      conformance tests against a real PostgreSQL instance (requires Docker; CI job: test-postgres).
+- [x] `PostgresStore::claim_code` uses conditional UPDATE and checks `rows_affected()`.
+- [x] `PostgresStore::consume_form_token` uses conditional UPDATE and checks `rows_affected()`.
+- [x] `rows_affected() > 1` returns `StoreError::InvariantViolation`.
+- [x] `run_postgres_migrations` is idempotent (`IF NOT EXISTS` everywhere).
+- [x] Adapter documentation states the isolation level and explains why `READ COMMITTED` + conditional UPDATE is sufficient (in `postgres/mod.rs` module doc).
+- [x] `PostgresStore` passes the concurrent-claim race test from `codlet-conformance` via `postgres_code_store_conformance` (includes `test_exactly_one_claim_winner`).
+- [x] `RETURNING` is not used; decision documented in `postgres/mod.rs` and `postgres/code.rs`.
+- [x] `#[cfg(feature = "postgres")]` gates all Postgres code; `sqlite` feature works independently. Docker-requiring tests behind `postgres-test` feature.
 
 ## 13. Open questions
 

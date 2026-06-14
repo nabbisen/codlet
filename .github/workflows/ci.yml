@@ -114,6 +114,15 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test -p codlet-sqlx --all-features
 
+  # RFC-034: PostgreSQL adapter conformance (requires Docker for testcontainers).
+  test-postgres:
+    name: test codlet-sqlx postgres adapter (RFC-034)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test -p codlet-sqlx --features postgres-test
+
   test-examples:
     name: build and run codlet-examples
     runs-on: ubuntu-latest
