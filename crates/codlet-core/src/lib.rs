@@ -1,5 +1,4 @@
 #![forbid(unsafe_code)]
-#![cfg_attr(not(feature = "std"), no_std)]
 #![doc = include_str!("../README.md")]
 
 //! # codlet-core
@@ -17,20 +16,46 @@
 //!
 //! ## Status
 //!
-//! This is the Phase 0 skeleton. The modules below are introduced by their
-//! respective RFCs as implementation lands:
+//! This release implements the first cryptographic primitives:
 //!
-//! - `code`    — code policy, generation, normalization, validation (RFC-003)
-//! - `hashing` — HMAC lookup-key derivation, key providers, domain separation,
-//!               key versioning (RFC-004)
-//! - `state`   — pure lifecycle classifiers: claim / token-consume / session
-//!               validation (RFC-005/006/007)
-//! - `store`   — `CodeStore`, `SessionStore`, `FormTokenStore`,
-//!               `RateLimitStore` traits (RFC-005..008)
-//! - `error`   — internal vs public-safe error model (RFC-012/021)
+//! - [`code`]    — code policy, generation, normalization, validation (RFC-003)
+//! - [`hashing`] — HMAC lookup-key derivation, key providers, domain
+//!                 separation, key versioning (RFC-004)
+//! - [`rng`]     — fail-closed randomness abstraction (RFC-020)
+//! - [`secret`]  — redacted secret newtypes and opaque IDs (RFC-019 foundation)
+//! - [`error`]   — internal error layer (RFC-021)
 //!
-//! Until those RFCs are accepted and implemented, this crate exposes only the
-//! crate-level documentation and version constant below.
+//! Forthcoming modules (added with their RFCs):
+//!
+//! - `state` — pure lifecycle classifiers (RFC-005/006/007)
+//! - `store` — storage traits (RFC-005..008)
+//!
+//! ## Example
+//!
+//! Generate a code and derive the value that would be stored (never the
+//! plaintext). End-to-end redemption needs the storage traits, still to come.
+//!
+//! ```
+//! use codlet_core::{CodePolicy, SecretDomain, SecretHasher, StaticKeyProvider};
+//! use codlet_core::{generate_code, validate_code_input};
+//! use codlet_core::rng::SystemRandom;
+//! use std::time::Duration;
+//!
+//! let policy = CodePolicy::default_human(Duration::from_secs(24 * 3600)).unwrap();
+//!
+//! let mut rng = SystemRandom::new();
+//! let code = generate_code(&policy, &mut rng).unwrap();
+//!
+//! let hasher = SecretHasher::new(
+//!     StaticKeyProvider::single("v1", b"real-key-from-secret-manager".to_vec()).unwrap(),
+//! );
+//! let normalized = validate_code_input(code.expose(), &policy).unwrap();
+//! let (lookup_key, key_version) =
+//!     hasher.lookup_key(SecretDomain::Code, &normalized).unwrap();
+//! assert_eq!(key_version.as_str(), "v1");
+//! assert_eq!(lookup_key.as_str().len(), 64);
+//! // Persist `lookup_key` + `key_version`; never persist `code`.
+//! ```
 
 /// The codlet wire/format version embedded in domain-separated HMAC inputs.
 ///
@@ -38,15 +63,22 @@
 /// accompanied by a key-version migration (RFC-004).
 pub const FORMAT_VERSION: &str = "codlet/v1";
 
-// Modules are added here as their RFCs are implemented. Keeping them out of the
-// skeleton avoids shipping placeholder security code, which would be worse than
-// an honest absence.
-//
-// pub mod code;     // RFC-003
-// pub mod hashing;  // RFC-004
-// pub mod state;    // RFC-005/006/007
-// pub mod store;    // RFC-005..008
-// pub mod error;    // RFC-012/021
+pub mod code;
+pub mod error;
+pub mod hashing;
+pub mod rng;
+pub mod secret;
+
+// Convenience re-exports for the most common types.
+pub use code::{Alphabet, CodePolicy, generate_code, normalize, validate_code_input};
+pub use error::{CodeInputError, KeyError, PolicyError, RandomError};
+pub use hashing::{
+    HmacKeyRef, KeyProvider, KeyVersion, LookupKey, SecretDomain, SecretHasher, StaticKeyProvider,
+};
+pub use rng::{RandomSource, SystemRandom};
+pub use secret::{
+    CodeId, FormTokenSecret, PlainCode, SecretString, SessionId, SessionSecret, SubjectId,
+};
 
 #[cfg(test)]
 mod tests {

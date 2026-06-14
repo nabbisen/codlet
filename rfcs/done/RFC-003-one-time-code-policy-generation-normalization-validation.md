@@ -1,6 +1,6 @@
 # RFC-003: One-Time Code Policy, Generation, Normalization, and Validation
 
-- **Status:** Proposed
+- **Status:** Implemented (v0.1.0)
 - **Target milestone:** M1
 - **Primary crate(s):** codlet-core
 - **Source basis:** zinnias-ciao v0.36.1 service handoff

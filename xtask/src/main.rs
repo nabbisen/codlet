@@ -42,10 +42,9 @@ type Gate = (&'static str, fn() -> Result<(), String>);
 /// the pattern it guards, so the gate and the code it protects land together.
 fn release_check() -> ExitCode {
     let gates: &[Gate] = &[
-        // ("no-fallback-key",  gate_no_fallback_key),   // RFC-004
-        // ("rng-fail-closed",  gate_rng_fail_closed),    // RFC-003/020
-        // ("cookie-attrs",     gate_cookie_attributes),  // RFC-006
-        // ("never-double-proceed", gate_never_double_proceed), // RFC-007
+        ("no-fallback-key", gate_no_fallback_key),
+        ("rng-no-silent-fallback", gate_rng_no_silent_fallback),
+        ("no-debug-prints", gate_no_debug_prints),
     ];
 
     let mut failed = 0usize;
@@ -60,7 +59,7 @@ fn release_check() -> ExitCode {
     }
 
     if gates.is_empty() {
-        println!("release-check: no gates registered yet (Phase 0 skeleton)");
+        println!("release-check: no gates registered yet");
     }
 
     if failed == 0 {
@@ -68,5 +67,124 @@ fn release_check() -> ExitCode {
     } else {
         eprintln!("{failed} gate(s) failed");
         ExitCode::FAILURE
+    }
+}
+
+/// Collect `.rs` files under `crates/*/src`, excluding test modules is not
+/// attempted here (gates are conservative and also scan tests intentionally
+/// for the fallback-key literal). Returns (path, contents).
+fn library_sources() -> Vec<(String, String)> {
+    let mut out = Vec::new();
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .map(std::path::Path::to_path_buf)
+        .unwrap_or_else(|| std::path::PathBuf::from("."));
+    let crates = root.join("crates");
+    visit(&crates, &mut out);
+    out
+}
+
+fn visit(dir: &std::path::Path, out: &mut Vec<(String, String)>) {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            // Skip target/ if it ever appears under a crate.
+            if path.file_name().map(|n| n == "target").unwrap_or(false) {
+                continue;
+            }
+            visit(&path, out);
+        } else if path.extension().map(|e| e == "rs").unwrap_or(false) {
+            if let Ok(s) = std::fs::read_to_string(&path) {
+                out.push((path.display().to_string(), s));
+            }
+        }
+    }
+}
+
+/// Lines that are pure comments or doc comments — gates ignore these so that
+/// describing a banned pattern in prose does not trip the gate.
+fn is_comment(line: &str) -> bool {
+    let t = line.trim_start();
+    t.starts_with("//") || t.starts_with("/*") || t.starts_with('*')
+}
+
+/// W-1: no development fallback key may exist. Bans the source service's
+/// sentinel and any obvious `*-change-in-production` style literal in code.
+fn gate_no_fallback_key() -> Result<(), String> {
+    let needles = ["dev-pepper-change-in-production", "change-in-production"];
+    let mut hits = Vec::new();
+    for (path, src) in library_sources() {
+        for (i, line) in src.lines().enumerate() {
+            if is_comment(line) {
+                continue;
+            }
+            for n in needles {
+                if line.contains(n) {
+                    hits.push(format!("{path}:{}: contains {n:?}", i + 1));
+                }
+            }
+        }
+    }
+    if hits.is_empty() {
+        Ok(())
+    } else {
+        Err(hits.join("; "))
+    }
+}
+
+/// INV-3: RNG results must not be silently defaulted or swallowed. Bans
+/// `unwrap_or_default()` and `.ok()` appearing on the same line as a
+/// `fill_bytes`/`getrandom` call in non-comment code.
+fn gate_rng_no_silent_fallback() -> Result<(), String> {
+    let mut hits = Vec::new();
+    for (path, src) in library_sources() {
+        for (i, line) in src.lines().enumerate() {
+            if is_comment(line) {
+                continue;
+            }
+            let rng_call = line.contains("fill_bytes") || line.contains("getrandom");
+            if rng_call && (line.contains("unwrap_or_default") || line.contains(".ok()")) {
+                hits.push(format!("{path}:{}: RNG result defaulted/swallowed", i + 1));
+            }
+        }
+    }
+    if hits.is_empty() {
+        Ok(())
+    } else {
+        Err(hits.join("; "))
+    }
+}
+
+/// No `println!`/`dbg!`/`eprintln!` in library code (they risk leaking
+/// secrets and are not a logging interface). The xtask crate itself is exempt
+/// because it is a CLI, not a library; `library_sources` only scans `crates/`.
+fn gate_no_debug_prints() -> Result<(), String> {
+    let banned = ["println!", "eprintln!", "dbg!", "print!"];
+    let mut hits = Vec::new();
+    for (path, src) in library_sources() {
+        // Allow prints inside integration tests: they never ship and the vector
+        // printer is intentional. (Unit `#[cfg(test)]` prints would also be
+        // stripped from release builds; this gate targets shipping code.)
+        if path.contains("/tests/") {
+            continue;
+        }
+        for (i, line) in src.lines().enumerate() {
+            if is_comment(line) {
+                continue;
+            }
+            for b in banned {
+                if line.contains(b) {
+                    hits.push(format!("{path}:{}: contains {b}", i + 1));
+                }
+            }
+        }
+    }
+    if hits.is_empty() {
+        Ok(())
+    } else {
+        Err(hits.join("; "))
     }
 }

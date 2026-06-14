@@ -28,13 +28,34 @@ does not try to make short codes look stronger than they are.
 
 ## Quick start
 
-> **Not yet.** codlet is at the pre-release bootstrap stage (v0.0.0). The
-> security primitives are being implemented RFC-by-RFC and are not ready to
-> depend on. Watch the `rfcs/` directory and `CHANGELOG.md` for progress.
+> **Early pre-release (v0.1.0).** The building blocks exist — code generation,
+> normalization, validation, and keyed lookup derivation — but storage, session
+> and form-token lifecycle, and runtime adapters are not implemented yet, so
+> there is no end-to-end redemption flow to call. The shape of the primitives:
 
-When the first primitives land, the minimal path will be: configure a
-`KeyProvider` with real HMAC key material, generate a code with a `CodePolicy`,
-and redeem it through a `CodeStore` whose atomic claim guarantees single use.
+```rust
+use codlet_core::{CodePolicy, SecretHasher, StaticKeyProvider, SecretDomain};
+use codlet_core::{generate_code, validate_code_input};
+use codlet_core::rng::SystemRandom;
+use std::time::Duration;
+
+// A policy: unambiguous alphabet, >=8 chars, 24h TTL.
+let policy = CodePolicy::default_human(Duration::from_secs(24 * 3600)).unwrap();
+
+// Generate a one-time code (fails closed if the RNG fails).
+let mut rng = SystemRandom::new();
+let code = generate_code(&policy, &mut rng).unwrap();
+
+// Derive the value stored in the database: a domain-separated HMAC, never the
+// plaintext. Real key material comes from a secret manager, not a literal.
+let hasher = SecretHasher::new(
+    StaticKeyProvider::single("v1", b"real-key-from-secret-manager".to_vec()).unwrap(),
+);
+let normalized = validate_code_input(code.expose(), &policy).unwrap();
+let (lookup_key, key_version) = hasher.lookup_key(SecretDomain::Code, &normalized).unwrap();
+assert_eq!(key_version.as_str(), "v1");
+let _ = lookup_key; // store this + key_version; never store `code`
+```
 
 ## Design notes
 
@@ -59,9 +80,11 @@ and redeem it through a `CodeStore` whose atomic claim guarantees single use.
 
 ## Status
 
-Pre-release (v0.0.0). Phase 0 bootstrap: workspace, CI, RFC process, and
-`codlet-core` skeleton. RFC-001 and RFC-002 are accepted; cryptographic
-primitives (RFC-003/004) are next.
+Early pre-release (v0.1.0). `codlet-core` implements the cryptographic
+primitives: code policy, generation, normalization, validation (RFC-003), and
+HMAC lookup-key derivation with key providers, domain separation, and key
+versioning (RFC-004). RFC-001/002 (scope, architecture) are accepted. Next:
+lifecycle state machines and storage traits (RFC-005/006/007).
 
 ## License
 

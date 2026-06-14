@@ -1,6 +1,6 @@
 # RFC-004: Secret Hashing, Key Providers, Domain Separation, and Key Versioning
 
-- **Status:** Proposed
+- **Status:** Implemented (v0.1.0)
 - **Target milestone:** M1
 - **Primary crate(s):** codlet-core + adapters
 - **Source basis:** zinnias-ciao v0.36.1 service handoff

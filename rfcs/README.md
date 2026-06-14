@@ -1,9 +1,8 @@
 # codlet RFCs
 
 Design proposals for codlet, governed by the RFC lifecycle policy in
-`000-rfc-lifecycle-policy.md` (project root). The folder a file lives in is
-the source of truth for its state; the `Status` field inside each RFC mirrors
-its folder.
+`000-rfc-lifecycle-policy.md`. The folder a file lives in is the source of
+truth for its state; the `Status` field inside each RFC mirrors its folder.
 
 - `proposed/` — open for review; implementer should not yet rely on the design.
 - `done/`     — accepted and in effect (Implemented).
@@ -17,13 +16,13 @@ Milestone and dependency context: see `05-RFC-MILESTONES.md` in the design packa
 |----|-------|--------|
 | RFC-001 | [Project Scope, Product Shape, and Non-goals](./done/RFC-001-project-scope-product-shape-non-goals.md) | Implemented (v0.0.0) |
 | RFC-002 | [Crate Architecture, Feature Flags, and Runtime Matrix](./done/RFC-002-crate-architecture-feature-flags-runtime-matrix.md) | Implemented (v0.0.0) |
+| RFC-003 | [One-Time Code Policy, Generation, Normalization, and Validation](./done/RFC-003-one-time-code-policy-generation-normalization-validation.md) | Implemented (v0.1.0) |
+| RFC-004 | [Secret Hashing, Key Providers, Domain Separation, and Key Versioning](./done/RFC-004-secret-hashing-key-providers-domain-separation-key-versioning.md) | Implemented (v0.1.0) |
 
 ## Proposed
 
 | ID | Title |
 |----|-------|
-| RFC-003 | [One-Time Code Policy, Generation, Normalization, and Validation](./proposed/RFC-003-one-time-code-policy-generation-normalization-validation.md) |
-| RFC-004 | [Secret Hashing, Key Providers, Domain Separation, and Key Versioning](./proposed/RFC-004-secret-hashing-key-providers-domain-separation-key-versioning.md) |
 | RFC-005 | [Code Lifecycle, Storage Contract, and Atomic Redemption](./proposed/RFC-005-code-lifecycle-storage-contract-atomic-redemption.md) |
 | RFC-006 | [Session Issuance, Validation, Revocation, and Cookie Policy](./proposed/RFC-006-session-issuance-validation-revocation-cookie-policy.md) |
 | RFC-007 | [Form Tokens, CSRF Protection, and Idempotency Replay](./proposed/RFC-007-form-tokens-csrf-protection-idempotency-replay.md) |
