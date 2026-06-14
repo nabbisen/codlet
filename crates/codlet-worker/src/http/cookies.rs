@@ -35,7 +35,7 @@ pub fn extract_cookie(req: &worker::Request, name: &str) -> Option<String> {
 /// Panics if the `Set-Cookie` header value cannot be set — this indicates a
 /// bug in the cookie builder, not a runtime condition.
 pub fn set_cookie_header(policy: &CookiePolicy, secret: &str) -> worker::Headers {
-    let mut headers = worker::Headers::new();
+    let headers = worker::Headers::new();
     let value = policy.build_set_cookie(secret);
     headers
         .set("Set-Cookie", &value)
@@ -46,7 +46,7 @@ pub fn set_cookie_header(policy: &CookiePolicy, secret: &str) -> worker::Headers
 /// Build a [`worker::Headers`] object containing a `Set-Cookie` header that
 /// clears the session cookie (produced by [`CookiePolicy::build_clear_cookie`]).
 pub fn clear_cookie_header(policy: &CookiePolicy) -> worker::Headers {
-    let mut headers = worker::Headers::new();
+    let headers = worker::Headers::new();
     let value = policy.build_clear_cookie();
     headers
         .set("Set-Cookie", &value)
