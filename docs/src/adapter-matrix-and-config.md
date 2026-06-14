@@ -20,14 +20,15 @@ requirement are not production-safe for codlet's core use case.
 |---------|:-----------:|:--------------:|:-------------:|-------|
 | `MemCodeStore` (test-utils) | ✓ (Mutex) | ✓ (Mutex) | ✗ | In-process only; not for production. |
 | `SqliteStore` (codlet-sqlx) | ✓ (cond. UPDATE) | ✓ (cond. UPDATE) | ✓ (WAL mode) | SQLite serialises writes; WAL recommended for concurrent reads. Also implements `CodeAdminStore`. |
-| D1 (codlet-worker, planned) | ✓ (cond. UPDATE) | ✓ (cond. UPDATE) | ✓ (D1 global) | Per-PoP write serialisation. |
+| `PostgresStore` (codlet-sqlx, `--features postgres`) | ✓ (cond. UPDATE, READ COMMITTED row-lock) | ✓ (cond. UPDATE) | ✓ | Multi-instance production. No `RETURNING`, no `FOR UPDATE`. Also implements `CodeAdminStore`. |
+| `D1CodeStore` / `D1SessionStore` / `D1FormTokenStore` (codlet-worker) | ✓ (cond. UPDATE + `meta().changes`) | ✓ (cond. UPDATE + `meta().changes`) | ✓ (D1 global) | wasm32 target only; timestamps as REAL (f64). Also implements `CodeAdminStore`. |
 
 ## Rate-limit adapters
 
 | Adapter | Consistency | Notes |
 |---------|------------|-------|
 | `MemRateLimitStore` (test-utils) | Exact (Mutex) | In-process only. |
-| Workers KV (planned) | Eventual | Counters may under-count under high concurrency. Documented caveat per RFC-010. |
+| `KvRateLimitStore` (codlet-worker) | Eventual | ⚠ Eventually consistent — counters may under-count under distributed attack. See RFC-010 §12.3. |
 
 ---
 

@@ -112,7 +112,7 @@ Before switching redemption fully, zinnias-ciao can run codlet derivation/classi
 ### 10.4 Concrete acceptance checklist
 
 - [x] Migration plan identifies database migrations and rollback points.
-- [~] Existing security release gates move into codlet or remain in service as appropriate. *(Note: service-side: gate portability is a zinnias-ciao adoption step, not a codlet gate)*
+- [x] Existing security release gates are in codlet (`xtask/` with 5 gates: no-fallback-key, rng-no-silent-fallback, no-debug-prints, cookie-attrs-present, no-plaintext-in-store-ops).(Note: service-side: gate portability is a zinnias-ciao adoption step, not a codlet gate)*
 - [~] Service tests verify full join flow before and after extraction. *(Note: service-side: service test coverage requires zinnias-ciao integration test suite)*
 - [~] Admin UI behavior remains unchanged unless deliberately redesigned. *(Note: service-side: admin UI ownership is host-application responsibility)*
 - [x] Deployment notes state whether existing sessions/codes survive the migration.

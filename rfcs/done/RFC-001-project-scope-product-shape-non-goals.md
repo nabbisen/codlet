@@ -121,11 +121,11 @@ This scope deliberately makes codlet less convenient than a full SaaS IdP in som
 
 ### 10.5 Concrete acceptance checklist
 
-- [ ] README states "embedded one-time-code authentication library" in the first paragraph.
-- [ ] Requirements document includes a non-goals table.
-- [ ] External design has a host-owned authorization section.
-- [ ] Every RFC that returns a subject/session states that the host must still authorize.
-- [ ] RFC-018 remains post-v1 and cannot add requirements back into RFC-001 without an explicit revision.
+- [x] README states "embedded one-time-code authentication library" in the first paragraph.
+- [x] Requirements document includes a non-goals table.
+- [x] External design has a host-owned authorization section.
+- [x] Every RFC that returns a subject/session states that the host must still authorize.
+- [x] RFC-018 remains post-v1 and cannot add requirements back into RFC-001 without an explicit revision.
 
 
 ## References

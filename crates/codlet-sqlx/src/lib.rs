@@ -7,16 +7,16 @@
 //! | `sqlite` (default) | `SqliteStore` | `"sqlite::memory:"`, `"sqlite:path/to/db"` | Local dev, single-server |
 //! | `postgres` | `PostgresStore` | `postgres://…` | Multi-instance production |
 //!
-//! Enable exactly one (or both) at build time:
+//! Enable one or both backends:
 //!
 //! ```toml
-//! # SQLite only (default):
+//! # SQLite only (default — no extra flags needed):
 //! codlet-sqlx = { version = "…" }
 //!
-//! # PostgreSQL only — no SQLite code compiled:
+//! # PostgreSQL only — SQLite driver not compiled:
 //! codlet-sqlx = { version = "…", default-features = false, features = ["postgres"] }
 //!
-//! # Both:
+//! # Both backends simultaneously:
 //! codlet-sqlx = { version = "…", features = ["sqlite", "postgres"] }
 //! ```
 //!

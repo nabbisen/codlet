@@ -128,11 +128,11 @@ The architecture should choose an MSRV that supports stable async ergonomics nee
 
 ### 10.5 Concrete acceptance checklist
 
-- [ ] `cargo tree -p codlet-core` contains no framework, DB, or executor crates.
-- [ ] Worker adapter compiles in a WASM-oriented target configuration.
-- [ ] At least one server adapter can expose `Send` futures.
-- [ ] Feature documentation states security impact.
-- [ ] Adapter crates publish a conformance matrix.
+- [x] `cargo tree -p codlet-core` contains no framework, DB, or executor crates.
+- [x] Worker adapter (`codlet-worker`) compiles for `wasm32-unknown-unknown` (verified by CI `wasm32-worker-compile` job).
+- [x] At least one server adapter can expose `Send` futures. (`rfc_009_compile::send_sync_store_satisfies_axum_style_bounds` proves this.)
+- [x] Feature documentation states security impact. (`codlet-sqlx` lib.rs doc and `codlet-core` feature list document security-relevant flags.)
+- [x] Adapter crates publish a conformance matrix. (`docs/src/adapter-matrix-and-config.md` covers all adapters.)
 
 
 ## References

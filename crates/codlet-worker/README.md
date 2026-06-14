@@ -54,8 +54,10 @@ async fn fetch(req: Request, env: Env, _ctx: Context) -> Result<Response> {
     // Load HMAC keys from Wrangler secrets. Fails closed if missing (INV-2).
     let keys = WorkerKeyProvider::from_env(&env, "v1", "CODLET_HMAC_KEY_V1", &[])?;
 
-    let code_store    = D1CodeStore::new(db.clone(), tables.clone());
-    let session_store = D1SessionStore::new(db.clone(), tables.clone());
+    // D1Database is not Clone; share it via Rc (Workers are single-threaded).
+    let db = std::rc::Rc::new(db);
+    let code_store    = D1CodeStore::new(std::rc::Rc::clone(&db), tables.clone());
+    let session_store = D1SessionStore::new(std::rc::Rc::clone(&db), tables.clone());
     let token_store   = D1FormTokenStore::new(db, tables);
     let rl_store      = KvRateLimitStore::new(kv);
 

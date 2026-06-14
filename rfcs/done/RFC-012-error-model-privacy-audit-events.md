@@ -139,11 +139,11 @@ Events may include IDs and redacted classifications. Events must not include pla
 
 ### 10.4 Concrete acceptance checklist
 
-- [ ] Every public error has a documented internal cause mapping.
-- [ ] Authentication failures collapse enumeration-sensitive details.
-- [ ] Audit events are redacted by construction.
-- [ ] `Debug` and `Display` implementations do not leak secrets.
-- [ ] REST/API examples avoid stack traces and detailed failure reason in responses.
+- [x] Every public error has a documented internal cause mapping (`PublicRedemptionError::from_reason`, `error.rs`).
+- [x] Authentication failures collapse enumeration-sensitive details (`NotFound`, `Expired`, `Revoked`, `AlreadyUsed` → `InvalidOrExpired`).
+- [x] Audit events are redacted by construction (`audit.rs` module doc; `events_contain_no_secrets_by_construction` test).
+- [x] `Debug` and `Display` implementations do not leak secrets (`SecretString` always prints `<redacted>`; tested in `secret.rs`).
+- [x] REST/API examples avoid stack traces: `PublicRedemptionError` maps all internal reasons to one of three safe variants; examples use only public error types.
 
 
 ## References

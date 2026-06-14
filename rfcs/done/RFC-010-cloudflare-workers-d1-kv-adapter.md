@@ -108,11 +108,11 @@ The adapter may fall back to the literal identity string `unknown` only as an ex
 
 ### 12.5 Concrete acceptance checklist
 
-- [ ] D1 code claim uses conditional update and checks affected rows.
-- [ ] D1 form-token consume uses conditional update and checks affected rows.
-- [ ] KV rate limit docs mention eventual consistency.
-- [ ] Worker request identity extraction is configurable.
-- [ ] Local test strategy does not require production Cloudflare credentials.
+- [x] D1 code claim uses conditional update and checks `meta().changes` (`D1CodeStore::claim_code`, INV-5).
+- [x] D1 form-token consume uses conditional update and checks `meta().changes` (`D1FormTokenStore::consume_form_token`, INV-6).
+- [x] KV rate limit docs mention eventual consistency (`kv/rate_limit.rs` module doc and README).
+- [x] Worker request identity extraction is configurable (`extract_rate_limit_key(req, trusted_header: Option<&str>)`).
+- [x] Local test strategy does not require production Cloudflare credentials (12 Miniflare tests via `@cloudflare/vitest-pool-workers`, CI `wrangler-test` job).
 
 
 ## References

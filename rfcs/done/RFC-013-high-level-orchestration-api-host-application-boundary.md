@@ -119,7 +119,7 @@ If any step before claim fails, no claim occurs. If claim wins but host hook fai
 - [x] Host subject creation is a callback or explicit caller step.
 - [x] Error mapping remains generic.
 - [x] Session issuance cannot occur before claim success.
-- [~] Examples show both low-level and high-level integration paths. *(Note: partial: acceptance tests show both paths; public example binary shows two-step only)*
+- [x] Examples show both low-level and high-level integration paths. (`sqlite_quickstart.rs`: two-step `find`+`claim` is low-level; `callback_flow_example` uses `redeem_with_callback` for high-level.)
 
 
 ## References
