@@ -6,7 +6,7 @@
 //!
 //! ## Compatibility note
 //!
-//! The `zinnias-ciao` `normalize_invite_code` strips ASCII whitespace and
+//! Normalization strips ASCII whitespace and
 //! hyphens and uppercases ASCII letters — and **nothing else**. In particular
 //! it does *not* drop the visually ambiguous characters `0 1 O I L` (those are
 //! merely excluded from the generation *alphabet*, RFC-003 §4). codlet

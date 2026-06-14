@@ -200,7 +200,7 @@ dependencies = [
 
 [[package]]
 name = "codlet-conformance"
-version = "0.14.5"
+version = "0.15.0"
 dependencies = [
  "codlet-core",
  "futures",
@@ -209,7 +209,7 @@ dependencies = [
 
 [[package]]
 name = "codlet-core"
-version = "0.14.5"
+version = "0.15.0"
 dependencies = [
  "getrandom 0.2.17",
  "hmac",
@@ -224,7 +224,7 @@ dependencies = [
 
 [[package]]
 name = "codlet-examples"
-version = "0.14.5"
+version = "0.15.0"
 dependencies = [
  "codlet-core",
  "codlet-sqlx",
@@ -234,7 +234,7 @@ dependencies = [
 
 [[package]]
 name = "codlet-sqlx"
-version = "0.14.5"
+version = "0.15.0"
 dependencies = [
  "codlet-conformance",
  "codlet-core",
@@ -246,7 +246,7 @@ dependencies = [
 
 [[package]]
 name = "codlet-worker"
-version = "0.14.5"
+version = "0.15.0"
 dependencies = [
  "codlet-core",
  "serde",
@@ -2876,7 +2876,7 @@ dependencies = [
 
 [[package]]
 name = "xtask"
-version = "0.14.5"
+version = "0.15.0"
 
 [[package]]
 name = "yoke"

@@ -19,9 +19,16 @@ pub struct D1SessionStore {
 
 impl D1SessionStore {
     /// Construct from a D1 database handle and table config.
-    pub fn new(db: worker::d1::D1Database, config: D1TableConfig) -> Self {
+    /// Construct from a shared D1 database handle.
+    ///
+    /// Pass `Rc::clone(&db)` to share one handle across multiple stores:
+    /// ```rust,ignore
+    /// let db = std::rc::Rc::new(env.d1("DB")?);
+    /// let store = D1SessionStore::new(std::rc::Rc::clone(&db), config);
+    /// ```
+    pub fn new(db: std::rc::Rc<worker::d1::D1Database>, config: D1TableConfig) -> Self {
         Self {
-            db: Rc::new(db),
+            db,
             table: config.sessions,
         }
     }

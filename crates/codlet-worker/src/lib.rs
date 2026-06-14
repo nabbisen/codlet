@@ -22,16 +22,18 @@
 //!
 //! #[worker::event(fetch)]
 //! async fn fetch(req: Request, env: Env, _ctx: Context) -> Result<Response> {
-//!     // env.d1() returns a new handle each call (takes &self) — no Rc needed.
-//!     run_d1_migrations(&env.d1("DB")?).await?;
+//!     // Wrap in Rc so all three stores share one D1Database handle.
+//!     // Rc is safe here — Workers are single-threaded.
+//!     let db = std::rc::Rc::new(env.d1("DB")?);
+//!     run_d1_migrations(&db).await?;
 //!
 //!     let key_provider = WorkerKeyProvider::from_env(
 //!         &env, "v1", "CODLET_HMAC_KEY_V1", &[],
 //!     )?;
 //!     let tables        = D1TableConfig::default();
-//!     let code_store    = D1CodeStore::new(env.d1("DB")?, tables.clone());
-//!     let session_store = D1SessionStore::new(env.d1("DB")?, tables.clone());
-//!     let token_store   = D1FormTokenStore::new(env.d1("DB")?, tables);
+//!     let code_store    = D1CodeStore::new(std::rc::Rc::clone(&db), tables.clone());
+//!     let session_store = D1SessionStore::new(std::rc::Rc::clone(&db), tables.clone());
+//!     let token_store   = D1FormTokenStore::new(db, tables);
 //!     let kv            = env.kv("CODLET_RL")?;
 //!     let rl_store      = KvRateLimitStore::new(kv);
 //!     // … wire into CodeAuth, SessionManager, etc.

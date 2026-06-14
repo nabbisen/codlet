@@ -18,8 +18,8 @@ pub const SECURE_MIN_HUMAN_LENGTH: usize = 8;
 /// on hostile input before a lookup.
 pub const DEFAULT_MAX_RAW_LEN: usize = 64;
 
-/// The `zinnias-ciao` compatibility code length (6 symbols, ~29.7 bits).
-pub const LEGACY_CIAO_LENGTH: usize = 6;
+/// Minimum accepted short-code length for the explicit compat opt-in (6 symbols, ~29.7 bits).
+pub const SHORT_COMPAT_LENGTH: usize = 6;
 
 /// Validated policy governing code generation and validation.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -66,9 +66,18 @@ impl CodePolicy {
     /// is acceptable only with short expiry, single-use semantics, and rate
     /// limiting. Hosts choosing this take on that responsibility.
     ///
+    /// **Security note:** codes shorter than [`SECURE_MIN_HUMAN_LENGTH`] symbols
+    /// have reduced entropy and **require** active rate limiting to be safe. An
+    /// unprotected 6-symbol code over 31 symbols has only ~29.7 bits of entropy.
+    /// Suppress this warning with `#[allow(deprecated)]` at the call site only
+    /// after confirming that rate limiting is in place.
+    ///
     /// # Errors
     /// Returns [`PolicyError::ZeroLength`] if `length` is zero, or a TTL error
     /// if `ttl` is zero. Lengths at or above the minimum are also accepted.
+    #[deprecated(
+        note = "codes shorter than SECURE_MIN_HUMAN_LENGTH have reduced entropy;                 ensure rate limiting is active and suppress with #[allow(deprecated)]                 at the call site to acknowledge the tradeoff"
+    )]
     pub fn short_compat(
         alphabet: Alphabet,
         length: usize,
@@ -80,13 +89,21 @@ impl CodePolicy {
         Self::build(alphabet, length, ttl)
     }
 
-    /// The `zinnias-ciao` compatibility policy: unambiguous alphabet, 6 symbols,
-    /// caller-chosen TTL. Equivalent to `short_compat` with the legacy length.
+    /// Short-code compatibility policy: unambiguous alphabet, 6 symbols,
+    /// caller-chosen TTL. Equivalent to `short_compat(Alphabet::unambiguous(), 6, ttl)`.
+    ///
+    /// Use this when migrating from an existing system that issued 6-symbol codes.
+    /// Prefer [`CodePolicy::default_human`] (8 symbols, ~39.6 bits) for new deployments.
     ///
     /// # Errors
     /// Returns a [`PolicyError`] if the TTL is zero.
-    pub fn legacy_ciao_6(ttl: Duration) -> Result<Self, PolicyError> {
-        Self::short_compat(Alphabet::unambiguous(), LEGACY_CIAO_LENGTH, ttl)
+    #[deprecated(
+        note = "6-symbol codes have only ~29.7 bits of entropy;                 use default_human() for new deployments or ensure rate limiting                 is active and suppress with #[allow(deprecated)]"
+    )]
+    #[allow(deprecated)] // calls short_compat which is also deprecated
+    pub fn six_symbol(ttl: Duration) -> Result<Self, PolicyError> {
+        #[allow(deprecated)]
+        Self::short_compat(Alphabet::unambiguous(), SHORT_COMPAT_LENGTH, ttl)
     }
 
     fn build(alphabet: Alphabet, length: usize, ttl: Duration) -> Result<Self, PolicyError> {
@@ -158,13 +175,16 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn short_compat_allows_six() {
-        let p = CodePolicy::legacy_ciao_6(HOUR).unwrap();
+        #[allow(deprecated)]
+        let p = CodePolicy::six_symbol(HOUR).unwrap();
         assert_eq!(p.length(), 6);
         assert!((p.approx_entropy_bits() - 29.7).abs() < 0.2);
     }
 
     #[test]
+    #[allow(deprecated)]
     fn zero_length_and_zero_ttl_rejected() {
         assert_eq!(
             CodePolicy::short_compat(Alphabet::unambiguous(), 0, HOUR),

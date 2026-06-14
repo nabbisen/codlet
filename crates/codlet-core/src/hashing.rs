@@ -17,7 +17,7 @@
 //!
 //! The fixed context string and `0x00` separators make the label and secret
 //! unambiguous, so distinct domains cannot collide. This is intentionally
-//! **not** the `zinnias-ciao` derivation (`HMAC(pepper, value)` with no domain
+//! **not** a simple `HMAC(pepper, value)` with no domain
 //! or prefix); the migration adapter (RFC-014) supplies a legacy mode for
 //! existing rows.
 

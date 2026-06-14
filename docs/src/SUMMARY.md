@@ -5,4 +5,4 @@
 - [Threat model](./threat-model.md)
 - [Adapter matrix and secure configuration](./adapter-matrix-and-config.md)
 - [Key management and rotation](./key-rotation.md)
-- [Migrating from zinnias-ciao](./migration-from-zinnias-ciao.md)
+- [Migrating from an existing service](./migration-from-an-existing-service.md)

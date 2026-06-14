@@ -26,7 +26,7 @@ No open RFCs.
 | [RFC-011](RFC-011-sqlx-in-memory-adapters.md) | SQLx and In-Memory Adapters | v0.5.0 |
 | [RFC-012](RFC-012-error-model-privacy-audit-events.md) | Error Model, Privacy, and Audit Events | v0.3.0 |
 | [RFC-013](RFC-013-high-level-orchestration-api-host-application-boundary.md) | High-Level Orchestration API and Host Application Boundary | v0.4.0 |
-| [RFC-014](RFC-014-zinnias-ciao-migration-compatibility-plan.md) | zinnias-ciao Migration and Compatibility Plan | v0.6.0 *(partial)* |
+| [RFC-014](RFC-014-zinnias-ciao-migration-compatibility-plan.md) | Existing Service Migration and Compatibility Plan | v0.6.0 *(partial)* |
 | [RFC-015](RFC-015-test-strategy-fuzzing-release-gates-security-regression-tests.md) | Test Strategy, Fuzzing, Release Gates, and Security Regression Tests | v0.6.0 *(partial)* |
 | [RFC-016](RFC-016-documentation-examples-non-technical-ux-guidance.md) | Documentation, Examples, and Non-Technical UX Guidance | v0.7.0 |
 | [RFC-017](RFC-017-security-operations-key-management-rotation.md) | Security Operations, Key Management, and Rotation | v0.6.0 |

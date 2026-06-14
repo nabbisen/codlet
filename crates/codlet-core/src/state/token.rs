@@ -1,6 +1,6 @@
 //! Form-token consume state machine (RFC-007).
 //!
-//! This is a direct port of `zinnias_ciao_contracts::auth::classify_token_consume`
+//! Pure classifier for atomic form-token consume operations (RFC-007).
 //! and its six tests, lifted into codlet-core so the logic is a pure,
 //! storage-free primitive. The function signature and all invariants are
 //! preserved exactly; adapters supply the inputs from their query results.
@@ -67,7 +67,7 @@ pub fn classify_token_consume(
 mod tests {
     use super::*;
 
-    // The six tests from zinnias-ciao contracts/src/auth.rs, preserved verbatim
+    // Six exhaustive cases covering all combinations of found/consumed/binding_ok.
     // as a compatibility / regression suite.
 
     #[test]

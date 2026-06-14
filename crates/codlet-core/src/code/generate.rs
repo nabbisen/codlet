@@ -109,7 +109,8 @@ mod tests {
     fn rejection_sampling_discards_bytes_at_or_above_ceiling() {
         // Alphabet len 31 → ceiling 248. Feed 248 (rejected) then 0 (accepted →
         // first symbol). A biased modulo-only generator would have used 248.
-        let policy = CodePolicy::legacy_ciao_6(Duration::from_secs(3600)).unwrap();
+        #[allow(deprecated)]
+        let policy = CodePolicy::six_symbol(Duration::from_secs(3600)).unwrap();
         let alpha = Alphabet::unambiguous();
         assert_eq!(alpha.unbiased_ceiling(), 248);
         // Sequence: 248 rejected, then 0,0,0,0,0,0 accepted → six of symbol[0].

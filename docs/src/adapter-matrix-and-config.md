@@ -36,15 +36,32 @@ requirement are not production-safe for codlet's core use case.
 
 ## Code policy
 
-```rust
-// Minimum secure configuration.
-let policy = CodePolicy::default_human(Duration::from_secs(24 * 3600))?;
-// → 8-char, 31-symbol alphabet, ~39.6 bits entropy, 24 h TTL.
+`CodePolicy::default_human` is the recommended constructor. It produces 8-symbol
+codes over the 31-symbol unambiguous alphabet (~39.6 bits of entropy) and does
+not require rate limiting to be safe — the entropy is sufficient.
 
-// Legacy compatibility (smaller deployments with rate limiting).
-let compat = CodePolicy::legacy_ciao_6(Duration::from_secs(4 * 3600))?;
-// → 6-char, 29.7 bits, 4 h TTL — requires tight rate limiting.
+```rust
+// Recommended: 8 symbols, ~39.6 bits, no rate-limit dependency.
+let policy = CodePolicy::default_human(Duration::from_secs(24 * 3600))?;
 ```
+
+For services migrating from an existing 6-symbol code system, `six_symbol` is
+available as an explicit opt-in. It is marked `#[deprecated]` to emit a compiler
+warning at every call site — the warning is the intended friction. Suppress it
+with `#[allow(deprecated)]` only after confirming that rate limiting is in place.
+6-symbol codes have only ~29.7 bits of entropy and **require** a `RateLimitStore`
+to be safe against online guessing.
+
+```rust
+// Short-code compatibility — requires active rate limiting.
+// Compiler will warn; suppress only after confirming rate limiting is wired.
+#[allow(deprecated)]
+let compat = CodePolicy::six_symbol(Duration::from_secs(4 * 3600))?;
+// → 6-char, 31-symbol alphabet, ~29.7 bits entropy, 4 h TTL.
+```
+
+For lengths between 6 and 7, use `CodePolicy::short_compat` (also deprecated)
+with an explicit length. The same rate-limiting requirement applies.
 
 ## Key provider
 

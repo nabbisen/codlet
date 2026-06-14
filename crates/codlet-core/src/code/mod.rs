@@ -13,4 +13,4 @@ pub mod policy;
 pub use alphabet::{Alphabet, DEFAULT_ALPHABET};
 pub use generate::{generate_code, validate_code_input};
 pub use normalize::normalize;
-pub use policy::{CodePolicy, DEFAULT_MAX_RAW_LEN, LEGACY_CIAO_LENGTH, SECURE_MIN_HUMAN_LENGTH};
+pub use policy::{CodePolicy, DEFAULT_MAX_RAW_LEN, SECURE_MIN_HUMAN_LENGTH, SHORT_COMPAT_LENGTH};

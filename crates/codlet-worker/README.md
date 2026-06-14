@@ -64,22 +64,22 @@ async fn fetch(req: Request, env: Env, _ctx: Context) -> Result<Response> {
 }
 ```
 
-## Migrating from zinnias-ciao
+## Using existing table names
 
-`D1TableConfig::zinnias_ciao_tables()` overrides the three table names to match
-zinnias-ciao v0.36.1 (`invite_codes`, `sessions`, `form_tokens`):
+`D1TableConfig::with_existing_table_names()` overrides the three table names
+for services that already use `invite_codes`, `sessions`, and `form_tokens`:
 
 ```rust,ignore
-let tables = D1TableConfig::zinnias_ciao_tables();
+let tables = D1TableConfig::with_existing_table_names();
 ```
 
 **This remaps table names only — not column names.** codlet's SQL always uses
 codlet column names (`lookup_key`, `key_version`, `grant_payload`, `scope`,
 `used_by_subject`, `subject`, `subject_kind`, etc.). Before using this preset
-the zinnias-ciao tables must have all of those columns present. See the
+the existing tables must have all of those columns. See the
 migration guide for the required `ALTER TABLE … RENAME COLUMN` statements.
 
-See `docs/src/migration-from-zinnias-ciao.md` for the full checklist.
+See `docs/src/migration-from-an-existing-service.md` for the full checklist.
 
 ## wrangler.toml
 
