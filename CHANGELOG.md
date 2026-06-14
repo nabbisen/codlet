@@ -8,6 +8,49 @@ semantic versioning once it reaches a stable release.
 
 Nothing yet.
 
+## [0.8.0] — 2026-06-14
+
+Final planned RFC sprint: observability hooks, admin API, security policy, and
+closing out all remaining proposed RFCs. All 31 planned RFCs are now
+implemented; RFC-018 (future server/IdP) is archived as post-v1. 142 tests.
+
+### Added
+
+- `metrics` module (RFC-024): `MetricsObserver` trait (fire-and-forget
+  counter/outcome hook), `NoopMetrics` (default zero-cost implementation),
+  `CapturingMetrics` (test-utils), `Outcome` enum with stable `label()`
+  strings, and `counter` module with 8 recommended counter-name constants.
+  Gate: counter names verified to contain no sensitive vocabulary.
+
+- `admin` module (RFC-030): `CodeAdminStore` optional extension trait with
+  `list_codes` (with `CodeListFilter`) and `get_code_meta`; `CodeMeta`
+  metadata record (no plaintext code, no HMAC lookup key — enforced by type
+  design and test); `CodeStats` aggregate; `CodeListFilter` with scope/active
+  helpers; in-memory stub for `MemCodeStore` under `test-utils`.
+
+- `SECURITY.md` (RFC-028): complete security policy covering supported
+  versions, MSRV policy (1.85, never raised in patch), reporting address and
+  response targets, disclosure policy, advisory format, and explicit list of
+  what constitutes a security bug. Release checklist matches the 5 `xtask`
+  gates.
+
+### Changed
+
+- RFC-024, RFC-025, RFC-026, RFC-027, RFC-028, RFC-029, RFC-030, RFC-031,
+  RFC-032 moved `proposed/ → done/` (Implemented v0.8.0). All 31 planned
+  RFCs are now implemented.
+- RFC-018 (future server/IdP strategy) moved to `archive/` as post-v1 deferred.
+- `proposed/` directory is now empty.
+
+### Security
+
+- `CodeMeta` contains no plaintext code value and no HMAC lookup key; a
+  `Debug`-output test asserts no sensitive vocabulary appears in the type.
+- `MetricsObserver::increment` must not block; `counter` names are tested to
+  contain no sensitive vocabulary (no `key`, `secret`, `hmac`, etc. in the
+  label strings that would be exported to metric backends).
+- SECURITY.md is now complete and linked from README (RFC-028 acceptance).
+
 ## [0.7.0] — 2026-06-14
 
 Documentation layer and compilable examples (RFC-016), plus the RFC-010
@@ -387,7 +430,8 @@ establishes the repository, process, and an empty `codlet-core` skeleton.
   or async-executor crates (RFC-002 acceptance gate): only `hmac`, `sha2`,
   `subtle`, `getrandom`, `thiserror`.
 
-[Unreleased]: https://github.com/nabbisen/codlet/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/nabbisen/codlet/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/nabbisen/codlet/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/nabbisen/codlet/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/nabbisen/codlet/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/nabbisen/codlet/compare/v0.4.0...v0.5.0

@@ -140,11 +140,11 @@ The library should document that fully atomic host creation requires shared tran
 
 ### 14.5 Concrete acceptance checklist
 
-- [ ] Adapter conformance test proves exactly one winner under concurrency.
-- [ ] Public mapping collapses all non-success auth states.
-- [ ] `changed > 1` is treated as invariant violation.
-- [ ] Claim request includes purpose and optional scope.
-- [ ] No high-level helper issues a session unless claim outcome is `Won`.
+- [x] Adapter conformance test proves exactly one winner under concurrency.
+- [x] Public mapping collapses all non-success auth states.
+- [x] `changed > 1` is treated as invariant violation.
+- [x] Claim request includes purpose and optional scope.
+- [x] No high-level helper issues a session unless claim outcome is `Won`.
 
 
 ## References

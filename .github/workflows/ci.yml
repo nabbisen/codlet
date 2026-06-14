@@ -42,6 +42,42 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test --workspace
 
+  # RFC-015 §2: CI separates core, adapters, examples, and docs.
+  test-core:
+    name: test codlet-core (all features)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test -p codlet-core --all-features
+
+  test-conformance:
+    name: test codlet-conformance + in-memory stores
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test -p codlet-conformance --all-features
+
+  test-sqlx:
+    name: test codlet-sqlx (SQLite adapter conformance)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test -p codlet-sqlx --all-features
+
+  test-examples:
+    name: build and run codlet-examples
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo build -p codlet-examples
+      - run: cargo run -p codlet-examples --bin sqlite_quickstart
+      - run: cargo run -p codlet-examples --bin key_rotation
+      - run: cargo run -p codlet-examples --bin form_token_csrf
+
   core-feature-matrix:
     name: codlet-core feature matrix
     runs-on: ubuntu-latest

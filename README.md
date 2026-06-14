@@ -77,17 +77,21 @@ let _ = lookup_key; // store this + key_version; never store `code`
 - Architecture, scope, and non-goals: [`rfcs/done/RFC-001`](./rfcs/done/RFC-001-project-scope-product-shape-non-goals.md),
   [`rfcs/done/RFC-002`](./rfcs/done/RFC-002-crate-architecture-feature-flags-runtime-matrix.md).
 - All design proposals and their lifecycle: [`rfcs/README.md`](./rfcs/README.md).
+- **Threat model** (what codlet protects against): [`docs/src/threat-model.md`](./docs/src/threat-model.md).
+- **Adapter guarantee matrix** and secure configuration guide: [`docs/src/adapter-matrix-and-config.md`](./docs/src/adapter-matrix-and-config.md).
+- **Key rotation** and emergency procedure: [`docs/src/key-rotation.md`](./docs/src/key-rotation.md).
+- **Migration from zinnias-ciao**: [`docs/src/migration-from-zinnias-ciao.md`](./docs/src/migration-from-zinnias-ciao.md).
 - Security policy and how to report a vulnerability: [`SECURITY.md`](./SECURITY.md).
 - Full documentation lives under [`docs/src`](./docs/src) (mdBook-compatible).
 
 ## Status
 
-Pre-release (v0.7.0). 22 RFCs implemented, 133 tests, 5 static release gates.
+Pre-release (v0.8.0). All 31 planned RFCs implemented (1 archived post-v1), 142 tests, 5 static release gates.
 The full stack is in place: primitive layer (`codlet-core`), orchestration
 managers (`auth` module), conformance suite (`codlet-conformance`), SQLite
 adapter (`codlet-sqlx`), key rotation guide, and zinnias-ciao migration plan.
-Remaining work targets the Cloudflare Workers/D1 adapter (RFC-010) and
-post-v1 features.
+The library is feature-complete for its stated purpose. Remaining work is hardening
+and production adapter expansion.
 
 ## License
 

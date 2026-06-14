@@ -122,11 +122,11 @@ No metric label should include raw code, raw IP, subject display name, or lookup
 
 ### 13.5 Concrete acceptance checklist
 
-- [ ] Rate-limit policy documents fail-open/fail-closed choice.
-- [ ] Check-before-lookup pattern exists in examples.
-- [ ] Success clears failure counter if configured.
-- [ ] Counters do not store plaintext code.
-- [ ] Public limited response does not reveal code existence.
+- [x] Rate-limit policy documents fail-open/fail-closed choice.
+- [x] Check-before-lookup pattern exists in examples.
+- [x] Success clears failure counter if configured.
+- [x] Counters do not store plaintext code.
+- [x] Public limited response does not reveal code existence.
 
 
 ## References

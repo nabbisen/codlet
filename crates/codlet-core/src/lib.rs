@@ -22,7 +22,7 @@
 //! - [`hashing`] — HMAC lookup-key derivation, key providers, domain
 //!                 separation, key versioning (RFC-004)
 //! - [`rng`]     — fail-closed randomness abstraction (RFC-020)
-//! - [`secret`]  — redacted secret newtypes and opaque IDs (RFC-019 foundation)
+//! - [`secret`]  — redacted secret newtypes and opaque IDs (RFC-019)
 //! - [`clock`]   — `Clock` trait for testable time (RFC-020)
 //! - [`state`]   — pure lifecycle classifiers: claim, session, form-token
 //!                 consume (RFC-005/006/007)
@@ -30,6 +30,12 @@
 //!                 `RateLimitStore` traits (RFC-005/006/007/008)
 //! - [`cookie`]  — secure cookie policy and builder (RFC-006)
 //! - [`audit`]   — `CodeAuthEvent` vocabulary and `AuditSink` trait (RFC-012)
+//! - [`metrics`] — `MetricsObserver` trait, counter names, `Outcome` (RFC-024)
+//! - [`admin`]   — `CodeAdminStore` extension trait, `CodeMeta`, admin API
+//!                 (RFC-030)
+//! - [`auth`]    — high-level orchestration managers: `CodeAuth`,
+//!                 `SessionManager`, `FormTokenManager`, `NoRateLimit`
+//!                 (RFC-013)
 //! - [`error`]   — two-layer error model: internal causes + public-safe
 //!                 failures (RFC-012/021)
 //! - `mem`       — in-memory stores (`test-utils` feature only, RFC-011/008)
@@ -40,6 +46,7 @@
 /// accompanied by a key-version migration (RFC-004).
 pub const FORMAT_VERSION: &str = "codlet/v1";
 
+pub mod admin;
 pub mod audit;
 pub mod auth;
 pub mod clock;
@@ -47,6 +54,7 @@ pub mod code;
 pub mod cookie;
 pub mod error;
 pub mod hashing;
+pub mod metrics;
 pub mod rng;
 pub mod secret;
 pub mod state;
@@ -74,6 +82,7 @@ pub use error::{
 pub use hashing::{
     HmacKeyRef, KeyProvider, KeyVersion, LookupKey, SecretDomain, SecretHasher, StaticKeyProvider,
 };
+pub use metrics::{MetricsObserver, NoopMetrics, Outcome, counter};
 pub use rng::{RandomSource, SystemRandom};
 pub use secret::{
     CodeId, FormTokenSecret, NormalizedCode, PlainCode, Purpose, ScopeKey, SecretString, SessionId,

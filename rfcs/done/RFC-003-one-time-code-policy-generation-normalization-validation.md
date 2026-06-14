@@ -134,11 +134,11 @@ The table must always be paired with a statement that online rate limiting is ma
 
 ### 11.5 Concrete acceptance checklist
 
-- [ ] RNG failure test uses a fake RNG that always errors.
-- [ ] Rejection-sampling test covers the 31-character alphabet ceiling of 248.
-- [ ] `Debug`/serialization never prints plaintext code unless an explicit redaction wrapper is intentionally opened in tests.
-- [ ] Normalization property tests run on arbitrary Unicode input.
-- [ ] Public docs show grouped display as optional and normalization as canonical.
+- [x] RNG failure test uses a fake RNG that always errors.
+- [x] Rejection-sampling test covers the 31-character alphabet ceiling of 248.
+- [x] `Debug`/serialization never prints plaintext code unless an explicit redaction wrapper is intentionally opened in tests.
+- [x] Normalization property tests run on arbitrary Unicode input.
+- [x] Public docs show grouped display as optional and normalization as canonical.
 
 
 ## References

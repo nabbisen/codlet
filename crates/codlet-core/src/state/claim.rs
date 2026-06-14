@@ -18,7 +18,7 @@ pub enum ClaimOutcome {
     Lost,
 }
 
-/// Classify an atomic claim attempt from the affected-row count.
+/// Classify an atomic claim attempt from the affected-row count (INV-5).
 ///
 /// `changed` is the number of rows the conditional UPDATE reported modifying:
 ///

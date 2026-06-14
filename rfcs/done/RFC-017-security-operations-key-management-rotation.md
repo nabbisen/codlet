@@ -113,11 +113,11 @@ If database and HMAC key are both suspected compromised, assume bearer secrets c
 
 ### 10.4 Concrete acceptance checklist
 
-- [ ] Key versions exist in all schemas.
-- [ ] Active/previous validation behavior is tested.
-- [ ] Missing previous key fails closed for affected records.
-- [ ] Rotation guide includes max-TTL waiting rule.
-- [ ] Emergency guide distinguishes DB-only leak from DB+key compromise.
+- [x] Key versions exist in all schemas.
+- [x] Active/previous validation behavior is tested.
+- [x] Missing previous key fails closed for affected records.
+- [x] Rotation guide includes max-TTL waiting rule.
+- [x] Emergency guide distinguishes DB-only leak from DB+key compromise.
 
 
 ## References

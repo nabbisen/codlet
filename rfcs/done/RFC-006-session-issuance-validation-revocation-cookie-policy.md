@@ -126,11 +126,11 @@ Revocation is monotonic. A revoked session cannot be unrevoked by codlet. If the
 
 ### 13.5 Concrete acceptance checklist
 
-- [ ] Cookie defaults are secure by construction.
-- [ ] Clear-cookie helper mirrors path/domain/name.
-- [ ] Session validation does not update mutable state unless renewal is explicitly configured.
-- [ ] Revoked and expired sessions are indistinguishable to public callers.
-- [ ] Examples demonstrate host authorization after session validation.
+- [x] Cookie defaults are secure by construction.
+- [x] Clear-cookie helper mirrors path/domain/name.
+- [x] Session validation does not update mutable state unless renewal is explicitly configured.
+- [x] Revoked and expired sessions are indistinguishable to public callers.
+- [x] Examples demonstrate host authorization after session validation.
 
 
 ## References

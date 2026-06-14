@@ -106,11 +106,11 @@ The following regressions should be named and blocked:
 
 ### 10.4 Concrete acceptance checklist
 
-- [ ] `codlet-test` can run the same store conformance suite against in-memory, D1, and SQLx stores.
-- [ ] CI separates core, adapters, examples, and docs.
-- [ ] Security gates are documented as release blockers.
-- [ ] Regression tests include the exact two service-side bugs already fixed: RNG fail-open and modulo bias.
-- [ ] v1 release notes include security policy and supported adapter matrix.
+- [x] `codlet-test` can run the same store conformance suite against in-memory, D1, and SQLx stores.
+- [~] CI separates core, adapters, examples, and docs. *(Note: done: CI now has per-crate jobs (core, conformance, sqlx, examples) since v0.8.0+audit)*
+- [x] Security gates are documented as release blockers.
+- [x] Regression tests include the exact two service-side bugs already fixed: RNG fail-open and modulo bias.
+- [~] v1 release notes include security policy and supported adapter matrix. *(Note: deferred: pre-v1; v1 release notes will include security policy and adapter matrix)*
 
 
 ## References

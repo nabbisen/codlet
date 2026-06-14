@@ -74,7 +74,7 @@ checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
 
 [[package]]
 name = "codlet-conformance"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "codlet-core",
  "futures",
@@ -83,7 +83,7 @@ dependencies = [
 
 [[package]]
 name = "codlet-core"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "getrandom 0.2.17",
  "hmac",
@@ -97,7 +97,7 @@ dependencies = [
 
 [[package]]
 name = "codlet-examples"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "codlet-core",
  "codlet-sqlx",
@@ -107,7 +107,7 @@ dependencies = [
 
 [[package]]
 name = "codlet-sqlx"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "codlet-conformance",
  "codlet-core",
@@ -1371,7 +1371,7 @@ checksum = "1ffae5123b2d3fc086436f8834ae3ab053a283cfac8fe0a0b8eaae044768a4c4"
 
 [[package]]
 name = "xtask"
-version = "0.7.0"
+version = "0.8.0"
 
 [[package]]
 name = "yoke"

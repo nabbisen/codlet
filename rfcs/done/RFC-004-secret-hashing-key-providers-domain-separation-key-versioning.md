@@ -172,11 +172,11 @@ Vectors are not production secrets; they guarantee cross-adapter compatibility.
 
 ### 12.5 Concrete acceptance checklist
 
-- [ ] All lookup functions accept a domain label/type.
-- [ ] All stores include `key_version` fields.
-- [ ] At least one test vector per domain exists.
-- [ ] No dev fallback key exists in normal constructors.
-- [ ] Redaction tests cover debug, display, serde, and audit paths.
+- [x] All lookup functions accept a domain label/type.
+- [x] All stores include `key_version` fields.
+- [x] At least one test vector per domain exists.
+- [x] No dev fallback key exists in normal constructors.
+- [x] Redaction tests cover debug, display, serde, and audit paths.
 
 
 ## References

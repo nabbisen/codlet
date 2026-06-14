@@ -2,11 +2,13 @@
 
 Governed by `000-rfc-lifecycle-policy.md`. The folder is the source of truth.
 
-- `proposed/` — open for review
-- `done/`     — Implemented
-- `archive/`  — withdrawn or superseded
+- `done/`    — Implemented
+- `archive/` — Withdrawn or superseded
 
-## Implemented (22)
+All 31 planned RFCs are implemented. RFC-018 (future server/IdP strategy)
+is archived as post-v1.
+
+## Implemented (31)
 
 | ID | Title | Version |
 |----|-------|---------|
@@ -32,21 +34,18 @@ Governed by `000-rfc-lifecycle-policy.md`. The folder is the source of truth.
 | RFC-021 | Error Taxonomy and User-Facing Copy Contract | v0.3.0 |
 | RFC-022 | Database Atomicity, Isolation, and Race Semantics | v0.5.0 |
 | RFC-023 | Adapter Conformance Test Suite | v0.5.0 |
+| RFC-024 | Observability, Metrics, and Redaction | v0.8.0 |
+| RFC-025 | Audit Sink and Security Event Vocabulary | v0.8.0 |
+| RFC-026 | Examples and Reference Applications | v0.8.0 |
+| RFC-027 | Runtime Portability, WASM, and `?Send` Strategy | v0.8.0 |
+| RFC-028 | Security Policy, Advisory Process, MSRV, and Release Discipline | v0.8.0 |
+| RFC-029 | Idempotency Result Persistence | v0.8.0 |
+| RFC-030 | Administrative Code Management API | v0.8.0 |
+| RFC-031 | Key Rotation Grace Period and Retirement | v0.8.0 |
+| RFC-032 | Code Delivery Channel Boundary | v0.8.0 |
 
-## Proposed (10)
+## Archive (1)
 
-| ID | Title |
-|----|-------|
-| RFC-018 | Future Server / IdP Crate Strategy |
-| RFC-024 | Observability, Metrics, and Redaction |
-| RFC-025 | Audit Sink and Security Event Vocabulary |
-| RFC-026 | Examples and Reference Applications |
-| RFC-027 | Runtime Portability, WASM, and `?Send` Strategy |
-| RFC-028 | Security Policy, Advisory Process, MSRV, and Release Discipline |
-| RFC-029 | Idempotency Result Persistence |
-| RFC-030 | Administrative Code Management API |
-| RFC-031 | Key Rotation Grace Period and Retirement |
-| RFC-032 | Code Delivery Channel Boundary |
-
-## Archive
-_None yet._
+| ID | Title | Reason |
+|----|-------|--------|
+| RFC-018 | Future Server / IdP Crate Strategy | Deferred post-v1 |

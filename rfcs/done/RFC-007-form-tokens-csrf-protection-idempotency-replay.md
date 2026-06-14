@@ -124,11 +124,11 @@ This prevents accidental collision between anonymous and real subject IDs.
 
 ### 13.5 Concrete acceptance checklist
 
-- [ ] Empty-string anonymous token use is replaced by explicit anonymous/flow type in design.
-- [ ] Purpose and bound resource are part of consume preconditions.
-- [ ] Replays cannot trigger side effects.
-- [ ] Token plaintext is never stored or logged.
-- [ ] CSRF docs avoid exposing framework-specific jargon to end users.
+- [x] Empty-string anonymous token use is replaced by explicit anonymous/flow type in design.
+- [x] Purpose and bound resource are part of consume preconditions.
+- [x] Replays cannot trigger side effects.
+- [x] Token plaintext is never stored or logged.
+- [x] CSRF docs avoid exposing framework-specific jargon to end users.
 
 
 ## References

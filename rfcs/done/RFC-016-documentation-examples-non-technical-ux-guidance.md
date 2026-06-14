@@ -102,11 +102,11 @@ codlet can recommend UX patterns but must not own UI rendering. Recommended lang
 
 ### 10.4 Concrete acceptance checklist
 
-- [ ] README has a safe quickstart and a security note.
-- [ ] Threat model is linked from README.
-- [ ] Adapter guarantee matrix is visible.
-- [ ] All example code compiles in CI.
-- [ ] User-facing copy guidance avoids jargon.
+- [x] README has a safe quickstart and a security note.
+- [x] Threat model is linked from README.
+- [x] Adapter guarantee matrix is visible.
+- [x] All example code compiles in CI.
+- [x] User-facing copy guidance avoids jargon.
 
 
 ## References

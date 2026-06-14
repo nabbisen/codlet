@@ -115,11 +115,11 @@ If any step before claim fails, no claim occurs. If claim wins but host hook fai
 
 ### 10.4 Concrete acceptance checklist
 
-- [ ] High-level API names do not imply authorization.
-- [ ] Host subject creation is a callback or explicit caller step.
-- [ ] Error mapping remains generic.
-- [ ] Session issuance cannot occur before claim success.
-- [ ] Examples show both low-level and high-level integration paths.
+- [x] High-level API names do not imply authorization.
+- [x] Host subject creation is a callback or explicit caller step.
+- [x] Error mapping remains generic.
+- [x] Session issuance cannot occur before claim success.
+- [~] Examples show both low-level and high-level integration paths. *(Note: partial: acceptance tests show both paths; public example binary shows two-step only)*
 
 
 ## References

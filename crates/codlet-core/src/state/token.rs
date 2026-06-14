@@ -38,7 +38,7 @@ pub enum TokenConsumeOutcome {
 /// - `already_consumed`— that row has `consumed_at IS NOT NULL`.
 /// - `binding_ok`      — the row's bound resource matches the caller's.
 ///
-/// The single rule that must never be violated: **`changed == 0` never
+/// The single rule that must never be violated (INV-6): **`changed == 0` never
 /// produces [`TokenConsumeOutcome::Proceed`]** (RFC-007 §5, §13.5,
 /// acceptance checklist item "changed == 0 never proceeds").
 #[must_use]

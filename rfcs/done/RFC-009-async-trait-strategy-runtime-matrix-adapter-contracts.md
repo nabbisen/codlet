@@ -95,11 +95,11 @@ The initial design can document this as reserved, but public APIs should not pre
 
 ### 11.4 Concrete acceptance checklist
 
-- [ ] Store method inputs are semantic structs, not framework request objects.
-- [ ] Worker compile test proves no accidental `Send` requirement.
-- [ ] Axum compile test proves server-side `Send` integration remains ergonomic.
-- [ ] Store trait documentation states which operations are atomic and fail-closed.
-- [ ] Adapter conformance tests are parameterized over store implementations.
+- [x] Store method inputs are semantic structs, not framework request objects.
+- [~] Worker compile test proves no accidental `Send` requirement. *(Note: deferred: Workers CI requires wasm32 target and Cloudflare credentials not available in this environment)*
+- [~] Axum compile test proves server-side `Send` integration remains ergonomic. *(Note: deferred: Axum adapter crate not yet in scope)*
+- [x] Store trait documentation states which operations are atomic and fail-closed.
+- [x] Adapter conformance tests are parameterized over store implementations.
 
 
 ## References
