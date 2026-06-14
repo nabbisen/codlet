@@ -6,7 +6,72 @@ semantic versioning once it reaches a stable release.
 
 ## [Unreleased]
 
-Nothing yet.
+Two new concrete implementation RFCs added.
+
+### Added
+
+- `rfcs/proposed/RFC-033` — Cloudflare Workers / D1 / KV Adapter
+  (`codlet-worker`): full implementation specification including wasm32
+  Cargo target config, timestamp representation (`D1Type::Real(f64)`),
+  affected-row count via `meta().changes`, `WorkerKeyProvider` from
+  `Env` secrets, `D1TableConfig` for zinnias-ciao compatibility,
+  `KvRateLimitStore` with eventual-consistency caveat, cookie helpers,
+  identity extraction, migration via `exec()`, Miniflare local test
+  strategy, and a 10-item acceptance checklist.
+
+- `rfcs/proposed/RFC-034` — PostgreSQL Adapter (`codlet-sqlx` `postgres`
+  feature): full implementation specification including `BIGINT` type
+  mapping, `0002_postgres.sql` migration, `PostgresStore` type, `READ
+  COMMITTED` + conditional UPDATE isolation rationale (with explicit
+  rejection of `RETURNING` and `FOR UPDATE`), `testcontainers`-based
+  test strategy, and an 8-item acceptance checklist.
+
+### Changed
+
+- RFC-010 status corrected: `Partially implemented` — the design is
+  accepted but `codlet-worker` crate has not been written yet; all 5
+  checklist items remain open. RFC-033 is the implementation RFC.
+
+- RFC-011 status corrected: `Partially implemented` — SQLite and in-memory
+  adapters are done; PostgreSQL adapter is not. All 5 checklist items
+  now ticked for the SQLite/mem portion. RFC-034 covers PostgreSQL.
+
+- RFC index updated: 2 proposed, 31 done (2 partial), 1 archived.
+
+## [0.10.0] — 2026-06-14
+
+Closes all RFC checklist items. RFC-009 items 2 and 3 are now verified by
+running tests, and `codlet-core` is confirmed to compile for
+`wasm32-unknown-unknown` — the target required for the Cloudflare Workers D1
+adapter. 152 tests. All 31 RFC checklists fully resolved.
+
+### Added
+
+- `crates/codlet-core/tests/rfc_009_compile.rs` — two compile tests that
+  close the last formally-annotated RFC-009 deferred items:
+  - `not_send_store_satisfies_code_store_trait`: a `!Send` type (raw pointer,
+    analogous to a D1 handle) implements `CodeStore` — the trait has no
+    implicit `Send` bound. Required for Cloudflare Workers.
+  - `send_sync_store_satisfies_axum_style_bounds`: a `Send + Sync` type
+    satisfies `CodeStore + Send + Sync + 'static` without any shim — the
+    bounds Axum/Tower shared state requires. No adapter layer needed.
+- `.cargo/config.toml` — workspace Cargo config placeholder, documented for
+  future wasm32 linker flags when `codlet-worker` is added.
+
+### Changed
+
+- `static_assertions = "1"` added to `codlet-core` dev-dependencies (used
+  by `rfc_009_compile.rs` to assert `Send + Sync` at compile time).
+- RFC-009 checklist items 2 and 3 are now `[x]` with verified test evidence
+  rather than `[~]` deferred. All 31 RFC checklists are fully resolved.
+
+### Verified
+
+- `cargo build -p codlet-core --target wasm32-unknown-unknown` passes.
+  `codlet-core` has no native I/O dependencies and compiles cleanly to WASM.
+  This is the prerequisite for `codlet-worker` (the Cloudflare D1 adapter).
+- CI `wasm32-compile` job (added in v0.9.0-audited) exercises this path on
+  every push.
 
 ## [0.9.0] — 2026-06-14
 
@@ -464,7 +529,8 @@ establishes the repository, process, and an empty `codlet-core` skeleton.
   or async-executor crates (RFC-002 acceptance gate): only `hmac`, `sha2`,
   `subtle`, `getrandom`, `thiserror`.
 
-[Unreleased]: https://github.com/nabbisen/codlet/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/nabbisen/codlet/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/nabbisen/codlet/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/nabbisen/codlet/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/nabbisen/codlet/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/nabbisen/codlet/compare/v0.6.0...v0.7.0

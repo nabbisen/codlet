@@ -42,7 +42,27 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test --workspace
 
-  # RFC-015 §2: CI separates core, adapters, examples, and docs.
+  # RFC-009 item 2: codlet-core must compile for wasm32-unknown-unknown
+  # (required for the Cloudflare Workers D1 adapter).
+  wasm32-compile:
+    name: codlet-core wasm32 compile check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - run: cargo build -p codlet-core --target wasm32-unknown-unknown
+
+  # RFC-009 item 3: a Send+Sync store satisfies the trait without adapter
+  # shims — proven by the rfc_009_compile test in codlet-core.
+  test-send-compat:
+    name: RFC-009 Send/!Send compile tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test -p codlet-core --test rfc_009_compile --all-features
   test-core:
     name: test codlet-core (all features)
     runs-on: ubuntu-latest

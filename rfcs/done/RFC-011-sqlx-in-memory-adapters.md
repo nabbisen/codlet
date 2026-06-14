@@ -1,6 +1,6 @@
 # RFC-011: SQLx and In-Memory Adapters
 
-- **Status:** Implemented (v0.5.0)
+- **Status:** Partially implemented (v0.5.0 — SQLite + in-memory done; PostgreSQL adapter not yet written)
 - **Target milestone:** M4
 - **Primary crate(s):** codlet-sqlx + codlet-test
 - **Source basis:** zinnias-ciao v0.36.1 service handoff
@@ -90,11 +90,11 @@ The in-memory adapter is a test and example tool unless explicitly documented ot
 
 ### 10.5 Concrete acceptance checklist
 
-- [ ] SQLite adapter passes all store conformance tests.
-- [ ] In-memory adapter is documented as non-production.
-- [ ] Schema includes key version columns from first migration.
-- [ ] Atomic operations do not rely on read-then-write without conditional update.
-- [ ] Migration docs explain host-owned domain tables remain separate.
+- [x] SQLite adapter passes all store conformance tests.
+- [x] In-memory adapter is documented as non-production.
+- [x] Schema includes key version columns from first migration.
+- [x] Atomic operations do not rely on read-then-write without conditional update.
+- [x] Migration docs explain host-owned domain tables remain separate.
 
 
 ## References

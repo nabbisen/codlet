@@ -96,8 +96,8 @@ The initial design can document this as reserved, but public APIs should not pre
 ### 11.4 Concrete acceptance checklist
 
 - [x] Store method inputs are semantic structs, not framework request objects.
-- [~] Worker compile test proves no accidental `Send` requirement. *(Note: deferred: Workers CI requires wasm32 target and Cloudflare credentials not available in this environment)*
-- [~] Axum compile test proves server-side `Send` integration remains ergonomic. *(Note: deferred: Axum adapter crate not yet in scope)*
+- [x] Worker compile test proves no accidental `Send` requirement. *(Implemented v0.9.0+: wasm32-unknown-unknown target installed; codlet-core compiles for wasm32; `rfc_009_compile::not_send_store_satisfies_code_store_trait` proves the trait has no Send bound; CI wasm32-compile job added.)*
+- [x] Axum compile test proves server-side `Send` integration remains ergonomic. *(Implemented v0.9.0+: `rfc_009_compile::send_sync_store_satisfies_axum_style_bounds` proves a Send+Sync store satisfies CodeStore + Send + Sync + 'static without any shim — the bound native Axum/Tower handlers require.)*
 - [x] Store trait documentation states which operations are atomic and fail-closed.
 - [x] Adapter conformance tests are parameterized over store implementations.
 

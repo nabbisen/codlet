@@ -1,6 +1,6 @@
 # RFC-010: Cloudflare Workers, D1, and KV Adapter
 
-- **Status:** Implemented (v0.7.0)
+- **Status:** Partially implemented (v0.7.0 — RFC accepted; codlet-worker crate not yet written)
 - **Target milestone:** M4
 - **Primary crate(s):** codlet-worker
 - **Source basis:** zinnias-ciao v0.36.1 service handoff

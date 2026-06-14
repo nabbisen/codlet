@@ -2,11 +2,16 @@
 
 Governed by `000-rfc-lifecycle-policy.md`. The folder is the source of truth.
 
-- `done/`    — Implemented
-- `archive/` — Withdrawn or superseded
+- `proposed/` — open for review
+- `done/`     — Implemented (fully or partially)
+- `archive/`  — Withdrawn or superseded
 
-All 31 planned RFCs are implemented. RFC-018 (future server/IdP strategy)
-is archived as post-v1.
+## Proposed (2)
+
+| ID | Title |
+|----|-------|
+| RFC-033 | Cloudflare Workers / D1 / KV Adapter (`codlet-worker`) |
+| RFC-034 | PostgreSQL Adapter (`codlet-sqlx` postgres feature) |
 
 ## Implemented (31)
 
@@ -21,8 +26,8 @@ is archived as post-v1.
 | RFC-007 | Form Tokens, CSRF Protection, and Idempotency Replay | v0.2.0 |
 | RFC-008 | Rate Limiting and Abuse Resistance | v0.3.0 |
 | RFC-009 | Async Trait Strategy, Runtime Matrix, and Adapter Contracts | v0.4.0 |
-| RFC-010 | Cloudflare Workers, D1, and KV Adapter | v0.7.0 |
-| RFC-011 | SQLx and In-Memory Adapters | v0.5.0 |
+| RFC-010 | Cloudflare Workers, D1, and KV Adapter | v0.7.0 *(partial)* |
+| RFC-011 | SQLx and In-Memory Adapters | v0.5.0 *(partial)* |
 | RFC-012 | Error Model, Privacy, and Audit Events | v0.3.0 |
 | RFC-013 | High-Level Orchestration API and Host Application Boundary | v0.4.0 |
 | RFC-014 | zinnias-ciao Migration and Compatibility Plan | v0.6.0 |

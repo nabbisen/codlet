@@ -1,0 +1,3 @@
+# Workspace-level Cargo configuration.
+# Currently no overrides needed. Kept for future use (e.g. wasm32 linker flags
+# when adding the codlet-worker crate).
