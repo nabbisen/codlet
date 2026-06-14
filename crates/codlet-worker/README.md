@@ -44,21 +44,19 @@ use codlet_worker::{
 
 #[worker::event(fetch)]
 async fn fetch(req: Request, env: Env, _ctx: Context) -> Result<Response> {
-    let db     = env.d1("DB")?;
     let kv     = env.kv("CODLET_RL")?;
     let tables = D1TableConfig::default();
 
     // Run migrations on every deploy (idempotent — IF NOT EXISTS).
-    run_d1_migrations(&db).await?;
+    // env.d1() returns a new handle per call (takes &self) — no Rc needed.
+    run_d1_migrations(&env.d1("DB")?).await?;
 
     // Load HMAC keys from Wrangler secrets. Fails closed if missing (INV-2).
     let keys = WorkerKeyProvider::from_env(&env, "v1", "CODLET_HMAC_KEY_V1", &[])?;
 
-    // D1Database is not Clone; share it via Rc (Workers are single-threaded).
-    let db = std::rc::Rc::new(db);
-    let code_store    = D1CodeStore::new(std::rc::Rc::clone(&db), tables.clone());
-    let session_store = D1SessionStore::new(std::rc::Rc::clone(&db), tables.clone());
-    let token_store   = D1FormTokenStore::new(db, tables);
+    let code_store    = D1CodeStore::new(env.d1("DB")?, tables.clone());
+    let session_store = D1SessionStore::new(env.d1("DB")?, tables.clone());
+    let token_store   = D1FormTokenStore::new(env.d1("DB")?, tables);
     let rl_store      = KvRateLimitStore::new(kv);
 
     // Wire into codlet_core managers …
@@ -68,13 +66,18 @@ async fn fetch(req: Request, env: Env, _ctx: Context) -> Result<Response> {
 
 ## Migrating from zinnias-ciao
 
-If your existing service uses different table names, use `D1TableConfig::zinnias_ciao_compat()`:
+`D1TableConfig::zinnias_ciao_tables()` overrides the three table names to match
+zinnias-ciao v0.36.1 (`invite_codes`, `sessions`, `form_tokens`):
 
 ```rust,ignore
-let tables = D1TableConfig::zinnias_ciao_compat();
-// codes → "invite_codes", sessions → "sessions", form_tokens → "form_tokens"
-// Column names must match the codlet schema; add key_version columns first.
+let tables = D1TableConfig::zinnias_ciao_tables();
 ```
+
+**This remaps table names only — not column names.** codlet's SQL always uses
+codlet column names (`lookup_key`, `key_version`, `grant_payload`, `scope`,
+`used_by_subject`, `subject`, `subject_kind`, etc.). Before using this preset
+the zinnias-ciao tables must have all of those columns present. See the
+migration guide for the required `ALTER TABLE … RENAME COLUMN` statements.
 
 See `docs/src/migration-from-zinnias-ciao.md` for the full checklist.
 

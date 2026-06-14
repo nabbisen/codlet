@@ -19,7 +19,45 @@ pub enum TokenSubject {
     Anonymous,
     /// Token issued for an authenticated subject.
     Authenticated(crate::secret::SubjectId),
-    /// Token bound to a transient flow ID (e.g. a join ticket).
+    /// Token bound to a transient flow ID (e.g. a multi-step join ticket).
+    ///
+    /// ## Intended pattern for two-step join flows
+    ///
+    /// The host generates a random flow ID at the start of the flow and
+    /// stores it in a short-lived bearer cookie (the "join ticket"):
+    ///
+    /// ```rust,ignore
+    /// // Step 1 — POST /join: validate the invite code, issue a join ticket.
+    /// let flow_id = CodeId::new(generate_random_hex(&mut rng));
+    /// // Set `__join_ticket` cookie to flow_id.expose() (the plaintext).
+    /// // The cookie is HttpOnly, Secure, SameSite=Strict, short TTL.
+    ///
+    /// // Also issue a CSRF form token bound to this flow:
+    /// let token = form_token_mgr.issue(
+    ///     &mut rng,
+    ///     TokenSubject::Flow(flow_id.clone()),
+    ///     "join_profile",          // purpose
+    ///     None,                    // bound_resource (or Some(community_id))
+    /// ).await?;
+    /// // Embed token.expose() in the profile form as a hidden field.
+    ///
+    /// // Step 2 — POST /join/profile: consume the form token.
+    /// // Read flow_id from the `__join_ticket` cookie.
+    /// let flow_id = CodeId::new(join_ticket_cookie_value.into());
+    /// let result = form_token_mgr.consume(
+    ///     raw_form_token,
+    ///     &TokenSubject::Flow(flow_id),
+    ///     "join_profile",
+    ///     None,
+    /// ).await?;
+    /// // Ok(None) → Proceed; Ok(Some(_)) → Replay; Err → Invalid/expired.
+    /// ```
+    ///
+    /// `SecretDomain::FlowTicket` is used when the host wants to hash the
+    /// join-ticket cookie value itself (making it a codlet-managed HMAC
+    /// lookup rather than a raw random string). This is optional — the host
+    /// may manage the ticket cookie independently and use `TokenSubject::Flow`
+    /// only for the CSRF form token layer.
     Flow(crate::secret::CodeId),
 }
 

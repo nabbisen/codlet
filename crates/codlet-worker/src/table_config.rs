@@ -31,15 +31,20 @@ impl Default for D1TableConfig {
 }
 
 impl D1TableConfig {
-    /// Config matching the zinnias-ciao v0.36.1 table names.
+    /// Table-name preset for zinnias-ciao v0.36.1 (`invite_codes`, `sessions`,
+    /// `form_tokens`).
     ///
-    /// Use this when migrating the service without immediately renaming
-    /// tables. See `docs/src/migration-from-zinnias-ciao.md` for the full
-    /// migration plan.
+    /// **This is a table-name override only.** Column names are not remapped.
+    /// codlet's SQL always uses its own column names (`lookup_key`,
+    /// `key_version`, `grant_payload`, `scope`, `used_by_subject`, `subject`,
+    /// `subject_kind`, etc.). Before using this preset, the zinnias-ciao tables
+    /// must have all of those columns present — either by renaming the existing
+    /// columns or by running codlet's migration against the existing tables after
+    /// dropping or renaming conflicting columns.
     ///
-    /// Note: column names are still expected to match the codlet schema.
-    /// Apply `ALTER TABLE … ADD COLUMN key_version …` before using this.
-    pub fn zinnias_ciao_compat() -> Self {
+    /// See `docs/src/migration-from-zinnias-ciao.md` for the full column rename
+    /// SQL and migration sequence.
+    pub fn zinnias_ciao_tables() -> Self {
         Self {
             codes: "invite_codes",
             sessions: "sessions",
