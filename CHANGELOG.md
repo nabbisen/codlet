@@ -8,6 +8,46 @@ semantic versioning once it reaches a stable release.
 
 Nothing yet.
 
+## [0.13.0] — 2026-06-14
+
+Feature-flag audit: all cargo features now gate their code correctly.
+A postgres-only deployment no longer compiles SQLite code; a native
+server build no longer links `getrandom/js` wasm-bindgen glue.
+
+### Fixed
+
+- **`codlet-sqlx`: SQLite and PostgreSQL now properly isolated.**
+  The sqlite modules (`code`, `session`, `token`, `admin`, `migration`,
+  `SqliteStore`) are now gated on `#[cfg(feature = "sqlite")]`.
+  Previously, `--features postgres` would still compile `sqlx-sqlite`
+  and all SQLite code even when unused.
+  - `--no-default-features --features postgres`: compiles only
+    `sqlx-postgres` — SQLite driver and code absent from the binary.
+  - `--features sqlite --features postgres`: both drivers compiled.
+  - Default (`sqlite` only): unchanged for existing users.
+  - `codlet-sqlx/tests/conformance.rs`: SQLite tests wrapped in
+    `#[cfg(feature = "sqlite")] mod sqlite_tests`; Postgres tests
+    already in `#[cfg(feature = "postgres-test")] mod postgres_tests`.
+  - CI `test-postgres` job now uses `--no-default-features --features
+    postgres-test`, verifying feature isolation on every push.
+
+- **`getrandom/js` feature removed from native builds.**
+  The `js` feature routes `getrandom` through `wasm-bindgen`'s
+  `crypto.getRandomValues()` and has no effect on native targets —
+  but added wasm-bindgen as a transitive dependency to native binaries.
+  The workspace root now specifies `getrandom` without `features = ["js"]`.
+  `codlet-core` activates `features = ["js"]` only under
+  `[target.'cfg(target_arch = "wasm32")'.dependencies]`.
+  Native server binaries no longer link wasm-bindgen glue.
+
+- **`codlet-sqlx` description updated** to reflect PostgreSQL support.
+
+### Changed
+
+- `codlet-sqlx` Cargo.toml comment added explaining the `runtime-tokio`
+  rationale: tokio is the only supported async runtime; hosts on async-std
+  must bridge via a tokio block.
+
 ## [0.12.0] — 2026-06-14
 
 `PostgresStore` — PostgreSQL adapter for `codlet-sqlx`. Full `CodeStore`,
@@ -631,7 +671,8 @@ establishes the repository, process, and an empty `codlet-core` skeleton.
   or async-executor crates (RFC-002 acceptance gate): only `hmac`, `sha2`,
   `subtle`, `getrandom`, `thiserror`.
 
-[Unreleased]: https://github.com/nabbisen/codlet/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/nabbisen/codlet/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/nabbisen/codlet/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/nabbisen/codlet/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/nabbisen/codlet/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/nabbisen/codlet/compare/v0.9.0...v0.10.0

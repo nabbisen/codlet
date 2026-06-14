@@ -121,7 +121,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo test -p codlet-sqlx --features postgres-test
+      # `--no-default-features` ensures the SQLite driver is NOT compiled —
+      # verifying the feature isolation that RFC-034 requires.
+      - run: cargo test -p codlet-sqlx --no-default-features --features postgres-test
 
   test-examples:
     name: build and run codlet-examples
