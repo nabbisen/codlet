@@ -6,7 +6,7 @@ Governed by `000-rfc-lifecycle-policy.md`. The folder is the source of truth.
 - `done/`     — Implemented
 - `archive/`  — withdrawn or superseded
 
-## Implemented (16)
+## Implemented (20)
 
 | ID | Title | Version |
 |----|-------|---------|
@@ -22,22 +22,22 @@ Governed by `000-rfc-lifecycle-policy.md`. The folder is the source of truth.
 | RFC-011 | SQLx and In-Memory Adapters | v0.5.0 |
 | RFC-012 | Error Model, Privacy, and Audit Events | v0.3.0 |
 | RFC-013 | High-Level Orchestration API and Host Application Boundary | v0.4.0 |
+| RFC-014 | zinnias-ciao Migration and Compatibility Plan | v0.6.0 |
+| RFC-015 | Test Strategy, Fuzzing, Release Gates, and Security Regression Tests | v0.6.0 |
+| RFC-017 | Security Operations, Key Management, and Rotation | v0.6.0 |
+| RFC-019 | Typestate API and Opaque Newtypes | v0.6.0 |
 | RFC-020 | Randomness, Clock, and Deterministic Testing | v0.3.0 |
 | RFC-021 | Error Taxonomy and User-Facing Copy Contract | v0.3.0 |
 | RFC-022 | Database Atomicity, Isolation, and Race Semantics | v0.5.0 |
 | RFC-023 | Adapter Conformance Test Suite | v0.5.0 |
 
-## Proposed (16)
+## Proposed (12)
 
 | ID | Title |
 |----|-------|
 | RFC-010 | Cloudflare Workers, D1, and KV Adapter |
-| RFC-014 | zinnias-ciao Migration and Compatibility Plan |
-| RFC-015 | Test Strategy, Fuzzing, Release Gates, and Security Regression Tests |
 | RFC-016 | Documentation, Examples, and Non-Technical UX Guidance |
-| RFC-017 | Security Operations, Key Management, and Rotation |
 | RFC-018 | Future Server / IdP Crate Strategy |
-| RFC-019 | Typestate API and Opaque Newtypes |
 | RFC-024 | Observability, Metrics, and Redaction |
 | RFC-025 | Audit Sink and Security Event Vocabulary |
 | RFC-026 | Examples and Reference Applications |

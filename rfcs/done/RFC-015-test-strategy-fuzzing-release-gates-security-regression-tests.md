@@ -1,6 +1,6 @@
 # RFC-015: Test Strategy, Fuzzing, Release Gates, and Security Regression Tests
 
-- **Status:** Proposed
+- **Status:** Implemented (v0.6.0)
 - **Target milestone:** M6
 - **Primary crate(s):** workspace-wide
 - **Source basis:** zinnias-ciao v0.36.1 service handoff

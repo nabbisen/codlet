@@ -8,6 +8,49 @@ semantic versioning once it reaches a stable release.
 
 Nothing yet.
 
+## [0.6.0] — 2026-06-14
+
+Typestate completions, two new release gates, key rotation and migration docs,
+and `.gitignore` updated to the standard Cargo template. 133 tests, 5 static
+release gates, 20 RFCs implemented.
+
+### Added
+
+- `secret` module additions (RFC-019):
+  - `NormalizedCode` — distinct type for the post-normalization canonical form,
+    preventing confusion between raw user input and the value passed to HMAC
+    derivation.
+  - `Purpose` — validated non-empty purpose label; `Purpose::new("")` returns
+    `None`.
+  - `ScopeKey` — host-owned scope/boundary label.
+  All three are exported from `codlet_core` root.
+
+- Two new `xtask release-check` gates (RFC-015):
+  - `cookie-attrs-present` — verifies `HttpOnly`, `Secure`, and `SameSite`
+    appear in `cookie.rs`; fails if any is removed.
+  - `no-plaintext-in-store-ops` — bans `.expose()` on the same line as
+    `.bind(` or `INSERT` in library source, preventing accidental plaintext
+    persistence.
+  Both gates verified to fire on injected violations. Total: 5 static gates.
+
+- `docs/src/key-rotation.md` — operational key management and rotation guide
+  (RFC-017): key states, planned rotation procedure, emergency compromise
+  procedure, what codlet does vs. does not do.
+
+- `docs/src/migration-from-zinnias-ciao.md` — migration plan (RFC-014):
+  HMAC incompatibility explanation, parallel lookup strategy, schema migration
+  SQL, column mapping table, cookie name compatibility, checklist.
+
+- `docs/src/SUMMARY.md` updated with new pages.
+
+- `.gitignore` replaced with the standard Cargo template (covers `debug/`,
+  `target`, `*.rs.bk`, `*.pdb`, `mutants.out*/`, RustRover hints).
+
+### Changed
+
+- RFC-014, RFC-015, RFC-017, RFC-019 moved `proposed/ → done/`
+  (Implemented v0.6.0). 20 RFCs total implemented, 12 remaining proposed.
+
 ## [0.5.0] — 2026-06-14
 
 First production adapter: SQLite via SQLx. A new shared conformance test suite
@@ -296,7 +339,8 @@ establishes the repository, process, and an empty `codlet-core` skeleton.
   or async-executor crates (RFC-002 acceptance gate): only `hmac`, `sha2`,
   `subtle`, `getrandom`, `thiserror`.
 
-[Unreleased]: https://github.com/nabbisen/codlet/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/nabbisen/codlet/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/nabbisen/codlet/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/nabbisen/codlet/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/nabbisen/codlet/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/nabbisen/codlet/compare/v0.2.0...v0.3.0

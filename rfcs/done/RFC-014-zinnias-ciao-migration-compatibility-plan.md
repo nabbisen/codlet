@@ -1,6 +1,6 @@
 # RFC-014: zinnias-ciao Migration and Compatibility Plan
 
-- **Status:** Proposed
+- **Status:** Implemented (v0.6.0)
 - **Target milestone:** M5
 - **Primary crate(s):** codlet-core + codlet-worker
 - **Source basis:** zinnias-ciao v0.36.1 service handoff

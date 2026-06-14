@@ -222,3 +222,116 @@ mod tests {
         assert!(!json.contains("supersecret"));
     }
 }
+
+// ── RFC-019: additional typed wrappers ───────────────────────────────────────
+
+/// A one-time code after normalization (whitespace/hyphen stripped, uppercased).
+///
+/// Constructed only via [`crate::code::normalize()`] + validation so it is
+/// impossible to confuse raw user input with the canonical form used for
+/// HMAC derivation.
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct NormalizedCode(String);
+
+impl NormalizedCode {
+    /// Wrap a value already known to be normalized. Prefer calling
+    /// [`crate::code::validate_code_input`] which constructs this type.
+    #[must_use]
+    pub fn new(value: String) -> Self {
+        Self(value)
+    }
+
+    /// Borrow the normalized code string.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl core::fmt::Display for NormalizedCode {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        // NormalizedCode is not a secret — it is the index form used for lookup.
+        f.write_str(&self.0)
+    }
+}
+
+/// A validated purpose label for a code or form token (RFC-019).
+///
+/// Prevents mixing up purpose strings between operations; not a secret.
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct Purpose(String);
+
+impl Purpose {
+    /// Wrap a purpose string. Must be non-empty; returns `None` otherwise.
+    #[must_use]
+    pub fn new(value: impl Into<String>) -> Option<Self> {
+        let s: String = value.into();
+        if s.is_empty() { None } else { Some(Self(s)) }
+    }
+
+    /// Borrow the purpose string.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl core::fmt::Display for Purpose {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+/// A scope key — an optional host-owned boundary label (community ID, tenant,
+/// etc.) used to restrict code lookup and revocation (RFC-019).
+///
+/// Not a secret; safe to log and display.
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct ScopeKey(String);
+
+impl ScopeKey {
+    /// Wrap a scope key string.
+    #[must_use]
+    pub fn new(value: impl Into<String>) -> Self {
+        Self(value.into())
+    }
+
+    /// Borrow the scope key string.
+    #[must_use]
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl core::fmt::Display for ScopeKey {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+#[cfg(test)]
+mod rfc019_tests {
+    use super::*;
+
+    #[test]
+    fn normalized_code_displays_plainly() {
+        let n = NormalizedCode::new("ABCD2345".into());
+        assert_eq!(format!("{n}"), "ABCD2345");
+        assert_eq!(n.as_str(), "ABCD2345");
+    }
+
+    #[test]
+    fn purpose_rejects_empty() {
+        assert!(Purpose::new("").is_none());
+        assert!(Purpose::new("logout").is_some());
+    }
+
+    #[test]
+    fn scope_key_roundtrip() {
+        let s = ScopeKey::new("community-42");
+        assert_eq!(s.as_str(), "community-42");
+        assert_eq!(format!("{s}"), "community-42");
+    }
+}

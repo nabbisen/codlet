@@ -76,7 +76,8 @@ pub use hashing::{
 };
 pub use rng::{RandomSource, SystemRandom};
 pub use secret::{
-    CodeId, FormTokenSecret, PlainCode, SecretString, SessionId, SessionSecret, SubjectId,
+    CodeId, FormTokenSecret, NormalizedCode, PlainCode, Purpose, ScopeKey, SecretString, SessionId,
+    SessionSecret, SubjectId,
 };
 pub use state::{
     ClaimOutcome, SessionValidationOutcome, TokenConsumeOutcome, classify_claim, classify_session,

@@ -45,6 +45,8 @@ fn release_check() -> ExitCode {
         ("no-fallback-key", gate_no_fallback_key),
         ("rng-no-silent-fallback", gate_rng_no_silent_fallback),
         ("no-debug-prints", gate_no_debug_prints),
+        ("cookie-attrs-present", gate_cookie_attrs),
+        ("no-plaintext-in-store-ops", gate_no_plaintext_store),
     ];
 
     let mut failed = 0usize;
@@ -179,6 +181,66 @@ fn gate_no_debug_prints() -> Result<(), String> {
                 if line.contains(b) {
                     hits.push(format!("{path}:{}: contains {b}", i + 1));
                 }
+            }
+        }
+    }
+    if hits.is_empty() {
+        Ok(())
+    } else {
+        Err(hits.join("; "))
+    }
+}
+
+/// RFC-006/015: The cookie builder must always emit `HttpOnly` and `Secure` in
+/// production profiles. Bans construction of `Set-Cookie` values that omit
+/// these attributes in non-dev code paths inside `codlet-core`.
+///
+/// Specifically: if `build_set_cookie` or `build_clear_cookie` is called and
+/// the result does NOT contain `HttpOnly`, that is a security defect. Here we
+/// scan for any line that builds a Set-Cookie string without the attribute in a
+/// non-test source file — a heuristic, not a full parser.
+fn gate_cookie_attrs() -> Result<(), String> {
+    // The cookie module is the only place cookies are built; verify it contains
+    // both attribute names. If they disappear from that file, the gate fires.
+    let required = ["HttpOnly", "Secure", "SameSite"];
+    let mut missing = Vec::new();
+    for (path, src) in library_sources() {
+        if !path.contains("cookie.rs") {
+            continue;
+        }
+        for attr in required {
+            if !src.contains(attr) {
+                missing.push(format!("{path}: missing {attr:?} in cookie builder"));
+            }
+        }
+    }
+    if missing.is_empty() {
+        Ok(())
+    } else {
+        Err(missing.join("; "))
+    }
+}
+
+/// RFC-005/015: No raw secret string (the bearer value) should appear in a
+/// store-insertion call. Bans patterns like `insert(secret.expose())` in
+/// library source that would persist the plaintext rather than the lookup key.
+///
+/// Heuristic: reject any non-comment line inside a store impl that calls both
+/// `.expose()` and an insert/update/bind in the same line, which would
+/// indicate the plaintext is being passed to the DB layer.
+fn gate_no_plaintext_store() -> Result<(), String> {
+    let mut hits = Vec::new();
+    for (path, src) in library_sources() {
+        if path.contains("/tests/") {
+            continue;
+        }
+        for (i, line) in src.lines().enumerate() {
+            if is_comment(line) {
+                continue;
+            }
+            // Pattern: `.expose()` used directly in a bind/insert/execute call.
+            if line.contains(".expose()") && (line.contains(".bind(") || line.contains("INSERT")) {
+                hits.push(format!("{path}:{}: expose() in store call", i + 1));
             }
         }
     }

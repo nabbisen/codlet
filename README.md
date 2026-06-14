@@ -82,12 +82,12 @@ let _ = lookup_key; // store this + key_version; never store `code`
 
 ## Status
 
-Pre-release (v0.5.0). 16 RFCs implemented, 130 tests. The complete primitive,
-orchestration, and first adapter layers are in place: `codlet-core` (all
-security primitives and managers), `codlet-conformance` (parameterised
-conformance suite), and `codlet-sqlx` (SQLite adapter passing all conformance
-tests including the concurrent race). Next: Axum integration helper and
-PostgreSQL support.
+Pre-release (v0.6.0). 20 RFCs implemented, 133 tests, 5 static release gates.
+The full stack is in place: primitive layer (`codlet-core`), orchestration
+managers (`auth` module), conformance suite (`codlet-conformance`), SQLite
+adapter (`codlet-sqlx`), key rotation guide, and zinnias-ciao migration plan.
+Remaining work targets the Cloudflare Workers/D1 adapter (RFC-010) and
+post-v1 features.
 
 ## License
 
