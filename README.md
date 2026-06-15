@@ -84,18 +84,6 @@ let _ = lookup_key; // store this + key_version; never store `code`
   form-token consume are trait-level contracts backed by conditional writes;
   every adapter must pass a shared conformance suite.
 
-## More detail
-
-- Architecture, scope, and non-goals: [`rfcs/done/RFC-001`](./rfcs/done/RFC-001-project-scope-product-shape-non-goals.md),
-  [`rfcs/done/RFC-002`](./rfcs/done/RFC-002-crate-architecture-feature-flags-runtime-matrix.md).
-- All design proposals and their lifecycle: [`rfcs/README.md`](./rfcs/README.md).
-- **Threat model** (what codlet protects against): [`docs/src/threat-model.md`](./docs/src/threat-model.md).
-- **Adapter guarantee matrix** and secure configuration guide: [`docs/src/adapter-matrix-and-config.md`](./docs/src/adapter-matrix-and-config.md).
-- **Key rotation** and emergency procedure: [`docs/src/key-rotation.md`](./docs/src/key-rotation.md).
-- **Migration from an existing service**: [`docs/src/migration-from-an-existing-service.md`](./docs/src/migration-from-an-existing-service.md).
-- Security policy and how to report a vulnerability: [`SECURITY.md`](./SECURITY.md).
-- Full documentation lives under [`docs/src`](./docs/src) (mdBook-compatible).
-
 ## How it fits in your service
 
 codlet authenticates — your application authorizes. The diagram below shows
@@ -137,6 +125,18 @@ sequenceDiagram
     Store-->>App: Authorization data
     App-->>User: Serve response (host policy)
 ```
+
+## More detail
+
+- Architecture, scope, and non-goals: [`rfcs/done/RFC-001`](./rfcs/done/RFC-001-project-scope-product-shape-non-goals.md),
+  [`rfcs/done/RFC-002`](./rfcs/done/RFC-002-crate-architecture-feature-flags-runtime-matrix.md).
+- All design proposals and their lifecycle: [`rfcs/README.md`](./rfcs/README.md).
+- **Threat model** (what codlet protects against): [`docs/src/threat-model.md`](./docs/src/threat-model.md).
+- **Adapter guarantee matrix** and secure configuration guide: [`docs/src/adapter-matrix-and-config.md`](./docs/src/adapter-matrix-and-config.md).
+- **Key rotation** and emergency procedure: [`docs/src/key-rotation.md`](./docs/src/key-rotation.md).
+- **Migration from an existing service**: [`docs/src/migration-from-an-existing-service.md`](./docs/src/migration-from-an-existing-service.md).
+- Security policy and how to report a vulnerability: [`SECURITY.md`](./SECURITY.md).
+- Full documentation lives under [`docs/src`](./docs/src) (mdBook-compatible).
 
 ## License
 
