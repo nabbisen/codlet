@@ -35,7 +35,7 @@ where
         .await
         .unwrap();
     let (outcome, _) = store
-        .consume_form_token(&token_lk("t1"), &auth(1), "logout", None, NOW)
+        .consume_form_token(&[token_lk("t1")], &auth(1), "logout", None, NOW)
         .await
         .unwrap();
     assert_eq!(
@@ -57,12 +57,12 @@ where
         .await
         .unwrap();
     let (r1, _) = store
-        .consume_form_token(&token_lk("t2"), &auth(1), "save", None, NOW)
+        .consume_form_token(&[token_lk("t2")], &auth(1), "save", None, NOW)
         .await
         .unwrap();
     assert_eq!(r1, TokenConsumeOutcome::Proceed);
     let (r2, _) = store
-        .consume_form_token(&token_lk("t2"), &auth(1), "save", None, NOW)
+        .consume_form_token(&[token_lk("t2")], &auth(1), "save", None, NOW)
         .await
         .unwrap();
     assert_eq!(
@@ -84,7 +84,7 @@ where
         .await
         .unwrap();
     let (outcome, _) = store
-        .consume_form_token(&token_lk("t3"), &auth(1), "act", None, NOW)
+        .consume_form_token(&[token_lk("t3")], &auth(1), "act", None, NOW)
         .await
         .unwrap();
     assert_eq!(
@@ -106,7 +106,7 @@ where
         .await
         .unwrap();
     let (outcome, _) = store
-        .consume_form_token(&token_lk("t4"), &auth(1), "delete", None, NOW)
+        .consume_form_token(&[token_lk("t4")], &auth(1), "delete", None, NOW)
         .await
         .unwrap();
     assert_eq!(
@@ -128,7 +128,7 @@ where
         .await
         .unwrap();
     let (outcome, _) = store
-        .consume_form_token(&token_lk("t5"), &auth(2), "save", None, NOW)
+        .consume_form_token(&[token_lk("t5")], &auth(2), "save", None, NOW)
         .await
         .unwrap();
     assert_eq!(
@@ -150,7 +150,7 @@ where
         .await
         .unwrap();
     let (outcome, _) = store
-        .consume_form_token(&token_lk("t6"), &auth(1), "edit", Some("res-B"), NOW)
+        .consume_form_token(&[token_lk("t6")], &auth(1), "edit", Some("res-B"), NOW)
         .await
         .unwrap();
     assert_eq!(
@@ -169,7 +169,7 @@ where
     // Unknown token → changed==0 → must be Invalid, never Proceed.
     let store = factory().await;
     let (outcome, _) = store
-        .consume_form_token(&token_lk("ghost"), &auth(1), "act", None, NOW)
+        .consume_form_token(&[token_lk("ghost")], &auth(1), "act", None, NOW)
         .await
         .unwrap();
     assert_ne!(

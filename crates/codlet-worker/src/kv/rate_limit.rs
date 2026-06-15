@@ -70,10 +70,6 @@ impl RateLimitStore for KvRateLimitStore {
                 RateLimitUnavailable::FailClosed => {
                     Err(StoreError::Backend(format!("KV check failed: {e}")))
                 }
-                RateLimitUnavailable::SoftDenyAfterThreshold(_) => {
-                    // Conservative: fail-open when threshold unknown.
-                    Ok(RateLimitOutcome::Allow)
-                }
             },
         }
     }

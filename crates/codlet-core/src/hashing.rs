@@ -151,6 +151,12 @@ pub trait KeyProvider {
     /// [`KeyError::MissingKeyVersion`] if that version is unknown. Callers must
     /// fail closed for that candidate rather than falling back.
     fn hmac_key_by_version(&self, version: &KeyVersion) -> Result<HmacKeyRef<'_>, KeyError>;
+
+    /// All held keys (active first, then previous) for generating verification
+    /// candidates during validation (RFC-A).
+    ///
+    /// The returned vec always contains at least the active key.
+    fn all_hmac_keys(&self) -> Result<Vec<HmacKeyRef<'_>>, KeyError>;
 }
 
 /// A key provider holding an active key and zero or more previous keys, in
@@ -229,6 +235,20 @@ impl KeyProvider for StaticKeyProvider {
             })
             .ok_or(KeyError::MissingKeyVersion)
     }
+
+    fn all_hmac_keys(&self) -> Result<Vec<HmacKeyRef<'_>>, KeyError> {
+        if self.keys.is_empty() {
+            return Err(KeyError::MissingActiveKey);
+        }
+        Ok(self
+            .keys
+            .iter()
+            .map(|(v, k)| HmacKeyRef {
+                version: v.clone(),
+                bytes: k,
+            })
+            .collect())
+    }
 }
 
 /// Derives [`LookupKey`]s from secrets using a [`KeyProvider`].
@@ -263,6 +283,28 @@ impl<K: KeyProvider> SecretHasher<K> {
         let key = self.key_provider.active_hmac_key()?;
         let lk = derive(key.bytes, domain, value);
         Ok((lk, key.version))
+    }
+
+    /// Derive one lookup-key candidate per held key (active first, then
+    /// previous). Managers pass the full slice to store finders so that
+    /// records written under any held key are reachable during the rotation
+    /// grace period (RFC-A).
+    ///
+    /// # Errors
+    /// Propagates [`KeyError::MissingActiveKey`] if no keys are configured.
+    pub fn lookup_key_candidates(
+        &self,
+        domain: SecretDomain,
+        value: &str,
+    ) -> Result<Vec<(LookupKey, KeyVersion)>, KeyError> {
+        let keys = self.key_provider.all_hmac_keys()?;
+        Ok(keys
+            .into_iter()
+            .map(|k| {
+                let lk = derive(k.bytes, domain, value);
+                (lk, k.version)
+            })
+            .collect())
     }
 
     /// Derive a lookup key for `value` in `domain` using a specific key

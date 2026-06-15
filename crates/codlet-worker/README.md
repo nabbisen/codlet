@@ -47,16 +47,19 @@ async fn fetch(req: Request, env: Env, _ctx: Context) -> Result<Response> {
     let kv     = env.kv("CODLET_RL")?;
     let tables = D1TableConfig::default();
 
+    // Wrap in Rc so all three stores share one D1Database handle.
+    // D1Database is not Clone; Workers are single-threaded so Rc is correct.
+    let db = std::rc::Rc::new(env.d1("DB")?);
+
     // Run migrations on every deploy (idempotent — IF NOT EXISTS).
-    // env.d1() returns a new handle per call (takes &self) — no Rc needed.
-    run_d1_migrations(&env.d1("DB")?).await?;
+    run_d1_migrations(&db).await?;
 
     // Load HMAC keys from Wrangler secrets. Fails closed if missing (INV-2).
     let keys = WorkerKeyProvider::from_env(&env, "v1", "CODLET_HMAC_KEY_V1", &[])?;
 
-    let code_store    = D1CodeStore::new(env.d1("DB")?, tables.clone());
-    let session_store = D1SessionStore::new(env.d1("DB")?, tables.clone());
-    let token_store   = D1FormTokenStore::new(env.d1("DB")?, tables);
+    let code_store    = D1CodeStore::new(std::rc::Rc::clone(&db), tables.clone());
+    let session_store = D1SessionStore::new(std::rc::Rc::clone(&db), tables.clone());
+    let token_store   = D1FormTokenStore::new(db, tables);
     let rl_store      = KvRateLimitStore::new(kv);
 
     // Wire into codlet_core managers …

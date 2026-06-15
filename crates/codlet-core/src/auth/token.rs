@@ -117,15 +117,20 @@ where
         purpose: &str,
         bound_resource: Option<&str>,
     ) -> Result<Option<String>, FormTokenError> {
-        let (lookup_key, _) = self
+        // Derive one candidate per held key (RFC-A) so tokens written under
+        // previous keys remain consumable during the rotation grace period.
+        let candidates: Vec<_> = self
             .hasher
-            .lookup_key(SecretDomain::FormToken, raw_token)
-            .map_err(FormTokenError::from_key)?;
+            .lookup_key_candidates(SecretDomain::FormToken, raw_token)
+            .map_err(FormTokenError::from_key)?
+            .into_iter()
+            .map(|(lk, _)| lk)
+            .collect();
 
         let now = self.clock.unix_now();
         let (outcome, result_ref) = self
             .store
-            .consume_form_token(&lookup_key, subject, purpose, bound_resource, now)
+            .consume_form_token(&candidates, subject, purpose, bound_resource, now)
             .await
             .map_err(FormTokenError::from_store)?;
 
@@ -152,12 +157,17 @@ where
         raw_token: &str,
         result_ref: &str,
     ) -> Result<(), FormTokenError> {
-        let (lookup_key, _) = self
+        // Derive one candidate per held key (RFC-A) so tokens written under
+        // previous keys remain consumable during the rotation grace period.
+        let candidates: Vec<_> = self
             .hasher
-            .lookup_key(SecretDomain::FormToken, raw_token)
-            .map_err(FormTokenError::from_key)?;
+            .lookup_key_candidates(SecretDomain::FormToken, raw_token)
+            .map_err(FormTokenError::from_key)?
+            .into_iter()
+            .map(|(lk, _)| lk)
+            .collect();
         self.store
-            .set_token_result(&lookup_key, result_ref)
+            .set_token_result(&candidates, result_ref)
             .await
             .map_err(FormTokenError::from_store)
     }

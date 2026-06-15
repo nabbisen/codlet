@@ -10,6 +10,8 @@ secure.
 **Online code guessing.** Short human-friendly codes are guessable in a small
 number of attempts without controls. codlet defends with:
 - mandatory rate limiting (`RateLimitStore`) checked before any lookup;
+- failure counters incremented for invalid-format *and* not-found results,
+  not only for lost concurrent claims — all guesses count toward the limit;
 - codes long enough for the configured window (8+ symbols over 31-symbol
   alphabet = ~39.6 bits entropy by default);
 - single-use enforcement via atomic conditional UPDATE.

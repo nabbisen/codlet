@@ -15,7 +15,14 @@ fn to_err(e: sqlx::Error) -> StoreError {
 
 // Tuple type for the redeemable SELECT.
 // (id, key_version, grant_payload, scope, expires_at)
-type RedeemableRow = (String, String, Option<String>, Option<String>, i64);
+type RedeemableRow = (
+    String,
+    String,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    i64,
+);
 
 // Tuple type for admin SELECT.
 // (id, key_version, purpose, scope, grant_payload,
@@ -60,7 +67,7 @@ impl CodeStore for PostgresStore {
         for candidate in candidates {
             let row: Option<RedeemableRow> = if let Some(s) = scope {
                 sqlx::query_as(
-                    "SELECT id, key_version, grant_payload, scope, expires_at
+                    "SELECT id, key_version, purpose, grant_payload, scope, expires_at
                      FROM codlet_codes
                      WHERE lookup_key = $1 AND scope = $2
                        AND used_at IS NULL AND revoked_at IS NULL
@@ -75,7 +82,7 @@ impl CodeStore for PostgresStore {
                 .map_err(to_err)?
             } else {
                 sqlx::query_as(
-                    "SELECT id, key_version, grant_payload, scope, expires_at
+                    "SELECT id, key_version, purpose, grant_payload, scope, expires_at
                      FROM codlet_codes
                      WHERE lookup_key = $1
                        AND used_at IS NULL AND revoked_at IS NULL
@@ -89,11 +96,12 @@ impl CodeStore for PostgresStore {
                 .map_err(to_err)?
             };
 
-            if let Some((id, kv, grant, scope_val, exp)) = row {
+            if let Some((id, kv, purpose_val, grant, scope_val, exp)) = row {
                 return Ok(Some(RedeemableCode {
                     id: CodeId::new(id),
                     key_version: KeyVersion::new(kv),
                     grant,
+                    purpose: purpose_val,
                     scope: scope_val,
                     expires_at: exp as u64,
                 }));
@@ -105,21 +113,23 @@ impl CodeStore for PostgresStore {
     async fn claim_code(&self, req: &ClaimRequest<'_>) -> Result<ClaimOutcome, StoreError> {
         // Conditional UPDATE — READ COMMITTED row-level lock (RFC-034 §7, INV-5).
         // RETURNING is not used; RFC-034 §7 documents the decision.
-        let result = sqlx::query(
-            "UPDATE codlet_codes
-             SET used_at = $1, used_by_subject = $2
-             WHERE id = $3
-               AND used_at    IS NULL
-               AND revoked_at IS NULL
-               AND expires_at  > $4",
-        )
-        .bind(req.now as i64)
-        .bind(req.subject.as_str())
-        .bind(req.code_id.as_str())
-        .bind(req.now as i64)
-        .execute(&self.pool)
-        .await
-        .map_err(to_err)?;
+        // purpose/scope are enforced in the WHERE clause to prevent cross-flow
+        // redemption (RFC-C).
+        let mut sql = "UPDATE codlet_codes SET used_at = $1, used_by_subject = $2              WHERE id = $3 AND used_at IS NULL AND revoked_at IS NULL              AND expires_at > $4".to_string();
+        if let Some(p) = req.purpose {
+            sql.push_str(&format!(" AND purpose = {p:?}"));
+        }
+        if let Some(s) = req.scope {
+            sql.push_str(&format!(" AND scope = {s:?}"));
+        }
+        let result = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
+            .bind(req.now as i64)
+            .bind(req.subject.as_str())
+            .bind(req.code_id.as_str())
+            .bind(req.now as i64)
+            .execute(&self.pool)
+            .await
+            .map_err(to_err)?;
 
         let changed = result.rows_affected() as usize;
         if changed > 1 {

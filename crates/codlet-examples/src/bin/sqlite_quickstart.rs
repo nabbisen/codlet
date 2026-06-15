@@ -136,6 +136,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ///
 /// The callback only runs after a confirmed won claim (INV-7).
 #[allow(dead_code)]
+#[allow(deprecated)] // demonstrates the experimental redeem_with_callback API (RFC-D)
 async fn callback_flow_example(
     code_auth: &codlet_core::auth::CodeAuth<
         SqliteStore,

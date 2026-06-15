@@ -19,6 +19,9 @@ pub struct RedeemableCode {
     pub key_version: KeyVersion,
     /// Opaque host-owned grant payload, returned after a won claim.
     pub grant: Option<String>,
+    /// Optional purpose label set at issuance (RFC-C).
+    /// Passed back to `claim_code` so adapters can enforce cross-flow isolation.
+    pub purpose: Option<String>,
     /// Optional scope label set at issuance; restricts claim to matching scope.
     pub scope: Option<String>,
     /// Expiry as Unix seconds (UTC).

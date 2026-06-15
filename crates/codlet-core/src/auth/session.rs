@@ -132,15 +132,20 @@ where
         &self,
         cookie_value: &str,
     ) -> Result<SessionValidationOutcome, SessionError> {
-        let (lookup_key, _) = self
+        // Derive one candidate per held key so records written under previous
+        // keys remain reachable during the rotation grace period (RFC-A).
+        let candidates: Vec<_> = self
             .hasher
-            .lookup_key(SecretDomain::Session, cookie_value)
-            .map_err(SessionError::from_key)?;
+            .lookup_key_candidates(SecretDomain::Session, cookie_value)
+            .map_err(SessionError::from_key)?
+            .into_iter()
+            .map(|(lk, _)| lk)
+            .collect();
 
         let now = self.clock.unix_now();
         let record = self
             .store
-            .find_active_session(&[lookup_key], now)
+            .find_active_session(&candidates, now)
             .await
             .map_err(SessionError::from_store)?;
 

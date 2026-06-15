@@ -8,6 +8,216 @@ semantic versioning once it reaches a stable release.
 
 Nothing yet.
 
+## [0.16.0] — 2026-06-15
+
+P1 security fixes from the external source review (RFC-A through RFC-E).
+165 Rust tests + 12 Miniflare tests. README workflow diagram added.
+
+### Fixed
+
+- **RFC-A: Key rotation candidate lookup** — `SessionManager::validate()`,
+  `CodeAuth::find()`, and `FormTokenManager::consume()` previously derived
+  only the active-key lookup candidate, making existing sessions, codes, and
+  tokens unreachable after a key rotation. All three managers now call
+  `SecretHasher::lookup_key_candidates()`, which returns one candidate per
+  held key (active first, then previous). The store `find_*` methods already
+  accepted `&[LookupKey]`; the fix is in the manager layer.
+  `FormTokenStore::consume_form_token` and `set_token_result` signatures
+  upgraded from `&LookupKey` to `&[LookupKey]` for consistency.
+  `KeyProvider` gains `all_hmac_keys()`; `SecretHasher` gains
+  `lookup_key_candidates()`.
+
+- **RFC-B: Rate-limit failure accounting** — `CodeAuth::find()` now calls
+  `record_failure()` after invalid-format rejections and after not-found
+  results, not only after a lost concurrent claim. Prior to this fix,
+  brute-force guesses of wrong or random codes did not increment the failure
+  counter. `FailClosed` is now honoured when `check()` returns `Err`: the
+  operation is denied rather than silently failing open.
+  `RateLimitUnavailable::SoftDenyAfterThreshold` removed — only `FailOpen`
+  and `FailClosed` remain.
+
+- **RFC-C: Purpose/scope enforcement across all adapters** — `claim_code()`
+  in the SQLite, PostgreSQL, and D1 adapters previously ignored `purpose` and
+  `scope` from `ClaimRequest`, allowing a code issued for one flow to be
+  redeemed in another. All three adapters now include `purpose` and `scope`
+  in the conditional UPDATE WHERE clause when present. `RedeemableCode` gains
+  a `purpose` field; `CodeAuth::claim()` passes `purpose` and `scope` from
+  the found record into `ClaimRequest`. `find_redeemable` SELECT queries
+  updated to include `purpose` in all three adapters.
+
+- **RFC-E: Form-token bound_resource conformance** — `MemFormTokenStore`
+  treated caller `None` as a wildcard matching any stored value
+  (`(None, _) => true`). SQL and D1 adapters correctly reject
+  `Some(stored) + None(caller)`. Semantics aligned to exact-match across all
+  adapters: `(None, None)` proceeds; all other mismatches are invalid.
+
+### Changed
+
+- **RFC-D: `redeem_with_callback()` marked experimental** — `#[deprecated]`
+  with a doc note explaining the DB/audit state divergence: the method claims
+  the code before the host callback returns the real subject, leaving
+  `used_by_subject = "__pending__"` in the database if the callback fails.
+  The two-step `find()` + host subject creation + `claim()` flow is the
+  recommended production path.
+
+- **README.md: workflow diagram** replaces the stale "Status" section
+  (which cited v0.8.0, 142 tests, and incorrectly described the library as
+  "feature-complete"). The diagram shows the codlet/host responsibility
+  boundary. Quick start section updated with a `Cargo.toml` snippet using
+  crates.io version specifiers.
+
+### Security
+
+- After RFC-B, invalid-format and not-found code guesses now count toward the
+  rate-limit counter. Before this fix, an attacker could submit unlimited
+  wrong codes without being throttled.
+- After RFC-A, rotating the HMAC key no longer silently invalidates all
+  in-flight sessions and unredeemed codes.
+- After RFC-C, `purpose` and `scope` fields set at code issuance are now
+  enforced at claim time in all production adapters, preventing cross-flow
+  redemption.
+- After RFC-E, a resource-bound form token cannot be consumed by a caller
+  that omits the `bound_resource` parameter in any adapter.
+
+## [0.15.2] — 2026-06-15
+
+Documentation fix: corrected a bug in the Option B in-place migration SQL
+for the `sessions` table.
+
+### Fixed
+
+- `docs/src/migration-from-an-existing-service.md` — Option B migration SQL
+  for `sessions` included `ALTER TABLE sessions ADD COLUMN created_at INTEGER
+  NOT NULL DEFAULT 0`. This fails with `duplicate column name` on any service
+  that already has a `created_at` column, which is the common case. The
+  bogus `ADD COLUMN` line is removed. A callout now explains the type conflict
+  (`TEXT` ISO-8601 vs `INTEGER` Unix seconds), its limited impact (admin
+  listings only, not session validation), and the resolution options. The
+  conflict is cited as a further reason to prefer Option A (fresh codlet
+  tables alongside existing ones).
+
+## [0.15.1] — 2026-06-15
+
+Dependency updates. No API changes.
+
+### Changed
+
+- `hmac` 0.12 → 0.13: `KeyInit` trait now required to bring `new_from_slice`
+  into scope; import updated in `hashing.rs`.
+- `sha2` 0.10 → 0.11.
+- `getrandom` 0.2 → 0.4: `getrandom::getrandom()` renamed to
+  `getrandom::fill()`; wasm32 feature renamed from `js` to `wasm_js`.
+- `sqlx` 0.8 → 0.9: dynamic SQL strings now require `sqlx::AssertSqlSafe`
+  wrapper; applied to migration runners and the admin `list_codes` dynamic
+  WHERE query.
+- `testcontainers-modules` 0.11 → 0.15 (dev-dependency, postgres-test only).
+- CI: `actions/checkout` v4 → v6; Node.js v22 → v24 in `wrangler-test` job.
+
+## [0.15.0] — 2026-06-15
+
+Breaking API changes to remove app-specific names from a general library,
+plus D1 store constructor fix and short-code deprecation surface.
+
+### Changed
+
+- **`D1CodeStore::new()`, `D1SessionStore::new()`, `D1FormTokenStore::new()`**
+  now take `Rc<worker::d1::D1Database>` instead of `worker::d1::D1Database`.
+  `D1Database` is not `Clone`; the previous doc example showing
+  `Rc::clone(&db)` passed to a function expecting owned `D1Database` did not
+  compile. The correct pattern is `Rc::new(env.d1("DB")?)` once, then
+  `Rc::clone(&db)` for each store.
+
+- **`D1TableConfig::zinnias_ciao_compat()`** renamed to
+  **`D1TableConfig::with_existing_table_names()`**. The old name embedded
+  the name of a specific adopting application. The function behaviour is
+  unchanged (table-name override only; column names are not remapped).
+
+- **`CodePolicy::legacy_ciao_6(ttl)`** renamed to
+  **`CodePolicy::six_symbol(ttl)`** and marked `#[deprecated]`. The old name
+  embedded an app-specific term. `six_symbol` emits a compiler warning at
+  every call site — the warning is the intended friction for 6-symbol codes
+  (~29.7 bits of entropy, requires rate limiting).
+
+- **`CodePolicy::short_compat(alphabet, length, ttl)`** marked `#[deprecated]`
+  for the same reason: codes shorter than `SECURE_MIN_HUMAN_LENGTH` require
+  active rate limiting to be safe.
+
+- **`LEGACY_CIAO_LENGTH`** constant renamed to **`SHORT_COMPAT_LENGTH`**.
+
+- All `zinnias-ciao` / `ciao` / `zinnias` occurrences removed from `crates/`
+  and `docs/` source and documentation. RFC filenames are exempted as
+  immutable historical records.
+
+- `docs/src/migration-from-zinnias-ciao.md` renamed to
+  `docs/src/migration-from-an-existing-service.md`; title and body
+  generalised to describe any existing service.
+
+- `docs/src/adapter-matrix-and-config.md`: D1 row corrected from "planned"
+  to implemented; `PostgresStore` row added; `six_symbol` deprecation
+  explained in prose.
+
+### Fixed
+
+- `crates/codlet-worker/src/lib.rs` and `crates/codlet-worker/README.md`
+  doc examples corrected to use `Rc::new(env.d1("DB")?)` and
+  `Rc::clone(&db)` (matching the new `new()` signatures).
+
+- `docs/src/migration-from-an-existing-service.md`: `D1TableConfig::
+  with_existing_table_names()` doc comment clarified — table-name override
+  only; column names are not remapped; full column-rename SQL provided for
+  Option B in-place migration.
+
+## [0.14.4] — 2026-06-14
+
+Removed two needless `mut` annotations in `codlet-worker/src/http/cookies.rs`
+that caused `unused_mut` Clippy warnings. No behaviour change.
+
+## [0.14.3] — 2026-06-14
+
+Published by the project owner. Includes dependency version consolidation
+into workspace-level `[workspace.dependencies]`, worker/worker-kv bumps
+(0.5→0.8, 0.7→0.9), `rust-toolchain.toml`, `CONTRIBUTING.md`, and
+crates.io/docs.rs badges in README.
+
+## [0.14.2] — 2026-06-14
+
+Four-dimensional audit (RFCs vs codebase, tests vs requirements, code vs
+tests, docs vs codebase). All findings corrected.
+
+### Fixed
+
+- **`D1CodeStore::new()` / `D1SessionStore::new()` / `D1FormTokenStore::new()`**
+  documented as taking `Rc<D1Database>` in v0.14.0, but the actual signatures
+  still took owned `D1Database`. The documentation and README were wrong; the
+  implementation was correct. Doc examples corrected to use `env.d1("DB")?`
+  once per store (Option A).
+
+- **`D1TableConfig::zinnias_ciao_compat()`** doc comment strengthened to
+  say explicitly: "table-name override only — column names are not remapped."
+
+- **`MemFormTokenStore::consume_form_token()`** wildcard `(None, _) => true`
+  identified as a semantic divergence from SQL/D1 adapters (pre-RFC-E;
+  noted, not yet fixed in this release).
+
+- **RFC index** (`rfcs/README.md`) rebuilt from filesystem: stale "Proposed (2)"
+  entries pointing to RFC-033 and RFC-034 (both in `done/`) removed.
+
+- **RFC checklists**: RFC-001, RFC-002, RFC-010, RFC-012, RFC-013, RFC-014,
+  RFC-015 — all checklist items verified against code and ticked. RFC-031
+  reclassified as partial (multi-candidate key lookup not yet wired).
+
+- **`docs/src/adapter-matrix-and-config.md`**: D1 row said "planned"; now
+  shows implemented. `PostgresStore` row was missing; added.
+
+- **`docs/src/migration-from-an-existing-service.md`**: `six_symbol` /
+  `short_compat` references updated.
+
+## [0.14.1] — 2026-06-14
+
+CI fixes only: `actions/checkout` v4 → v6; `node-version` 22 → 24.
+
+## [0.14.0] — 2026-06-14
+
 ## [0.14.0] — 2026-06-14
 
 Miniflare integration tests complete (RFC-033 §14 fully resolved). All 10
@@ -630,9 +840,6 @@ orchestration come next.
   the source service (RFC-007 §13.3).
 - Cookie `Domain` omitted by default; subdomain sharing requires explicit opt-in.
 
-[Unreleased]: https://github.com/nabbisen/codlet/compare/v0.2.0...HEAD
-[0.2.0]: https://github.com/nabbisen/codlet/compare/v0.1.0...v0.2.0
-
 ## [0.1.0] — 2026-06-13
 
 First functional primitives in `codlet-core`. Implements RFC-003 (one-time code
@@ -711,7 +918,15 @@ establishes the repository, process, and an empty `codlet-core` skeleton.
   or async-executor crates (RFC-002 acceptance gate): only `hmac`, `sha2`,
   `subtle`, `getrandom`, `thiserror`.
 
-[Unreleased]: https://github.com/nabbisen/codlet/compare/v0.14.0...HEAD
+[Unreleased]: https://github.com/nabbisen/codlet/compare/v0.16.0...HEAD
+[0.16.0]: https://github.com/nabbisen/codlet/compare/v0.15.2...v0.16.0
+[0.15.2]: https://github.com/nabbisen/codlet/compare/v0.15.1...v0.15.2
+[0.15.1]: https://github.com/nabbisen/codlet/compare/v0.15.0...v0.15.1
+[0.15.0]: https://github.com/nabbisen/codlet/compare/v0.14.4...v0.15.0
+[0.14.4]: https://github.com/nabbisen/codlet/compare/v0.14.3...v0.14.4
+[0.14.3]: https://github.com/nabbisen/codlet/compare/v0.14.2...v0.14.3
+[0.14.2]: https://github.com/nabbisen/codlet/compare/v0.14.1...v0.14.2
+[0.14.1]: https://github.com/nabbisen/codlet/compare/v0.14.0...v0.14.1
 [0.14.0]: https://github.com/nabbisen/codlet/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/nabbisen/codlet/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/nabbisen/codlet/compare/v0.11.0...v0.12.0

@@ -120,6 +120,7 @@ async fn two_step_issue_find_claim_session() {
 // ── Callback-based redemption flow ────────────────────────────────────────────
 
 #[tokio::test]
+#[allow(deprecated)] // tests RFC-D experimental API
 async fn callback_flow_issues_session_only_on_won() {
     let ca = code_auth();
     let sm = session_mgr();
@@ -185,6 +186,7 @@ async fn lost_claim_cannot_issue_session() {
 // ── Host callback error — claim is consumed, no session ───────────────────────
 
 #[tokio::test]
+#[allow(deprecated)] // tests RFC-D experimental API
 async fn callback_error_leaves_claim_consumed_no_session() {
     // RFC-013 §5: "If claim wins but host hook fails, no session is issued."
     let ca = code_auth();

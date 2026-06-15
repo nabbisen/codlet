@@ -58,17 +58,15 @@ impl RateLimitKey {
 /// Behaviour when the rate-limit store is unavailable (RFC-008 §4).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum RateLimitUnavailable {
-    /// Allow the operation to proceed; log the store error internally.
-    /// Appropriate when rate limiting is a defence-in-depth layer and
-    /// availability is preferred over strict enforcement.
+    /// Allow the operation to proceed when the rate-limit store is unavailable.
+    /// Appropriate when rate limiting is defence-in-depth and availability is
+    /// preferred over strict enforcement.
     #[default]
     FailOpen,
-    /// Deny the operation. Appropriate when rate limiting is a hard
-    /// requirement and availability is secondary.
+    /// Deny the operation when the rate-limit store is unavailable.
+    /// Use when rate limiting is a hard security requirement and the host
+    /// prefers a temporary outage over a weakened rate-limit guarantee.
     FailClosed,
-    /// Allow until the counter reaches `n` above the normal threshold,
-    /// then deny. A compromise for services with intermittent store issues.
-    SoftDenyAfterThreshold(u32),
 }
 
 /// Rate-limit policy (RFC-008 §4).

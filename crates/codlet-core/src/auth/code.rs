@@ -155,7 +155,7 @@ where
         raw_input: &str,
         rate_key: Option<&RateLimitKey>,
     ) -> Result<RedeemableCode, RedeemError> {
-        // Step 1: rate-limit check.
+        // Step 1: rate-limit check. Honour unavailable policy on store error.
         if let (Some(key), Some(rl_policy)) = (rate_key, &self.rate_limit_policy) {
             match self.rate_limit_store.check(key, rl_policy).await {
                 Ok(RateLimitOutcome::Deny) => {
@@ -168,31 +168,57 @@ where
                     });
                 }
                 Ok(RateLimitOutcome::Allow) => {}
-                Err(_) => { /* fail-open per policy; store error logged internally */ }
+                Err(_) => {
+                    // Rate-limit store unavailable: apply configured policy.
+                    match rl_policy.unavailable {
+                        crate::store::ratelimit::RateLimitUnavailable::FailClosed => {
+                            self.audit.record(CodeAuthEvent::RateLimitHit {
+                                key_fingerprint: key.fingerprint().to_string(),
+                                purpose: None,
+                            });
+                            return Err(RedeemError::RateLimited {
+                                public: PublicRedemptionError::RateLimited,
+                            });
+                        }
+                        crate::store::ratelimit::RateLimitUnavailable::FailOpen => {}
+                    }
+                }
             }
         }
 
         // Step 2: input normalization + validation.
-        let normalized = validate_code_input(raw_input, &self.policy).map_err(|_| {
-            self.audit.record(CodeAuthEvent::RedemptionFailed {
-                reason: RedemptionFailReason::InvalidFormat,
-            });
-            RedeemError::InvalidInput {
-                reason: RedemptionFailReason::InvalidFormat,
-                public: PublicRedemptionError::from_reason(&RedemptionFailReason::InvalidFormat),
+        let normalized = match validate_code_input(raw_input, &self.policy) {
+            Ok(n) => n,
+            Err(_) => {
+                self.audit.record(CodeAuthEvent::RedemptionFailed {
+                    reason: RedemptionFailReason::InvalidFormat,
+                });
+                // Invalid-format guesses count toward the rate limit (RFC-B).
+                if let (Some(key), Some(rl_policy)) = (rate_key, &self.rate_limit_policy) {
+                    let _ = self.rate_limit_store.record_failure(key, rl_policy).await;
+                }
+                return Err(RedeemError::InvalidInput {
+                    reason: RedemptionFailReason::InvalidFormat,
+                    public: PublicRedemptionError::from_reason(
+                        &RedemptionFailReason::InvalidFormat,
+                    ),
+                });
             }
-        })?;
+        };
 
-        // Step 3: derive lookup key candidates and find the record.
-        let (lookup_key, _) = self
+        // Step 3: derive one candidate per held key (RFC-A) and find the record.
+        let candidates: Vec<_> = self
             .hasher
-            .lookup_key(SecretDomain::Code, &normalized)
-            .map_err(RedeemError::from_key)?;
+            .lookup_key_candidates(SecretDomain::Code, &normalized)
+            .map_err(RedeemError::from_key)?
+            .into_iter()
+            .map(|(lk, _)| lk)
+            .collect();
 
         let now = self.clock.unix_now();
         let record = self
             .store
-            .find_redeemable(&[lookup_key], now, None)
+            .find_redeemable(&candidates, now, None)
             .await
             .map_err(RedeemError::from_store)?
             .ok_or_else(|| {
@@ -203,7 +229,15 @@ where
                     reason: RedemptionFailReason::NotFound,
                     public: PublicRedemptionError::InvalidOrExpired,
                 }
-            })?;
+            });
+
+        // Not-found guesses count toward the rate limit (RFC-B).
+        if record.is_err() {
+            if let (Some(key), Some(rl_policy)) = (rate_key, &self.rate_limit_policy) {
+                let _ = self.rate_limit_store.record_failure(key, rl_policy).await;
+            }
+        }
+        let record = record?;
 
         Ok(record)
     }
@@ -232,8 +266,10 @@ where
                 code_id: &record.id,
                 subject: &subject,
                 now,
-                purpose: None,
-                scope: None,
+                // Pass purpose/scope from the found record so adapters can
+                // enforce cross-flow isolation in the UPDATE WHERE (RFC-C).
+                purpose: record.purpose.as_deref(),
+                scope: record.scope.as_deref(),
             })
             .await
             .map_err(RedeemError::from_store)?;
@@ -283,6 +319,20 @@ where
     /// Returns [`RedeemError`] on any failure. If `on_won` fails, returns
     /// [`RedeemError::Internal`] and the claim is already consumed (the host
     /// must decide on compensation if needed — RFC-013 §5).
+    ///
+    /// # Production warning
+    ///
+    /// **Experimental (RFC-D).** This method claims the code before the host
+    /// callback returns the real subject, leaving `used_by_subject = "__pending__"`
+    /// in the database until the callback completes. If the callback fails, the
+    /// code is permanently consumed with no subject recorded, and the audit event
+    /// and database state disagree on who claimed it.
+    ///
+    /// For production audit-sensitive deployments, use the explicit two-step
+    /// flow: [`Self::find`] → host creates/resolves subject → [`Self::claim`].
+    #[deprecated(
+        note = "experimental: DB and audit state diverge if callback fails.                 Use find() + host subject creation + claim() for production."
+    )]
     pub async fn redeem_with_callback<F, Fut, E>(
         &self,
         raw_input: &str,
@@ -298,14 +348,18 @@ where
         let now = self.clock.unix_now();
 
         // Attempt claim before invoking host callback (fail-fast on race).
+        // WARNING: redeem_with_callback() is experimental (RFC-D). The DB record
+        // will store the real subject once the callback returns, but the interim
+        // state is a won claim with no subject yet. Use find()+claim() for
+        // production audit-sensitive deployments.
         let outcome = self
             .store
             .claim_code(&ClaimRequest {
                 code_id: &record.id,
                 subject: &SubjectId::new("__pending__".into()),
                 now,
-                purpose: None,
-                scope: None,
+                purpose: record.purpose.as_deref(),
+                scope: record.scope.as_deref(),
             })
             .await
             .map_err(RedeemError::from_store)?;

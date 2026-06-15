@@ -40,6 +40,11 @@ let provider = StaticKeyProvider::new(
   record that required it cannot be validated until the key is added back
   (or the record expires).
 
+During validation, codlet derives one HMAC lookup candidate per held key
+(active + all previous) via `SecretHasher::lookup_key_candidates()` and
+passes the full slice to the store. A session or code issued under a previous
+key remains reachable as long as that key is listed in `previous`.
+
 ## Planned rotation procedure
 
 1. **Generate** a new key outside application logs (e.g. `openssl rand -hex 32`).

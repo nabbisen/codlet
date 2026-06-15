@@ -10,7 +10,15 @@ use crate::SqliteStore;
 
 /// Columns returned by the `find_one` SELECT:
 /// (id, lookup_key, key_version, grant_payload, scope, expires_at)
-type CodeRow = (String, String, String, Option<String>, Option<String>, i64);
+type CodeRow = (
+    String,
+    String,
+    String,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    i64,
+);
 
 impl CodeStore for SqliteStore {
     async fn find_redeemable(
@@ -35,21 +43,36 @@ impl CodeStore for SqliteStore {
         let id = req.code_id.as_str();
         let subject = req.subject.as_str();
 
-        let result = sqlx::query(
-            "UPDATE codlet_codes
-             SET used_at = ?, used_by_subject = ?
-             WHERE id = ?
-               AND used_at   IS NULL
-               AND revoked_at IS NULL
-               AND expires_at  > ?",
-        )
-        .bind(now)
-        .bind(subject)
-        .bind(id)
-        .bind(now)
-        .execute(&self.pool)
-        .await
-        .map_err(|e| StoreError::Backend(e.to_string()))?;
+        // Enforce purpose and scope to prevent cross-flow redemption (RFC-C).
+        let sql = match (req.purpose, req.scope) {
+            (Some(p), Some(s)) => format!(
+                "UPDATE codlet_codes SET used_at = ?, used_by_subject = ?
+                 WHERE id = ? AND used_at IS NULL AND revoked_at IS NULL
+                   AND expires_at > ? AND purpose = {p:?} AND scope = {s:?}"
+            ),
+            (Some(p), None) => format!(
+                "UPDATE codlet_codes SET used_at = ?, used_by_subject = ?
+                 WHERE id = ? AND used_at IS NULL AND revoked_at IS NULL
+                   AND expires_at > ? AND purpose = {p:?}"
+            ),
+            (None, Some(s)) => format!(
+                "UPDATE codlet_codes SET used_at = ?, used_by_subject = ?
+                 WHERE id = ? AND used_at IS NULL AND revoked_at IS NULL
+                   AND expires_at > ? AND scope = {s:?}"
+            ),
+            (None, None) => "UPDATE codlet_codes SET used_at = ?, used_by_subject = ?
+                 WHERE id = ? AND used_at IS NULL AND revoked_at IS NULL
+                   AND expires_at > ?"
+                .to_string(),
+        };
+        let result = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
+            .bind(now)
+            .bind(subject)
+            .bind(id)
+            .bind(now)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| StoreError::Backend(e.to_string()))?;
 
         let changed = result.rows_affected() as usize;
         if changed > 1 {
@@ -136,7 +159,7 @@ async fn find_one(
     // Build scope clause: when scope is provided, filter by it; when None, accept any scope.
     let row: Option<CodeRow> = if let Some(s) = scope {
         sqlx::query_as(
-            "SELECT id, lookup_key, key_version, grant_payload, scope, expires_at
+            "SELECT id, lookup_key, key_version, purpose, grant_payload, scope, expires_at
              FROM codlet_codes
              WHERE lookup_key = ?
                AND scope       = ?
@@ -153,7 +176,7 @@ async fn find_one(
         .map_err(|e| StoreError::Backend(e.to_string()))?
     } else {
         sqlx::query_as(
-            "SELECT id, lookup_key, key_version, grant_payload, scope, expires_at
+            "SELECT id, lookup_key, key_version, purpose, grant_payload, scope, expires_at
              FROM codlet_codes
              WHERE lookup_key = ?
                AND used_at    IS NULL
@@ -168,13 +191,14 @@ async fn find_one(
         .map_err(|e| StoreError::Backend(e.to_string()))?
     };
 
-    Ok(
-        row.map(|(id, _lk, kv, grant, scope_val, exp)| RedeemableCode {
+    Ok(row.map(
+        |(id, _lk, kv, purpose_val, grant, scope_val, exp)| RedeemableCode {
             id: CodeId::new(id),
             key_version: KeyVersion::new(kv),
             grant,
+            purpose: purpose_val,
             scope: scope_val,
             expires_at: exp as u64,
-        }),
-    )
+        },
+    ))
 }

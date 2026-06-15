@@ -30,10 +30,22 @@ does not try to make short codes look stronger than they are.
 
 ## Quick start
 
-> **Early pre-release (v0.1.0).** The building blocks exist — code generation,
-> normalization, validation, and keyed lookup derivation — but storage, session
-> and form-token lifecycle, and runtime adapters are not implemented yet, so
-> there is no end-to-end redemption flow to call. The shape of the primitives:
+Add the core crate and your chosen adapter to `Cargo.toml`:
+
+```toml
+[dependencies]
+codlet-core = "0.16"
+
+# Cloudflare Workers (wasm32 target only):
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+codlet-worker = "0.16"
+
+# SQLite or PostgreSQL (native targets):
+# codlet-sqlx = "0.16"
+# codlet-sqlx = { version = "0.16", default-features = false, features = ["postgres"] }
+```
+
+The shape of the core primitives:
 
 ```rust
 use codlet_core::{CodePolicy, SecretHasher, StaticKeyProvider, SecretDomain};
@@ -80,18 +92,51 @@ let _ = lookup_key; // store this + key_version; never store `code`
 - **Threat model** (what codlet protects against): [`docs/src/threat-model.md`](./docs/src/threat-model.md).
 - **Adapter guarantee matrix** and secure configuration guide: [`docs/src/adapter-matrix-and-config.md`](./docs/src/adapter-matrix-and-config.md).
 - **Key rotation** and emergency procedure: [`docs/src/key-rotation.md`](./docs/src/key-rotation.md).
-- **Migration from zinnias-ciao**: [`docs/src/migration-from-zinnias-ciao.md`](./docs/src/migration-from-zinnias-ciao.md).
+- **Migration from an existing service**: [`docs/src/migration-from-an-existing-service.md`](./docs/src/migration-from-an-existing-service.md).
 - Security policy and how to report a vulnerability: [`SECURITY.md`](./SECURITY.md).
 - Full documentation lives under [`docs/src`](./docs/src) (mdBook-compatible).
 
-## Status
+## How it fits in your service
 
-Pre-release (v0.8.0). All 31 planned RFCs implemented (1 archived post-v1), 142 tests, 5 static release gates.
-The full stack is in place: primitive layer (`codlet-core`), orchestration
-managers (`auth` module), conformance suite (`codlet-conformance`), SQLite
-adapter (`codlet-sqlx`), key rotation guide, and zinnias-ciao migration plan.
-The library is feature-complete for its stated purpose. Remaining work is hardening
-and production adapter expansion.
+codlet authenticates — your application authorizes. The diagram below shows
+where codlet's responsibility begins and ends; storage, users, roles, and
+authorization decisions remain entirely with the host service.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+
+    box Host application / deployment
+        participant App as Web Service
+        participant Store as App-owned DB / KV<br/>codes, sessions, users
+    end
+
+    box Library dependency
+        participant Codlet
+    end
+
+    User->>App: Submit one-time code
+    App->>Codlet: Redeem code using app storage adapter
+    Codlet->>Store: Consume valid code
+    Store-->>Codlet: Code consumed
+    Codlet-->>App: Subject accepted
+
+    App->>Codlet: Issue session
+    Codlet->>Store: Store session record
+    Codlet-->>App: Set-Cookie value / cookie policy
+    App-->>User: Signed in
+
+    User->>App: Later request with cookie
+    App->>Codlet: Introspect session
+    Codlet->>Store: Load session record
+    Store-->>Codlet: Session record
+    Codlet-->>App: Authenticated subject or Unauthenticated
+
+    App->>Store: Load user / roles / membership
+    Store-->>App: Authorization data
+    App-->>User: Serve response (host policy)
+```
 
 ## License
 

@@ -60,4 +60,8 @@ impl KeyProvider for WorkerKeyProvider {
     fn hmac_key_by_version(&self, version: &KeyVersion) -> Result<HmacKeyRef<'_>, KeyError> {
         self.inner.hmac_key_by_version(version)
     }
+
+    fn all_hmac_keys(&self) -> Result<Vec<HmacKeyRef<'_>>, KeyError> {
+        self.inner.all_hmac_keys()
+    }
 }

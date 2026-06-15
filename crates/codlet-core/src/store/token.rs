@@ -125,9 +125,12 @@ pub trait FormTokenStore {
     /// 2. If `changed == 0`, run a follow-up SELECT to classify why.
     /// 3. Call [`crate::state::classify_token_consume`] with the results.
     /// 4. Return the outcome plus any stored `result_ref` for replays.
+    ///
+    /// Try each candidate lookup key in order; consume on the first match.
+    /// Accepting multiple candidates supports rotation grace periods (RFC-A).
     fn consume_form_token(
         &self,
-        lookup_key: &LookupKey,
+        candidates: &[LookupKey],
         subject: &TokenSubject,
         purpose: &str,
         bound_resource: Option<&str>,
@@ -137,7 +140,7 @@ pub trait FormTokenStore {
     /// Store a result reference on a consumed token for idempotency replay.
     fn set_token_result(
         &self,
-        lookup_key: &LookupKey,
+        candidates: &[LookupKey],
         result_ref: &str,
     ) -> impl Future<Output = Result<(), StoreError>>;
 }

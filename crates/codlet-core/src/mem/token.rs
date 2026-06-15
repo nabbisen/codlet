@@ -52,12 +52,13 @@ impl FormTokenStore for MemFormTokenStore {
 
     async fn consume_form_token(
         &self,
-        lookup_key: &LookupKey,
+        candidates: &[LookupKey],
         subject: &TokenSubject,
         purpose: &str,
         bound_resource: Option<&str>,
         now: u64,
     ) -> Result<(TokenConsumeOutcome, Option<String>), StoreError> {
+        let lookup_key = candidates.first().expect("at least one candidate");
         let mut rows = self
             .rows
             .lock()
@@ -80,11 +81,12 @@ impl FormTokenStore for MemFormTokenStore {
 
             // Conditional consume: unconsumed AND not expired.
             if row.consumed_at.is_none() && row.expires_at > now {
-                // Binding check on bound_resource.
+                // Binding check on bound_resource — exact match semantics (RFC-E).
+                // Aligns with SQL/D1: caller None only matches stored None.
                 let br_ok = match (bound_resource, &row.bound_resource) {
                     (Some(expected), Some(stored)) => expected == stored.as_str(),
-                    (None, _) => true,
-                    (Some(_), None) => false,
+                    (None, None) => true,
+                    _ => false, // None vs Some or Some vs None → mismatch
                 };
                 if br_ok {
                     row.consumed_at = Some(now);
@@ -127,9 +129,10 @@ impl FormTokenStore for MemFormTokenStore {
 
     async fn set_token_result(
         &self,
-        lookup_key: &LookupKey,
+        candidates: &[LookupKey],
         result_ref: &str,
     ) -> Result<(), StoreError> {
+        let lookup_key = candidates.first().expect("at least one candidate");
         let mut rows = self
             .rows
             .lock()

@@ -44,6 +44,7 @@ struct RedeemableRow {
     id: String,
     key_version: String,
     grant_payload: Option<String>,
+    purpose: Option<String>,
     scope: Option<String>,
     expires_at: f64,
 }
@@ -122,6 +123,7 @@ impl CodeStore for D1CodeStore {
                     id: CodeId::new(r.id),
                     key_version: KeyVersion::new(r.key_version),
                     grant: r.grant_payload,
+                    purpose: r.purpose,
                     scope: r.scope,
                     expires_at: r.expires_at as u64,
                 }));
@@ -134,14 +136,19 @@ impl CodeStore for D1CodeStore {
         use worker::d1::D1Type;
 
         // Atomic conditional UPDATE (INV-5, RFC-022).
-        let sql = format!(
-            "UPDATE {t}
-             SET used_at = ?, used_by_subject = ?
-             WHERE id = ?
-               AND used_at IS NULL AND revoked_at IS NULL
+        // purpose/scope enforced in WHERE to prevent cross-flow redemption (RFC-C).
+        let mut sql = format!(
+            "UPDATE {t} SET used_at = ?, used_by_subject = ?
+             WHERE id = ? AND used_at IS NULL AND revoked_at IS NULL
                AND expires_at > ?",
             t = self.table
         );
+        if let Some(p) = req.purpose {
+            sql.push_str(&format!(" AND purpose = {p:?}"));
+        }
+        if let Some(s) = req.scope {
+            sql.push_str(&format!(" AND scope = {s:?}"));
+        }
         let stmt = bind(
             self.db.prepare(&sql),
             &[

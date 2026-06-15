@@ -77,12 +77,13 @@ impl FormTokenStore for D1FormTokenStore {
 
     async fn consume_form_token(
         &self,
-        lookup_key: &LookupKey,
+        candidates: &[LookupKey],
         subject: &TokenSubject,
         purpose: &str,
         bound_resource: Option<&str>,
         now: u64,
     ) -> Result<(TokenConsumeOutcome, Option<String>), StoreError> {
+        let lookup_key = candidates.first().expect("at least one candidate");
         use worker::d1::D1Type;
 
         let lk = lookup_key.as_str();
@@ -155,9 +156,10 @@ impl FormTokenStore for D1FormTokenStore {
 
     async fn set_token_result(
         &self,
-        lookup_key: &LookupKey,
+        candidates: &[LookupKey],
         result_ref: &str,
     ) -> Result<(), StoreError> {
+        let lookup_key = candidates.first().expect("at least one candidate");
         use worker::d1::D1Type;
         let sql = format!(
             "UPDATE {t} SET result_ref = ?

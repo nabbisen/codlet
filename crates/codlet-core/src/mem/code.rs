@@ -83,6 +83,7 @@ impl CodeStore for MemCodeStore {
                 id: r.id.clone(),
                 key_version: r.key_version.clone(),
                 grant: r.grant.clone(),
+                purpose: r.purpose.clone(),
                 scope: r.scope.clone(),
                 expires_at: r.expires_at,
             });

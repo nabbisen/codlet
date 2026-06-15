@@ -16,4 +16,5 @@ This documentation is organized for three audiences:
   process, and local development. See the workspace `rfcs/` directory and
   `CONTRIBUTING.md`.
 
-> codlet is at the pre-release bootstrap stage. See `CHANGELOG.md`.
+> codlet is pre-v1. The full authentication stack is implemented.
+> See `CHANGELOG.md` for the current version and release history.

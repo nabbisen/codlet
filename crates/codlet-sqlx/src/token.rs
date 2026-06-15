@@ -29,12 +29,13 @@ impl FormTokenStore for SqliteStore {
 
     async fn consume_form_token(
         &self,
-        lookup_key: &LookupKey,
+        candidates: &[LookupKey],
         subject: &TokenSubject,
         purpose: &str,
         bound_resource: Option<&str>,
         now: u64,
     ) -> Result<(TokenConsumeOutcome, Option<String>), StoreError> {
+        let lookup_key = candidates.first().expect("at least one candidate");
         let now_i = now as i64;
         let lk = lookup_key.as_str();
         let subj = subject.as_binding_str();
@@ -106,9 +107,10 @@ impl FormTokenStore for SqliteStore {
 
     async fn set_token_result(
         &self,
-        lookup_key: &LookupKey,
+        candidates: &[LookupKey],
         result_ref: &str,
     ) -> Result<(), StoreError> {
+        let lookup_key = candidates.first().expect("at least one candidate");
         sqlx::query(
             "UPDATE codlet_form_tokens
              SET result_ref = ?
