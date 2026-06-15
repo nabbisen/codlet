@@ -85,9 +85,21 @@ ALTER TABLE invite_codes ADD COLUMN key_version TEXT NOT NULL DEFAULT 'legacy';
 ALTER TABLE sessions RENAME COLUMN session_hmac TO lookup_key;
 ALTER TABLE sessions RENAME COLUMN user_id      TO subject;
 ALTER TABLE sessions ADD COLUMN key_version TEXT NOT NULL DEFAULT 'legacy';
-ALTER TABLE sessions ADD COLUMN created_at  INTEGER NOT NULL DEFAULT 0;
 -- Verify: id, expires_at, revoked_at
 ```
+
+> **`created_at` type conflict.** codlet stores `created_at` as `INTEGER`
+> (Unix seconds). If your existing `sessions` table already has a `created_at`
+> column (e.g. as `TEXT` in ISO-8601 format), the `ADD COLUMN` above is
+> omitted — adding it would fail with `duplicate column name`. codlet reads
+> `created_at` only for the `CodeAdminStore` listing API, not for session
+> validation, so the conflict does not break runtime auth. However, admin
+> listings will show incorrect timestamps for migrated rows.
+>
+> To resolve correctly: drop the old column and add it as `INTEGER`, or accept
+> stale `created_at` values for pre-migration sessions. This type conflict is
+> another reason **Option A (fresh codlet tables) is strongly preferred** for
+> services with an existing `sessions.created_at` column.
 
 **`form_tokens` → codlet column names:**
 
