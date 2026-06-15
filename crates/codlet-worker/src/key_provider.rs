@@ -9,6 +9,7 @@ use codlet_core::hashing::{HmacKeyRef, KeyProvider, KeyVersion, StaticKeyProvide
 
 /// Loads active and previous HMAC key material from Cloudflare Worker
 /// `Env` secrets (RFC-033 §9).
+#[derive(Clone)]
 pub struct WorkerKeyProvider {
     inner: StaticKeyProvider,
 }
