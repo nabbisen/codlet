@@ -10,7 +10,7 @@
 //! - Say "please reload the page and try again" on Invalid — do not say "CSRF failed".
 //! - On Replay, silently redirect to the same result — no need to tell the user anything.
 //!
-//! Run with: `cargo run -p codlet-examples --bin form_token_csrf`
+//! Run with: `cargo run  # from examples/form_token_csrf/`
 
 use std::time::Duration;
 

@@ -110,10 +110,13 @@ checksum = "31b698c5f9a010f6573133b09e0de5408834d0c82f8d7475a89fc1867a71cd90"
 dependencies = [
  "axum-core",
  "bytes",
+ "form_urlencoded",
  "futures-util",
  "http",
  "http-body",
  "http-body-util",
+ "hyper",
+ "hyper-util",
  "itoa",
  "matchit 0.8.4",
  "memchr",
@@ -121,10 +124,15 @@ dependencies = [
  "percent-encoding",
  "pin-project-lite",
  "serde_core",
+ "serde_json",
+ "serde_path_to_error",
+ "serde_urlencoded",
  "sync_wrapper",
+ "tokio",
  "tower",
  "tower-layer",
  "tower-service",
+ "tracing",
 ]
 
 [[package]]
@@ -143,6 +151,19 @@ dependencies = [
  "sync_wrapper",
  "tower-layer",
  "tower-service",
+ "tracing",
+]
+
+[[package]]
+name = "axum_login_logout"
+version = "0.16.2"
+dependencies = [
+ "axum",
+ "codlet-core",
+ "codlet-sqlx",
+ "serde",
+ "sqlx",
+ "tokio",
 ]
 
 [[package]]
@@ -325,7 +346,7 @@ checksum = "0c9ea0ac24bc397ab3c98583a3c9ba74fa56b09a4449bbe172b9b1ddb016027a"
 
 [[package]]
 name = "codlet-conformance"
-version = "0.16.1"
+version = "0.16.2"
 dependencies = [
  "codlet-core",
  "futures",
@@ -334,7 +355,7 @@ dependencies = [
 
 [[package]]
 name = "codlet-core"
-version = "0.16.1"
+version = "0.16.2"
 dependencies = [
  "getrandom 0.4.2",
  "hmac",
@@ -348,18 +369,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "codlet-examples"
-version = "0.16.1"
-dependencies = [
- "codlet-core",
- "codlet-sqlx",
- "sqlx",
- "tokio",
-]
-
-[[package]]
 name = "codlet-sqlx"
-version = "0.16.1"
+version = "0.16.2"
 dependencies = [
  "codlet-conformance",
  "codlet-core",
@@ -371,7 +382,7 @@ dependencies = [
 
 [[package]]
 name = "codlet-worker"
-version = "0.16.1"
+version = "0.16.2"
 dependencies = [
  "codlet-core",
  "serde",
@@ -693,6 +704,14 @@ name = "foldhash"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb"
+
+[[package]]
+name = "form_token_csrf"
+version = "0.16.2"
+dependencies = [
+ "codlet-core",
+ "tokio",
+]
 
 [[package]]
 name = "form_urlencoded"
@@ -1290,6 +1309,14 @@ dependencies = [
  "cfg-if",
  "futures-util",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "key_rotation"
+version = "0.16.2"
+dependencies = [
+ "codlet-core",
+ "tokio",
 ]
 
 [[package]]
@@ -1991,6 +2018,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_path_to_error"
+version = "0.1.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "10a9ff822e371bb5403e391ecd83e182e0e77ba7f6fe0160b795797109d1b457"
+dependencies = [
+ "itoa",
+ "serde",
+ "serde_core",
+]
+
+[[package]]
 name = "serde_repr"
 version = "0.1.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2115,6 +2153,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
 dependencies = [
  "lock_api",
+]
+
+[[package]]
+name = "sqlite_file"
+version = "0.16.2"
+dependencies = [
+ "codlet-core",
+ "codlet-sqlx",
+ "sqlx",
+ "tokio",
+]
+
+[[package]]
+name = "sqlite_quickstart"
+version = "0.16.2"
+dependencies = [
+ "codlet-core",
+ "codlet-sqlx",
+ "sqlx",
+ "tokio",
 ]
 
 [[package]]
@@ -3283,7 +3341,7 @@ dependencies = [
 
 [[package]]
 name = "xtask"
-version = "0.16.1"
+version = "0.16.2"
 
 [[package]]
 name = "yoke"

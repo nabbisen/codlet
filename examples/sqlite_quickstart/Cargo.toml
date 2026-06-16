@@ -1,0 +1,19 @@
+[package]
+name        = "sqlite_quickstart"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "SQLite quick-start: full auth flow in a single program (example)."
+publish     = false
+
+[lints]
+workspace = true
+
+[dependencies]
+codlet-core = { workspace = true }
+codlet-sqlx = { workspace = true }
+sqlx        = { workspace = true, features = ["sqlite", "runtime-tokio"] }
+tokio       = { workspace = true, features = ["rt-multi-thread", "macros"] }

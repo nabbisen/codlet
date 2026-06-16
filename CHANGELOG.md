@@ -8,6 +8,14 @@ semantic versioning once it reaches a stable release.
 
 Nothing yet.
 
+## [0.16.2] — 2026-06-16
+
+Example projects in examples/.
+
+## [0.16.1] — 2026-06-16
+
+Sequence diagram position in README.md.
+
 ## [0.16.0] — 2026-06-15
 
 P1 security fixes from the external source review (RFC-A through RFC-E).

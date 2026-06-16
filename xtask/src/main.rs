@@ -170,7 +170,7 @@ fn gate_no_debug_prints() -> Result<(), String> {
         // Allow prints inside integration tests and example binaries:
         // tests never ship; example binaries are demonstration programs
         // that intentionally produce terminal output.
-        if path.contains("/tests/") || path.contains("codlet-examples") {
+        if path.contains("/tests/") {
             continue;
         }
         for (i, line) in src.lines().enumerate() {

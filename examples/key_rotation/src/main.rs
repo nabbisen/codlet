@@ -5,7 +5,7 @@
 //! - records written under the old key still validating during the grace period;
 //! - a missing key version failing closed, not silently defaulting.
 //!
-//! Run with: `cargo run -p codlet-examples --bin key_rotation`
+//! Run with: `cargo run  # from examples/key_rotation/`
 
 use codlet_core::error::KeyError;
 use codlet_core::hashing::{KeyVersion, SecretDomain, SecretHasher, StaticKeyProvider};
