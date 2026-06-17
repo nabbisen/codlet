@@ -28,6 +28,48 @@ team tools, event sign-ups, and similar invite-driven membership systems. It is
 **not** an IdP, a user-management system, or an authorization framework, and it
 does not try to make short codes look stronger than they are.
 
+## How it fits in your service
+
+codlet authenticates — your application authorizes. The diagram below shows
+where codlet's responsibility begins and ends; storage, users, roles, and
+authorization decisions remain entirely with the host service.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+
+    box Host application / deployment
+        participant App as Web Service
+        participant Store as App-owned DB / KV<br/>codes, sessions, users
+    end
+
+    box Library dependency
+        participant Codlet
+    end
+
+    User->>App: Submit one-time code
+    App->>Codlet: Redeem code using app storage adapter
+    Codlet->>Store: Consume valid code
+    Store-->>Codlet: Code consumed
+    Codlet-->>App: Subject accepted
+
+    App->>Codlet: Issue session
+    Codlet->>Store: Store session record
+    Codlet-->>App: Set-Cookie value / cookie policy
+    App-->>User: Signed in
+
+    User->>App: Later request with cookie
+    App->>Codlet: Introspect session
+    Codlet->>Store: Load session record
+    Store-->>Codlet: Session record
+    Codlet-->>App: Authenticated subject or Unauthenticated
+
+    App->>Store: Load user / roles / membership
+    Store-->>App: Authorization data
+    App-->>User: Serve response (host policy)
+```
+
 ## Quick start
 
 Add the core crate and your chosen adapter to `Cargo.toml`:
@@ -83,48 +125,6 @@ let _ = lookup_key; // store this + key_version; never store `code`
 - **Storage proves its own atomicity.** One-time claim and single-use
   form-token consume are trait-level contracts backed by conditional writes;
   every adapter must pass a shared conformance suite.
-
-## How it fits in your service
-
-codlet authenticates — your application authorizes. The diagram below shows
-where codlet's responsibility begins and ends; storage, users, roles, and
-authorization decisions remain entirely with the host service.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User
-
-    box Host application / deployment
-        participant App as Web Service
-        participant Store as App-owned DB / KV<br/>codes, sessions, users
-    end
-
-    box Library dependency
-        participant Codlet
-    end
-
-    User->>App: Submit one-time code
-    App->>Codlet: Redeem code using app storage adapter
-    Codlet->>Store: Consume valid code
-    Store-->>Codlet: Code consumed
-    Codlet-->>App: Subject accepted
-
-    App->>Codlet: Issue session
-    Codlet->>Store: Store session record
-    Codlet-->>App: Set-Cookie value / cookie policy
-    App-->>User: Signed in
-
-    User->>App: Later request with cookie
-    App->>Codlet: Introspect session
-    Codlet->>Store: Load session record
-    Store-->>Codlet: Session record
-    Codlet-->>App: Authenticated subject or Unauthenticated
-
-    App->>Store: Load user / roles / membership
-    Store-->>App: Authorization data
-    App-->>User: Serve response (host policy)
-```
 
 ## More detail
 
