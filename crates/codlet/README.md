@@ -1,4 +1,4 @@
-# codlet-core
+# codlet
 
 Runtime-neutral authentication primitives for [codlet](https://github.com/nabbisen/codlet).
 

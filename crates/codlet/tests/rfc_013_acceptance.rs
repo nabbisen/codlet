@@ -11,20 +11,20 @@
 
 use std::time::Duration;
 
-use codlet_core::CodePolicy;
-use codlet_core::audit::{CollectingAuditSink, NoopAuditSink};
-use codlet_core::auth::{
+use codlet::CodePolicy;
+use codlet::audit::{CollectingAuditSink, NoopAuditSink};
+use codlet::auth::{
     CodeAuth, FormTokenManager, IssuedSession, NoRateLimit, RedeemError, SessionManager,
 };
-use codlet_core::clock::FixedClock;
-use codlet_core::cookie::CookiePolicy;
-use codlet_core::error::PublicRedemptionError;
-use codlet_core::hashing::{SecretHasher, StaticKeyProvider};
-use codlet_core::mem::{MemCodeStore, MemFormTokenStore, MemSessionStore};
-use codlet_core::rng::SystemRandom;
-use codlet_core::secret::{CodeId, SessionId, SubjectId};
-use codlet_core::state::SessionValidationOutcome;
-use codlet_core::store::token::TokenSubject;
+use codlet::clock::FixedClock;
+use codlet::cookie::CookiePolicy;
+use codlet::error::PublicRedemptionError;
+use codlet::hashing::{SecretHasher, StaticKeyProvider};
+use codlet::mem::{MemCodeStore, MemFormTokenStore, MemSessionStore};
+use codlet::rng::SystemRandom;
+use codlet::secret::{CodeId, SessionId, SubjectId};
+use codlet::state::SessionValidationOutcome;
+use codlet::store::token::TokenSubject;
 
 // ── Shared fixtures ───────────────────────────────────────────────────────────
 
@@ -243,8 +243,8 @@ async fn missing_code_returns_generic_public_error() {
 
 #[tokio::test]
 async fn validate_expired_session_returns_unauthenticated() {
-    use codlet_core::hashing::SecretDomain;
-    use codlet_core::store::session::{SessionRecord, SessionStore};
+    use codlet::hashing::SecretDomain;
+    use codlet::store::session::{SessionRecord, SessionStore};
 
     let store = MemSessionStore::new();
     let h = hasher();
@@ -397,7 +397,7 @@ async fn form_token_wrong_subject_is_invalid() {
         .consume(secret.expose(), &bob, "save", None)
         .await
         .unwrap_err();
-    assert!(matches!(err, codlet_core::FormTokenError::Invalid { .. }));
+    assert!(matches!(err, codlet::FormTokenError::Invalid { .. }));
 }
 
 // ── Audit events emitted ──────────────────────────────────────────────────────

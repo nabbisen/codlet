@@ -193,7 +193,7 @@ fn gate_no_debug_prints() -> Result<(), String> {
 
 /// RFC-006/015: The cookie builder must always emit `HttpOnly` and `Secure` in
 /// production profiles. Bans construction of `Set-Cookie` values that omit
-/// these attributes in non-dev code paths inside `codlet-core`.
+/// these attributes in non-dev code paths inside `codlet`.
 ///
 /// Specifically: if `build_set_cookie` or `build_clear_cookie` is called and
 /// the result does NOT contain `HttpOnly`, that is a security defect. Here we

@@ -4,7 +4,7 @@
 //! production adapters.  A failure here would indicate a bug in the
 //! conformance suite itself or in the in-memory reference implementation.
 
-use codlet_core::mem::{MemCodeStore, MemFormTokenStore, MemSessionStore};
+use codlet::mem::{MemCodeStore, MemFormTokenStore, MemSessionStore};
 
 #[tokio::test]
 async fn mem_code_store_conformance() {

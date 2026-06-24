@@ -7,10 +7,10 @@
 
 #[cfg(feature = "sqlite")]
 mod sqlite_tests {
+    use codlet::admin::{CodeAdminStore, CodeListFilter};
+    use codlet::secret::{CodeId, ScopeKey};
+    use codlet::store::code::{ClaimRequest, CodeStore};
     use codlet_conformance::fixtures::{LATER, NOW, code_lk, code_record};
-    use codlet_core::admin::{CodeAdminStore, CodeListFilter};
-    use codlet_core::secret::{CodeId, ScopeKey};
-    use codlet_core::store::code::{ClaimRequest, CodeStore};
     use codlet_sqlx::{SqliteStore, run_migrations};
 
     async fn fresh_store() -> SqliteStore {
@@ -129,7 +129,7 @@ mod sqlite_tests {
         store
             .claim_code(&ClaimRequest {
                 code_id: &found.id,
-                subject: &codlet_core::secret::SubjectId::new("u1".into()),
+                subject: &codlet::secret::SubjectId::new("u1".into()),
                 now: NOW,
                 purpose: None,
                 scope: None,
@@ -252,7 +252,7 @@ mod sqlite_tests {
         store
             .claim_code(&ClaimRequest {
                 code_id: &found.id,
-                subject: &codlet_core::secret::SubjectId::new("alice".into()),
+                subject: &codlet::secret::SubjectId::new("alice".into()),
                 now: NOW,
                 purpose: None,
                 scope: None,
@@ -302,10 +302,10 @@ mod sqlite_tests {
 
 #[cfg(feature = "postgres-test")]
 mod postgres_tests {
+    use codlet::admin::{CodeAdminStore, CodeListFilter};
+    use codlet::secret::{CodeId, ScopeKey};
+    use codlet::store::code::{ClaimRequest, CodeStore};
     use codlet_conformance::fixtures::{LATER, NOW, code_lk, code_record};
-    use codlet_core::admin::{CodeAdminStore, CodeListFilter};
-    use codlet_core::secret::{CodeId, ScopeKey};
-    use codlet_core::store::code::{ClaimRequest, CodeStore};
     use codlet_sqlx::{PostgresStore, run_postgres_migrations};
     use testcontainers_modules::{postgres::Postgres, testcontainers::runners::AsyncRunner};
 
@@ -436,7 +436,7 @@ mod postgres_tests {
         let outcome = store
             .claim_code(&ClaimRequest {
                 code_id: &found.id,
-                subject: &codlet_core::secret::SubjectId::new("alice".into()),
+                subject: &codlet::secret::SubjectId::new("alice".into()),
                 now: NOW,
                 purpose: None,
                 scope: None,
@@ -444,7 +444,7 @@ mod postgres_tests {
             .await
             .unwrap();
         assert!(
-            matches!(outcome, codlet_core::state::ClaimOutcome::Won),
+            matches!(outcome, codlet::state::ClaimOutcome::Won),
             "expected Won, got {outcome:?}"
         );
         let meta = store

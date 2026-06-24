@@ -30,10 +30,10 @@ pub use token::PostgresFormTokenStore;
 ///
 /// Wraps a [`sqlx::PgPool`]. Clone is cheap — the pool is reference-counted.
 ///
-/// Implements [`codlet_core::store::code::CodeStore`],
-/// [`codlet_core::store::session::SessionStore`],
-/// [`codlet_core::store::token::FormTokenStore`], and
-/// [`codlet_core::admin::CodeAdminStore`].
+/// Implements [`codlet::store::code::CodeStore`],
+/// [`codlet::store::session::SessionStore`],
+/// [`codlet::store::token::FormTokenStore`], and
+/// [`codlet::admin::CodeAdminStore`].
 #[derive(Debug, Clone)]
 pub struct PostgresStore {
     pub(crate) pool: sqlx::PgPool,

@@ -1,7 +1,7 @@
 #![forbid(unsafe_code)]
 #![doc = include_str!("../README.md")]
 
-//! # codlet-core
+//! # codlet
 //!
 //! Runtime-neutral authentication primitives. This crate contains pure types,
 //! policy objects, cryptographic lookup-key derivation, lifecycle state

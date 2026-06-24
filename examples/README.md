@@ -1,6 +1,6 @@
 # codlet-examples
 
-Compilable usage examples for [codlet](https://crates.io/crates/codlet-core).
+Compilable usage examples for [codlet](https://crates.io/crates/codlet).
 Each binary is self-contained and runs against an in-memory SQLite database —
 no database setup required.
 

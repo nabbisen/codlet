@@ -3,13 +3,13 @@
 //!
 //! Each section covers the checklist items from the corresponding RFC.
 
-use codlet_core::hashing::{KeyVersion, SecretDomain, SecretHasher, StaticKeyProvider};
-use codlet_core::mem::{MemCodeStore, MemFormTokenStore, MemSessionStore};
-use codlet_core::secret::{CodeId, SessionId, SubjectId};
-use codlet_core::state::{ClaimOutcome, TokenConsumeOutcome};
-use codlet_core::store::code::{ClaimRequest, CodeRecord, CodeStore, expires_at_from_ttl};
-use codlet_core::store::session::{SessionRecord, SessionStore};
-use codlet_core::store::token::{FormTokenRecord, FormTokenStore, TokenSubject};
+use codlet::hashing::{KeyVersion, SecretDomain, SecretHasher, StaticKeyProvider};
+use codlet::mem::{MemCodeStore, MemFormTokenStore, MemSessionStore};
+use codlet::secret::{CodeId, SessionId, SubjectId};
+use codlet::state::{ClaimOutcome, TokenConsumeOutcome};
+use codlet::store::code::{ClaimRequest, CodeRecord, CodeStore, expires_at_from_ttl};
+use codlet::store::session::{SessionRecord, SessionStore};
+use codlet::store::token::{FormTokenRecord, FormTokenStore, TokenSubject};
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 
@@ -21,15 +21,15 @@ fn kv() -> KeyVersion {
     KeyVersion::new("v1")
 }
 
-fn code_lookup(val: &str) -> codlet_core::LookupKey {
+fn code_lookup(val: &str) -> codlet::LookupKey {
     hasher().lookup_key(SecretDomain::Code, val).unwrap().0
 }
 
-fn session_lookup(val: &str) -> codlet_core::LookupKey {
+fn session_lookup(val: &str) -> codlet::LookupKey {
     hasher().lookup_key(SecretDomain::Session, val).unwrap().0
 }
 
-fn token_lookup(val: &str) -> codlet_core::LookupKey {
+fn token_lookup(val: &str) -> codlet::LookupKey {
     hasher().lookup_key(SecretDomain::FormToken, val).unwrap().0
 }
 
@@ -49,7 +49,7 @@ fn session_id(n: u8) -> SessionId {
     SessionId::new(format!("sess-{n}"))
 }
 
-fn basic_code_record(id: CodeId, lk: codlet_core::LookupKey, expires_at: u64) -> CodeRecord {
+fn basic_code_record(id: CodeId, lk: codlet::LookupKey, expires_at: u64) -> CodeRecord {
     CodeRecord {
         id,
         lookup_key: lk,
@@ -370,7 +370,7 @@ async fn insert_token(
     purpose: &str,
     bound: Option<&str>,
     expires_at: u64,
-) -> codlet_core::LookupKey {
+) -> codlet::LookupKey {
     let lk = token_lookup(secret);
     store
         .insert_form_token(FormTokenRecord {
@@ -558,7 +558,7 @@ async fn expired_unconsumed_is_invalid() {
 #[tokio::test]
 async fn changed_zero_never_proceeds() {
     // Cross-crate enforcement: all changed==0 classifier paths return non-Proceed.
-    use codlet_core::classify_token_consume;
+    use codlet::classify_token_consume;
     for found in [false, true] {
         for consumed in [false, true] {
             for binding in [false, true] {
@@ -611,7 +611,7 @@ async fn anonymous_token_subject_distinct_from_authenticated() {
 
 #[test]
 fn cookie_defaults_are_secure_by_construction() {
-    use codlet_core::cookie::CookiePolicy;
+    use codlet::cookie::CookiePolicy;
     let p = CookiePolicy::production_strict("sid", std::time::Duration::from_secs(3600));
     assert!(p.is_secure());
     let hdr = p.build_set_cookie("mysecret");
@@ -623,7 +623,7 @@ fn cookie_defaults_are_secure_by_construction() {
 
 #[test]
 fn clear_cookie_mirrors_set_cookie_attributes() {
-    use codlet_core::cookie::CookiePolicy;
+    use codlet::cookie::CookiePolicy;
     let p = CookiePolicy::production_strict("sid", std::time::Duration::from_secs(3600))
         .with_domain(Some("example.com"));
     let set = p.build_set_cookie("s");
@@ -640,7 +640,7 @@ fn clear_cookie_mirrors_set_cookie_attributes() {
 
 #[cfg(feature = "test-utils")]
 mod rfc_a_key_rotation {
-    use codlet_core::{
+    use codlet::{
         SecretHasher, StaticKeyProvider,
         hashing::{KeyVersion, SecretDomain},
     };
@@ -708,7 +708,7 @@ mod rfc_a_key_rotation {
 
 #[cfg(feature = "test-utils")]
 mod rfc_b_rate_limit {
-    use codlet_core::{
+    use codlet::{
         CodePolicy, SecretHasher, StaticKeyProvider,
         audit::NoopAuditSink,
         auth::CodeAuth,
@@ -786,7 +786,7 @@ mod rfc_b_rate_limit {
 
 #[cfg(feature = "test-utils")]
 mod rfc_c_purpose_scope {
-    use codlet_core::{
+    use codlet::{
         CodePolicy, SecretHasher, StaticKeyProvider,
         audit::NoopAuditSink,
         auth::CodeAuth,
@@ -875,7 +875,7 @@ mod rfc_c_purpose_scope {
 
 #[cfg(feature = "test-utils")]
 mod rfc_e_bound_resource {
-    use codlet_core::{
+    use codlet::{
         SecretHasher, StaticKeyProvider,
         hashing::{KeyVersion, SecretDomain},
         mem::MemFormTokenStore,
@@ -898,7 +898,7 @@ mod rfc_e_bound_resource {
         store: &MemFormTokenStore,
         secret: &str,
         res: Option<&str>,
-    ) -> codlet_core::hashing::LookupKey {
+    ) -> codlet::hashing::LookupKey {
         let lk = hasher()
             .lookup_key(SecretDomain::FormToken, secret)
             .unwrap()

@@ -11,7 +11,7 @@
 //! ## Usage
 //!
 //! ```rust
-//! use codlet_core::metrics::{MetricsObserver, NoopMetrics, Outcome};
+//! use codlet::metrics::{MetricsObserver, NoopMetrics, Outcome};
 //!
 //! struct MyMetrics;
 //! impl MetricsObserver for MyMetrics {

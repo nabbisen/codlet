@@ -3,10 +3,10 @@
 //! Provides metadata listing and single-record lookup for admin tooling.
 //! Never returns plaintext codes or HMAC lookup keys (RFC-030).
 
-use codlet_core::admin::{CodeAdminStore, CodeListFilter, CodeMeta};
-use codlet_core::hashing::KeyVersion;
-use codlet_core::secret::{CodeId, SubjectId};
-use codlet_core::store::error::StoreError;
+use codlet::admin::{CodeAdminStore, CodeListFilter, CodeMeta};
+use codlet::hashing::KeyVersion;
+use codlet::secret::{CodeId, SubjectId};
+use codlet::store::error::StoreError;
 
 use crate::SqliteStore;
 

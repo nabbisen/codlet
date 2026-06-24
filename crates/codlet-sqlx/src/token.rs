@@ -1,9 +1,9 @@
-//! SQLite implementation of [`codlet_core::store::token::FormTokenStore`].
+//! SQLite implementation of [`codlet::store::token::FormTokenStore`].
 
-use codlet_core::hashing::LookupKey;
-use codlet_core::state::{TokenConsumeOutcome, classify_token_consume};
-use codlet_core::store::error::StoreError;
-use codlet_core::store::token::{FormTokenRecord, FormTokenStore, TokenSubject};
+use codlet::hashing::LookupKey;
+use codlet::state::{TokenConsumeOutcome, classify_token_consume};
+use codlet::store::error::StoreError;
+use codlet::store::token::{FormTokenRecord, FormTokenStore, TokenSubject};
 
 use crate::SqliteStore;
 

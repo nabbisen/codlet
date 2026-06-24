@@ -1,10 +1,10 @@
-//! SQLite implementation of [`codlet_core::store::code::CodeStore`].
+//! SQLite implementation of [`codlet::store::code::CodeStore`].
 
-use codlet_core::hashing::{KeyVersion, LookupKey};
-use codlet_core::secret::CodeId;
-use codlet_core::state::{ClaimOutcome, classify_claim};
-use codlet_core::store::code::{ClaimRequest, CodeRecord, CodeStore, RedeemableCode};
-use codlet_core::store::error::StoreError;
+use codlet::hashing::{KeyVersion, LookupKey};
+use codlet::secret::CodeId;
+use codlet::state::{ClaimOutcome, classify_claim};
+use codlet::store::code::{ClaimRequest, CodeRecord, CodeStore, RedeemableCode};
+use codlet::store::error::StoreError;
 
 use crate::SqliteStore;
 

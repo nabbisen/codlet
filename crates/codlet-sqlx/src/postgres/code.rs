@@ -1,11 +1,11 @@
 //! PostgreSQL implementation of [`CodeStore`] and [`CodeAdminStore`] (RFC-034).
 
-use codlet_core::admin::{CodeAdminStore, CodeListFilter, CodeMeta};
-use codlet_core::hashing::{KeyVersion, LookupKey};
-use codlet_core::secret::{CodeId, SubjectId};
-use codlet_core::state::{ClaimOutcome, classify_claim};
-use codlet_core::store::code::{ClaimRequest, CodeRecord, CodeStore, RedeemableCode};
-use codlet_core::store::error::StoreError;
+use codlet::admin::{CodeAdminStore, CodeListFilter, CodeMeta};
+use codlet::hashing::{KeyVersion, LookupKey};
+use codlet::secret::{CodeId, SubjectId};
+use codlet::state::{ClaimOutcome, classify_claim};
+use codlet::store::code::{ClaimRequest, CodeRecord, CodeStore, RedeemableCode};
+use codlet::store::error::StoreError;
 
 use super::PostgresStore;
 

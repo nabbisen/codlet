@@ -15,15 +15,15 @@
 
 use std::time::Duration;
 
-use codlet_core::CodePolicy;
-use codlet_core::audit::NoopAuditSink;
-use codlet_core::auth::{CodeAuth, SessionManager};
-use codlet_core::clock::SystemClock;
-use codlet_core::cookie::CookiePolicy;
-use codlet_core::hashing::{SecretHasher, StaticKeyProvider};
-use codlet_core::rng::SystemRandom;
-use codlet_core::secret::{CodeId, SessionId, SubjectId};
-use codlet_core::state::SessionValidationOutcome;
+use codlet::CodePolicy;
+use codlet::audit::NoopAuditSink;
+use codlet::auth::{CodeAuth, SessionManager};
+use codlet::clock::SystemClock;
+use codlet::cookie::CookiePolicy;
+use codlet::hashing::{SecretHasher, StaticKeyProvider};
+use codlet::rng::SystemRandom;
+use codlet::secret::{CodeId, SessionId, SubjectId};
+use codlet::state::SessionValidationOutcome;
 use codlet_sqlx::{SqliteStore, run_migrations};
 
 #[tokio::main]
@@ -138,20 +138,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 #[allow(dead_code)]
 #[allow(deprecated)] // demonstrates the experimental redeem_with_callback API (RFC-D)
 async fn callback_flow_example(
-    code_auth: &codlet_core::auth::CodeAuth<
+    code_auth: &codlet::auth::CodeAuth<
         SqliteStore,
-        codlet_core::auth::NoRateLimit,
+        codlet::auth::NoRateLimit,
         StaticKeyProvider,
-        codlet_core::clock::SystemClock,
-        codlet_core::audit::NoopAuditSink,
+        codlet::clock::SystemClock,
+        codlet::audit::NoopAuditSink,
     >,
     raw_code: &str,
-) -> Result<codlet_core::auth::RedeemSuccess, codlet_core::auth::RedeemError> {
+) -> Result<codlet::auth::RedeemSuccess, codlet::auth::RedeemError> {
     code_auth
         .redeem_with_callback(raw_code, None, |_record| async {
             // The host creates or resolves its subject here, *after* the claim
             // is won. codlet does not create users — the host owns that step.
-            Ok::<_, std::convert::Infallible>(codlet_core::secret::SubjectId::new("user-99".into()))
+            Ok::<_, std::convert::Infallible>(codlet::secret::SubjectId::new("user-99".into()))
         })
         .await
 }

@@ -14,14 +14,14 @@
 
 use std::time::Duration;
 
-use codlet_core::audit::NoopAuditSink;
-use codlet_core::auth::FormTokenManager;
-use codlet_core::clock::FixedClock;
-use codlet_core::hashing::{SecretHasher, StaticKeyProvider};
-use codlet_core::mem::MemFormTokenStore;
-use codlet_core::rng::SystemRandom;
-use codlet_core::secret::SubjectId;
-use codlet_core::store::token::TokenSubject;
+use codlet::audit::NoopAuditSink;
+use codlet::auth::FormTokenManager;
+use codlet::clock::FixedClock;
+use codlet::hashing::{SecretHasher, StaticKeyProvider};
+use codlet::mem::MemFormTokenStore;
+use codlet::rng::SystemRandom;
+use codlet::secret::SubjectId;
+use codlet::store::token::TokenSubject;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

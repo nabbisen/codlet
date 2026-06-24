@@ -22,7 +22,7 @@ model):
   single-winner (`changed == 0` never proceeds);
 - public redemption failures are generic and do not reveal code state;
 - session cookies are `HttpOnly; Secure; SameSite=Strict` by default;
-- `codlet-core` gains no web-framework, database, or async-executor dependency;
+- `codlet` gains no web-framework, database, or async-executor dependency;
 - no authorization, user, role, permission, or community concept enters core.
 
 ## Before opening a PR

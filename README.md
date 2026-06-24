@@ -1,8 +1,8 @@
 # codlet
 
-[![codlet-core](https://img.shields.io/crates/v/codlet-core?label=codlet-core)](https://crates.io/crates/codlet-core)
-[![codlet-core Docs](https://docs.rs/codlet-core/badge.svg?version=latest)](https://docs.rs/codlet-core)
-[![codlet-core Deps Status](https://deps.rs/crate/codlet-core/latest/status.svg)](https://deps.rs/crate/codlet-core)
+[![codlet](https://img.shields.io/crates/v/codlet?label=codlet)](https://crates.io/crates/codlet)
+[![codlet Docs](https://docs.rs/codlet/badge.svg?version=latest)](https://docs.rs/codlet)
+[![codlet Deps Status](https://deps.rs/crate/codlet/latest/status.svg)](https://deps.rs/crate/codlet)
 [![License](https://img.shields.io/github/license/nabbisen/codlet)](LICENSE)
 
 **Embedded one-time-code authentication primitives for Rust web services.**
@@ -76,23 +76,23 @@ Add the core crate and your chosen adapter to `Cargo.toml`:
 
 ```toml
 [dependencies]
-codlet-core = "0.16"
+codlet = "0.17"
 
 # Cloudflare Workers (wasm32 target only):
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-codlet-worker = "0.16"
+codlet-worker = "0.17"
 
 # SQLite or PostgreSQL (native targets):
-# codlet-sqlx = "0.16"
-# codlet-sqlx = { version = "0.16", default-features = false, features = ["postgres"] }
+# codlet-sqlx = "0.17"
+# codlet-sqlx = { version = "0.17", default-features = false, features = ["postgres"] }
 ```
 
 The shape of the core primitives:
 
 ```rust
-use codlet_core::{CodePolicy, SecretHasher, StaticKeyProvider, SecretDomain};
-use codlet_core::{generate_code, validate_code_input};
-use codlet_core::rng::SystemRandom;
+use codlet::{CodePolicy, SecretHasher, StaticKeyProvider, SecretDomain};
+use codlet::{generate_code, validate_code_input};
+use codlet::rng::SystemRandom;
 use std::time::Duration;
 
 // A policy: unambiguous alphabet, >=8 chars, 24h TTL.
@@ -119,7 +119,7 @@ let _ = lookup_key; // store this + key_version; never store `code`
   missing key material and RNG failure both fail closed; redemption failures map
   to a single generic public error; session cookies are `HttpOnly; Secure;
   SameSite=Strict` by default.
-- **Small, runtime-neutral core.** `codlet-core` carries no web-framework,
+- **Small, runtime-neutral core.** `codlet` carries no web-framework,
   database, or async-executor dependencies. Runtime support (Cloudflare
   Workers/D1/KV, SQLx, Axum) lives in separate adapter crates.
 - **Storage proves its own atomicity.** One-time claim and single-use

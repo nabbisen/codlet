@@ -7,8 +7,8 @@
 //!
 //! Run with: `cargo run  # from examples/key_rotation/`
 
-use codlet_core::error::KeyError;
-use codlet_core::hashing::{KeyVersion, SecretDomain, SecretHasher, StaticKeyProvider};
+use codlet::error::KeyError;
+use codlet::hashing::{KeyVersion, SecretDomain, SecretHasher, StaticKeyProvider};
 
 fn main() {
     // ── Step 1: Initial deployment (only v1) ─────────────────────────────────

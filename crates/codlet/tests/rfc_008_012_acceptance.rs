@@ -3,13 +3,13 @@
 
 use std::time::Duration;
 
-use codlet_core::audit::{AuditSink, CodeAuthEvent, CollectingAuditSink, NoopAuditSink};
-use codlet_core::error::{
+use codlet::audit::{AuditSink, CodeAuthEvent, CollectingAuditSink, NoopAuditSink};
+use codlet::error::{
     PublicFormError, PublicRedemptionError, PublicSessionError, RedemptionFailReason,
 };
-use codlet_core::mem::MemRateLimitStore;
-use codlet_core::secret::{CodeId, SessionId, SubjectId};
-use codlet_core::store::ratelimit::{
+use codlet::mem::MemRateLimitStore;
+use codlet::secret::{CodeId, SessionId, SubjectId};
+use codlet::store::ratelimit::{
     RateLimitKey, RateLimitOutcome, RateLimitPolicy, RateLimitStore, RateLimitUnavailable,
 };
 

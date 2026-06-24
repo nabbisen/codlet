@@ -14,8 +14,8 @@
 //! - D1-backed counters with serialised writes (higher latency, stronger
 //!   consistency)
 
-use codlet_core::store::error::StoreError;
-use codlet_core::store::ratelimit::{
+use codlet::store::error::StoreError;
+use codlet::store::ratelimit::{
     RateLimitKey, RateLimitOutcome, RateLimitPolicy, RateLimitStore, RateLimitUnavailable,
 };
 

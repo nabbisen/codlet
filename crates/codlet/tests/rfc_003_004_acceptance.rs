@@ -6,8 +6,8 @@
 //! - frozen HMAC lookup-key vectors per domain (RFC-004 §12.3) so any future
 //!   refactor or adapter must reproduce the exact same bytes.
 
-use codlet_core::code::normalize;
-use codlet_core::hashing::{SecretDomain, SecretHasher, StaticKeyProvider};
+use codlet::code::normalize;
+use codlet::hashing::{SecretDomain, SecretHasher, StaticKeyProvider};
 
 /// Small xorshift so the sweep is reproducible without adding a dev-dependency.
 struct XorShift(u64);

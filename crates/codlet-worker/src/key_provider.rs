@@ -4,8 +4,8 @@
 //! Fails closed: if any configured secret binding is missing or empty,
 //! construction returns `Err` (INV-2).
 
-use codlet_core::error::KeyError;
-use codlet_core::hashing::{HmacKeyRef, KeyProvider, KeyVersion, StaticKeyProvider};
+use codlet::error::KeyError;
+use codlet::hashing::{HmacKeyRef, KeyProvider, KeyVersion, StaticKeyProvider};
 
 /// Loads active and previous HMAC key material from Cloudflare Worker
 /// `Env` secrets (RFC-033 §9).

@@ -4,7 +4,7 @@ use std::future::Future;
 use std::sync::Arc;
 
 use crate::fixtures::*;
-use codlet_core::state::ClaimOutcome;
+use codlet::state::ClaimOutcome;
 
 // ── CodeStore conformance ────────────────────────────────────────────────────
 

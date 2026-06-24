@@ -1,13 +1,13 @@
 [package]
 name = "codlet-sqlx"
-version.workspace = true
-edition.workspace = true
-rust-version.workspace = true
-license.workspace = true
-authors.workspace = true
-repository.workspace = true
 description = "SQLite and PostgreSQL storage adapters for codlet, backed by SQLx (RFC-011, RFC-034)."
 readme = "README.md"
+version.workspace      = true
+edition.workspace      = true
+rust-version.workspace = true
+license.workspace      = true
+authors.workspace      = true
+repository.workspace   = true
 
 [lints]
 workspace = true
@@ -16,26 +16,22 @@ workspace = true
 # No default: callers choose their backend explicitly.
 # Use `--features sqlite` for SQLite or `--features postgres` for PostgreSQL.
 # Both can be enabled simultaneously.
-default      = ["sqlite"]
-sqlite       = ["sqlx/sqlite"]
-postgres     = ["sqlx/postgres"]
+default       = ["sqlite"]
+sqlite        = ["sqlx/sqlite"]
+postgres      = ["sqlx/postgres"]
 # Activates postgres + testcontainers for Docker-based integration tests.
 postgres-test = ["postgres", "dep:testcontainers-modules"]
 
 [dependencies]
-codlet-core = { workspace = true }
+codlet                 = { workspace = true }
 # runtime-tokio is unconditional: both SQLite and PostgreSQL adapters require
 # an async runtime and tokio is the only supported choice. Hosts using
 # async-std must wrap calls via a tokio runtime block.
-sqlx = { workspace = true, features = ["runtime-tokio"] }
-tokio = { workspace = true, features = ["rt"] }
+sqlx                   = { workspace = true, features = ["runtime-tokio"] }
+tokio                  = { workspace = true, features = ["rt"] }
+testcontainers-modules = { version = "0.15", features = ["postgres"], optional = true }
 
 [dev-dependencies]
 codlet-conformance = { path = "../codlet-conformance" }
-tokio = { workspace = true, features = ["rt-multi-thread", "macros", "sync"] }
-tempfile = "3"
-
-[dependencies.testcontainers-modules]
-version = "0.15"
-features = ["postgres"]
-optional = true
+tokio              = { workspace = true, features = ["rt-multi-thread", "macros", "sync"] }
+tempfile           = "3"

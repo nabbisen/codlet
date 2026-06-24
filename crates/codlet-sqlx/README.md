@@ -13,7 +13,7 @@ support is planned for a later release.
 
 ```rust,ignore
 use codlet_sqlx::{run_migrations, SqliteStore};
-use codlet_core::store::code::CodeStore;
+use codlet::store::code::CodeStore;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

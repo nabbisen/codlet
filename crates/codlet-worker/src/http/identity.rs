@@ -18,7 +18,7 @@
 //! rejected (RFC-033 §13 / RFC-010 §12.4): all requests would share one
 //! counter, causing false positives.
 
-use codlet_core::store::ratelimit::RateLimitKey;
+use codlet::store::ratelimit::RateLimitKey;
 
 /// Extract a rate-limit key from a Workers [`worker::Request`].
 ///

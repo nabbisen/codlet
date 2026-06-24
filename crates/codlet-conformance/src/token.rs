@@ -3,7 +3,7 @@
 use std::future::Future;
 
 use crate::fixtures::*;
-use codlet_core::state::TokenConsumeOutcome;
+use codlet::state::TokenConsumeOutcome;
 
 // ── FormTokenStore conformance ────────────────────────────────────────────────
 

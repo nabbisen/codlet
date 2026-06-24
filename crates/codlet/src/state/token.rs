@@ -1,7 +1,7 @@
 //! Form-token consume state machine (RFC-007).
 //!
 //! Pure classifier for atomic form-token consume operations (RFC-007).
-//! and its six tests, lifted into codlet-core so the logic is a pure,
+//! and its six tests, lifted into codlet so the logic is a pure,
 //! storage-free primitive. The function signature and all invariants are
 //! preserved exactly; adapters supply the inputs from their query results.
 

@@ -33,15 +33,15 @@ use axum::{
     response::{Html, IntoResponse, Redirect, Response},
     routing::{get, post},
 };
-use codlet_core::audit::NoopAuditSink;
-use codlet_core::auth::{CodeAuth, SessionManager};
-use codlet_core::clock::SystemClock;
-use codlet_core::cookie::CookiePolicy;
-use codlet_core::hashing::{SecretHasher, StaticKeyProvider};
-use codlet_core::rng::SystemRandom;
-use codlet_core::secret::{CodeId, SessionId, SubjectId};
-use codlet_core::state::SessionValidationOutcome;
-use codlet_core::{CodePolicy, IssuedSession};
+use codlet::audit::NoopAuditSink;
+use codlet::auth::{CodeAuth, SessionManager};
+use codlet::clock::SystemClock;
+use codlet::cookie::CookiePolicy;
+use codlet::hashing::{SecretHasher, StaticKeyProvider};
+use codlet::rng::SystemRandom;
+use codlet::secret::{CodeId, SessionId, SubjectId};
+use codlet::state::SessionValidationOutcome;
+use codlet::{CodePolicy, IssuedSession};
 use codlet_sqlx::{SqliteStore, run_migrations};
 use serde::Deserialize;
 
@@ -53,7 +53,7 @@ struct AppState {
     code_auth: Arc<
         CodeAuth<
             SqliteStore,
-            codlet_core::auth::NoRateLimit,
+            codlet::auth::NoRateLimit,
             StaticKeyProvider,
             SystemClock,
             NoopAuditSink,

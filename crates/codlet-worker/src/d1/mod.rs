@@ -16,7 +16,7 @@ pub use code::D1CodeStore;
 pub use session::D1SessionStore;
 pub use token::D1FormTokenStore;
 
-use codlet_core::store::error::StoreError;
+use codlet::store::error::StoreError;
 use worker::d1::{D1PreparedStatement, D1Type};
 
 /// Bind a `u64` Unix-second timestamp as `REAL` for D1 (RFC-033 §6).

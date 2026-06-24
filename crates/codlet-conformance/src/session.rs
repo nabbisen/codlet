@@ -3,7 +3,7 @@
 use std::future::Future;
 
 use crate::fixtures::*;
-use codlet_core::secret::SessionId;
+use codlet::secret::SessionId;
 
 // ── SessionStore conformance ──────────────────────────────────────────────────
 

@@ -10,11 +10,11 @@
 
 use std::ptr;
 
-use codlet_core::LookupKey;
-use codlet_core::secret::CodeId;
-use codlet_core::state::ClaimOutcome;
-use codlet_core::store::code::{ClaimRequest, CodeRecord, CodeStore, RedeemableCode};
-use codlet_core::store::error::StoreError;
+use codlet::LookupKey;
+use codlet::secret::CodeId;
+use codlet::state::ClaimOutcome;
+use codlet::store::code::{ClaimRequest, CodeRecord, CodeStore, RedeemableCode};
+use codlet::store::error::StoreError;
 
 // ── Item 2: !Send store satisfies CodeStore ───────────────────────────────────
 

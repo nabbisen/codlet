@@ -1,6 +1,6 @@
 //! Cookie extraction and response header construction (RFC-033 §12).
 
-use codlet_core::cookie::CookiePolicy;
+use codlet::cookie::CookiePolicy;
 
 /// Extract a named cookie value from a Workers [`worker::Request`].
 ///

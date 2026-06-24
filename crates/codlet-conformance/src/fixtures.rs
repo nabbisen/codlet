@@ -5,12 +5,12 @@
 pub use std::future::Future;
 pub use std::sync::Arc;
 
-pub use codlet_core::hashing::{KeyVersion, SecretDomain, SecretHasher, StaticKeyProvider};
-pub use codlet_core::secret::{CodeId, SessionId, SubjectId};
-pub use codlet_core::state::{ClaimOutcome, TokenConsumeOutcome};
-pub use codlet_core::store::code::{ClaimRequest, CodeRecord, CodeStore};
-pub use codlet_core::store::session::{SessionRecord, SessionStore};
-pub use codlet_core::store::token::{FormTokenRecord, FormTokenStore, TokenSubject};
+pub use codlet::hashing::{KeyVersion, SecretDomain, SecretHasher, StaticKeyProvider};
+pub use codlet::secret::{CodeId, SessionId, SubjectId};
+pub use codlet::state::{ClaimOutcome, TokenConsumeOutcome};
+pub use codlet::store::code::{ClaimRequest, CodeRecord, CodeStore};
+pub use codlet::store::session::{SessionRecord, SessionStore};
+pub use codlet::store::token::{FormTokenRecord, FormTokenStore, TokenSubject};
 
 /// Fixed "now" timestamp used in all conformance tests.
 pub const NOW: u64 = 1_700_000_000;
@@ -30,17 +30,17 @@ pub fn kv() -> KeyVersion {
 }
 
 /// Derive a code domain lookup key from a test value.
-pub fn code_lk(val: &str) -> codlet_core::LookupKey {
+pub fn code_lk(val: &str) -> codlet::LookupKey {
     hasher().lookup_key(SecretDomain::Code, val).unwrap().0
 }
 
 /// Derive a session domain lookup key from a test value.
-pub fn session_lk(val: &str) -> codlet_core::LookupKey {
+pub fn session_lk(val: &str) -> codlet::LookupKey {
     hasher().lookup_key(SecretDomain::Session, val).unwrap().0
 }
 
 /// Derive a form-token domain lookup key from a test value.
-pub fn token_lk(val: &str) -> codlet_core::LookupKey {
+pub fn token_lk(val: &str) -> codlet::LookupKey {
     hasher().lookup_key(SecretDomain::FormToken, val).unwrap().0
 }
 

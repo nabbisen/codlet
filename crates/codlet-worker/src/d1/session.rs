@@ -3,10 +3,10 @@
 use serde::Deserialize;
 use std::rc::Rc;
 
-use codlet_core::hashing::LookupKey;
-use codlet_core::secret::{SessionId, SubjectId};
-use codlet_core::store::error::StoreError;
-use codlet_core::store::session::{ActiveSessionRecord, SessionRecord, SessionStore};
+use codlet::hashing::LookupKey;
+use codlet::secret::{SessionId, SubjectId};
+use codlet::store::error::StoreError;
+use codlet::store::session::{ActiveSessionRecord, SessionRecord, SessionStore};
 
 use crate::d1::{bind, to_store_err, ts};
 use crate::table_config::D1TableConfig;

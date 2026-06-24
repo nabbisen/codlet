@@ -62,7 +62,7 @@ async fn fetch(req: Request, env: Env, _ctx: Context) -> Result<Response> {
     let token_store   = D1FormTokenStore::new(db, tables);
     let rl_store      = KvRateLimitStore::new(kv);
 
-    // Wire into codlet_core managers …
+    // Wire into codlet managers …
     todo!()
 }
 ```

@@ -22,7 +22,7 @@ codlet_form_tokens: lookup_key, key_version
 Supply an active key and any previous keys through `StaticKeyProvider`:
 
 ```rust
-use codlet_core::hashing::{StaticKeyProvider, KeyVersion};
+use codlet::hashing::{StaticKeyProvider, KeyVersion};
 
 let provider = StaticKeyProvider::new(
     "v2",                            // active version label

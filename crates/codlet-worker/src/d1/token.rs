@@ -3,10 +3,10 @@
 use serde::Deserialize;
 use std::rc::Rc;
 
-use codlet_core::hashing::LookupKey;
-use codlet_core::state::{TokenConsumeOutcome, classify_token_consume};
-use codlet_core::store::error::StoreError;
-use codlet_core::store::token::{FormTokenRecord, FormTokenStore, TokenSubject};
+use codlet::hashing::LookupKey;
+use codlet::state::{TokenConsumeOutcome, classify_token_consume};
+use codlet::store::error::StoreError;
+use codlet::store::token::{FormTokenRecord, FormTokenStore, TokenSubject};
 
 use crate::d1::{bind, changes, to_store_err, ts};
 use crate::table_config::D1TableConfig;

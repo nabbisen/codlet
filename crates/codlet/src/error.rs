@@ -1,4 +1,4 @@
-//! Error types for codlet-core.
+//! Error types for codlet.
 //!
 //! This is the internal error layer (RFC-012/021): structured, useful for
 //! developers and operators, and safe to log because no variant carries a

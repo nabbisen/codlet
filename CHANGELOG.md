@@ -8,6 +8,10 @@ semantic versioning once it reaches a stable release.
 
 Nothing yet.
 
+## [0.17.0] — 2026-06-24
+
+`codlet-core` crate renamed to `codlet`.
+
 ## [0.16.2] — 2026-06-16
 
 Example projects in examples/.

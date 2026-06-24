@@ -1,6 +1,6 @@
 //! Storage traits (RFC-005, RFC-006, RFC-007).
 //!
-//! These traits define the contract between `codlet-core` and any storage
+//! These traits define the contract between `codlet` and any storage
 //! backend. Adapters (in-memory, SQLx, Workers D1) implement them and must
 //! pass the conformance suite (RFC-023) before being considered production-ready.
 
