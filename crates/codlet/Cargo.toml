@@ -40,6 +40,6 @@ serde = { workspace = true, optional = true }
 getrandom = { workspace = true, features = ["wasm_js"] }
 
 [dev-dependencies]
-serde_json = "1"
-static_assertions = "1"
-tokio = { version = "1", features = ["rt", "macros"] }
+serde_json        = { workspace = true }
+static_assertions = { workspace = true }
+tokio             = { workspace = true, features = ["rt", "macros"] }

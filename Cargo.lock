@@ -156,7 +156,7 @@ dependencies = [
 
 [[package]]
 name = "axum_login_logout"
-version = "0.17.0"
+version = "0.17.1"
 dependencies = [
  "axum",
  "codlet",
@@ -346,7 +346,7 @@ checksum = "0c9ea0ac24bc397ab3c98583a3c9ba74fa56b09a4449bbe172b9b1ddb016027a"
 
 [[package]]
 name = "codlet"
-version = "0.17.0"
+version = "0.17.1"
 dependencies = [
  "getrandom 0.4.3",
  "hmac",
@@ -361,7 +361,7 @@ dependencies = [
 
 [[package]]
 name = "codlet-conformance"
-version = "0.17.0"
+version = "0.17.1"
 dependencies = [
  "codlet",
  "futures",
@@ -370,7 +370,7 @@ dependencies = [
 
 [[package]]
 name = "codlet-sqlx"
-version = "0.17.0"
+version = "0.17.1"
 dependencies = [
  "codlet",
  "codlet-conformance",
@@ -382,7 +382,7 @@ dependencies = [
 
 [[package]]
 name = "codlet-worker"
-version = "0.17.0"
+version = "0.17.1"
 dependencies = [
  "codlet",
  "serde",
@@ -701,7 +701,7 @@ checksum = "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb"
 
 [[package]]
 name = "form_token_csrf"
-version = "0.17.0"
+version = "0.17.1"
 dependencies = [
  "codlet",
  "tokio",
@@ -1290,7 +1290,7 @@ dependencies = [
 
 [[package]]
 name = "key_rotation"
-version = "0.17.0"
+version = "0.17.1"
 dependencies = [
  "codlet",
  "tokio",
@@ -2112,7 +2112,7 @@ dependencies = [
 
 [[package]]
 name = "sqlite_file"
-version = "0.17.0"
+version = "0.17.1"
 dependencies = [
  "codlet",
  "codlet-sqlx",
@@ -2122,7 +2122,7 @@ dependencies = [
 
 [[package]]
 name = "sqlite_quickstart"
-version = "0.17.0"
+version = "0.17.1"
 dependencies = [
  "codlet",
  "codlet-sqlx",
@@ -3159,7 +3159,7 @@ dependencies = [
 
 [[package]]
 name = "xtask"
-version = "0.17.0"
+version = "0.17.1"
 
 [[package]]
 name = "yoke"

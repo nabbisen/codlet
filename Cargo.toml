@@ -1,5 +1,5 @@
 [workspace]
-resolver = "2"
+resolver = "3"
 members = [
     "crates/codlet",
     "crates/codlet-conformance",
@@ -15,51 +15,54 @@ default-members = [
 ]
 
 [workspace.package]
-version      = "0.17.0"
-edition      = "2024"
-rust-version = "1.85"
-license      = "Apache-2.0"
-authors      = ["nabbisen"]
-repository   = "https://github.com/nabbisen/codlet"
-description  = "Embedded one-time-code authentication primitives for Rust web services."
-categories   = ["authentication", "cryptography", "no-std::no-alloc"]
-keywords     = ["authentication", "one-time-code", "session", "csrf", "hmac"]
+version         = "0.17.1"
+edition         = "2024"
+rust-version    = "1.85"
+license         = "Apache-2.0"
+authors         = ["nabbisen"]
+repository      = "https://github.com/nabbisen/codlet"
+description     = "Embedded one-time-code authentication primitives for Rust web services."
+categories      = ["authentication", "cryptography", "no-std::no-alloc"]
+keywords        = ["authentication", "one-time-code", "session", "csrf", "hmac"]
 
 # Candidate core dependencies (RFC-002 §4, RFC-NFR-3). Pinned here so every
 # crate shares one version. Adapters add their own platform deps in their own
 # manifests; none of these are web-framework, database, or async-executor crates.
 [workspace.dependencies]
-codlet      = { version = "0.17.0", path = "crates/codlet" }
-codlet-sqlx = { version = "0.17.0", path = "crates/codlet-sqlx" }
+codlet                  = { version = "0.17.1", path = "crates/codlet" }
+codlet-sqlx             = { version = "0.17.1", path = "crates/codlet-sqlx" }
 
-worker      = { version = "0.8" }
-worker-kv   = { version = "0.9" }
+worker                  = "0.8"
+worker-kv               = "0.9"
 
-sqlx        = { version = "0.9", default-features = false }
-tokio       = { version = "1" }
+sqlx                    = { version = "0.9", default-features = false }
+tokio                   = "1"
 
-hmac        = { version = "0.13" }
-sha2        = { version = "0.11" }
-subtle      = { version = "2" }
+hmac                    = "0.13"
+sha2                    = "0.11"
+subtle                  = "2"
 # getrandom: the `js` feature is required on wasm32-unknown-unknown (Workers
 # target) to route through wasm-bindgen's crypto API.  It must NOT be enabled
 # on native targets — it adds wasm-bindgen glue that has no effect but
 # increases binary size.  Per-target activation is done in codlet's
 # Cargo.toml, not here.
-getrandom   = { version = "0.4" }
-thiserror   = { version = "2" }
-serde       = { version = "1", features = ["derive"] }
-serde_json  = { version = "1" }
-
-[profile.release]
-opt-level = "s"   # smaller artifacts; adapters targeting WASM benefit
+getrandom               = "0.4"
+thiserror               = "2"
+serde                   = { version = "1", features = ["derive"] }
+serde_json              = "1"
+axum                    = "0.8"
+static_assertions       = "1"
+testcontainers-modules  = "0.15"
+tempfile                = "3"
 
 # Shared lint policy. forbid(unsafe_code) is also asserted in each crate root
 # (implementation handoff §5) so it is visible at the top of the source file.
 [workspace.lints.rust]
-unsafe_code = "forbid"
-missing_docs = "warn"
+unsafe_code     = "forbid"
+missing_docs    = "warn"
 
 [workspace.lints.clippy]
-all = { level = "warn", priority = -1 }
+all             = { level = "warn", priority = -1 }
 
+[profile.release]
+opt-level = "s"   # smaller artifacts; adapters targeting WASM benefit

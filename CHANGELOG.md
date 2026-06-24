@@ -8,6 +8,39 @@ semantic versioning once it reaches a stable release.
 
 Nothing yet.
 
+## [0.17.1] — 2026-06-24
+
+Housekeeping release: module layout, test organisation, and dependency
+consolidation. No API changes.
+
+### Changed
+
+- **Rust 2024 module style.** All `mod.rs` files converted to sibling `.rs`
+  files: `auth.rs`, `code.rs`, `mem.rs`, `state.rs`, `store.rs` in
+  `crates/codlet`; `postgres.rs` in `crates/codlet-sqlx`;
+  `d1.rs`, `http.rs`, `kv.rs` in `crates/codlet-worker`. An `include_str!`
+  path in `postgres.rs` was corrected after the rename.
+
+- **Test extraction.** All inline `#[cfg(test)] mod tests { … }` blocks in
+  `crates/codlet/src/` extracted to `<module>/tests.rs` sibling files.
+  `lib.rs` retains its 11-line smoke test inline.
+
+- **Acceptance test split.** `rfc_005_006_007_011_acceptance.rs` (972 lines)
+  split into four focused files: `rfc_005_acceptance.rs` (code lifecycle),
+  `rfc_006_acceptance.rs` (session lifecycle), `rfc_007_acceptance.rs`
+  (form-token lifecycle), `rfc_security_acceptance.rs` (key rotation,
+  rate-limit, purpose/scope, bound-resource).
+
+- **Workspace dependency consolidation.** `crates/codlet` dev-dependencies
+  (`serde_json`, `static_assertions`, `tokio`) now use `workspace = true`.
+  `codlet-sqlx` (`testcontainers-modules`, `tempfile`) and
+  `examples/axum_login_logout` (`axum`) likewise. Workspace `[dependencies]`
+  table expanded with `axum`, `static_assertions`, `testcontainers-modules`,
+  and `tempfile` entries.
+
+- **Test count.** 165 → 167: two RFC-019 typed-wrapper tests previously hidden
+  inside a nested `#[cfg(test)]` sub-module are now properly discovered.
+
 ## [0.17.0] — 2026-06-24
 
 `codlet-core` crate renamed to `codlet`.

@@ -29,9 +29,9 @@ codlet                 = { workspace = true }
 # async-std must wrap calls via a tokio runtime block.
 sqlx                   = { workspace = true, features = ["runtime-tokio"] }
 tokio                  = { workspace = true, features = ["rt"] }
-testcontainers-modules = { version = "0.15", features = ["postgres"], optional = true }
+testcontainers-modules = { workspace = true, features = ["postgres"], optional = true }
 
 [dev-dependencies]
 codlet-conformance = { path = "../codlet-conformance" }
 tokio              = { workspace = true, features = ["rt-multi-thread", "macros", "sync"] }
-tempfile           = "3"
+tempfile           = { workspace = true }

@@ -65,7 +65,7 @@ impl PostgresStore {
 ///
 /// Returns [`sqlx::Error`] if any statement fails.
 pub async fn run_postgres_migrations(pool: &sqlx::PgPool) -> Result<(), sqlx::Error> {
-    let migration_sql = include_str!("../../migrations/0002_postgres.sql");
+    let migration_sql = include_str!("../migrations/0002_postgres.sql");
     for stmt in migration_sql.split(';') {
         let trimmed: String = stmt
             .lines()

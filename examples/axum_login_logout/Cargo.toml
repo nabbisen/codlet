@@ -17,5 +17,5 @@ codlet      = { workspace = true }
 codlet-sqlx = { workspace = true }
 sqlx        = { workspace = true, features = ["sqlite", "runtime-tokio"] }
 tokio       = { workspace = true, features = ["rt-multi-thread", "macros"] }
-axum        = { version = "0.8", features = ["form"] }
+axum        = { workspace = true, features = ["form"] }
 serde       = { workspace = true }
