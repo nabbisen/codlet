@@ -1,0 +1,192 @@
+# codlet Roadmap
+
+- **Status:** Approved by the project owner, 2026-08-31
+- **Prepared by:** architect (high-capability model)
+- **Date:** 2026-08-31
+- **Baseline:** v0.17.1 published; the v0.1–v0.17 roadmap is exhausted
+  (33 RFCs Implemented, 1 Archived, 0 Proposed)
+
+This document is the planning baseline for the RFC portfolio. It replaces the
+phase list in the original design package (`04-ROADMAP.md`, phases 0–9), whose
+milestones are all resolved or explicitly carried forward below.
+
+## Sequencing decision
+
+The owner has directed **maintenance first, then security**. Milestones run in
+order; M5 does not start until M4 is reviewed and merged, because M4 restores
+the automated gates that any later review depends on for evidence.
+
+---
+
+## M4 — Governance and gate integrity
+
+**Theme:** repair the process machinery. No library behaviour changes.
+
+**Why first:** CI has referenced non-existent packages since v0.17.0 (the
+`codlet-core` → `codlet` rename). The job that enforces core runtime-neutrality
+(RFC-002 §10.5) has therefore not run for two releases, and the RFC directory
+does not match its own governing policy. Until this is fixed, no review of
+later work can rest on verifiable evidence.
+
+**Deliverables**
+
+| ID | Item | Governing document |
+|----|------|--------------------|
+| M4-1 | CI workflow repaired; all jobs reference real packages | RFC-036 |
+| M4-2 | MSRV 1.85 actually verified by a CI job | RFC-036 |
+| M4-3 | RFC directory conformance: 5-folder layout, `NNN-slug.md` naming, RFC-000 relocated and refreshed, index links repaired, handoffs moved in-repo | RFC-035 |
+| M4-4 | Documentation consistency sweep (RFC counts, release-discipline commands, official crate list) | RFC-035, RFC-036, RFC-037 |
+| M4-5 | `codlet-axum` formally withdrawn | RFC-037 |
+
+Handoffs: `rfcs/handoffs/036-gate-integrity-ci-conformance-and-msrv/` runs
+first, then `rfcs/handoffs/035-rfc-directory-conformance-and-naming/`. RFC-037
+ships with the latter and must not ship before RFC-036 (RFC-037 §4.2).
+
+**Exit criteria**
+
+- Every CI job passes on `main`, with the run URL recorded as evidence.
+- `cargo tree -p codlet` gate demonstrably fails when a forbidden crate is
+  introduced (verified by a deliberate local trial, then reverted).
+- A CI job builds the workspace on Rust 1.85 and fails on 1.84.
+- Every link in `rfcs/README.md` resolves; every file under `rfcs/` matches the
+  naming convention; every `Status` field matches its folder.
+
+**Release implication:** patch release 0.17.2, or fold into the next minor.
+Owner decides; no API change either way.
+
+---
+
+## M5 — Security hardening
+
+**Theme:** close the gaps the threat model and `ops-security.md` already name.
+
+**Why now:** these were roadmap Phase 6 deliverables that never landed. RFC-015
+is recorded as *partial* precisely because of them, and `ops-security.md`
+carries "security gates are project-internal (no `cargo audit`/`deny` yet)" as
+an open operational risk.
+
+**Deliverables**
+
+| ID | Item | Governing document |
+|----|------|--------------------|
+| M5-1 | Supply-chain scanning: `cargo-deny` (licences, bans, advisories) in CI | new RFC-036 |
+| M5-2 | Property tests for code normalization (INV-4 is idempotence — currently asserted by example, not by property) | RFC-015 completion |
+| M5-3 | Distribution tests for code generation (rejection sampling / modulo-bias evidence) | RFC-015 completion |
+| M5-4 | Fuzz targets for normalization and code-input validation, CI smoke mode | RFC-015 completion |
+| M5-5 | Threat-model re-audit against as-built code; INV-1…8 each mapped to a named test or gate | RFC-015 completion |
+
+**Exit criteria**
+
+- Each of INV-1 through INV-8 names the test or gate that proves it, and that
+  test is executed in CI.
+- Advisory scanning runs on every PR; a known-vulnerable dependency fails it.
+- Fuzz targets run in CI smoke mode without findings.
+
+**Release implication:** 0.18.0.
+
+**Blocking policy — decided 2026-08-31.** Split by what triggers the failure:
+
+| Check | On pull requests | At release |
+|---|---|---|
+| `cargo deny check bans licenses sources` | **Blocking** | Blocking |
+| `cargo deny check advisories` | Reported, non-blocking | **Blocking** |
+
+Rationale: bans, licences, and sources change only when *we* change
+dependencies, so a failure always names something a developer just did —
+blocking is correct and it never fires spontaneously. Advisories are published
+by third parties at arbitrary times; blocking them on pull requests would let an
+upstream RUSTSEC entry against a transitive dependency freeze every unrelated
+PR, which is precisely the pressure that leads to blanket `ignore` lists and
+kills the gate. Blocking at release instead means nothing ships with a known
+advisory, while day-to-day work keeps moving. The release gate is the part that
+protects users.
+
+---
+
+## M6 — Session lifecycle hardening
+
+**Theme:** the work the handoff bundle calls "RFC-F". It has never existed as an
+RFC; M6 is where it becomes one.
+
+**Scope candidates** (each needs its own RFC before any implementation):
+
+- inactivity timeout distinct from absolute expiry;
+- session rotation — re-issue the session secret on privilege change, and
+  optionally on each use;
+- authenticator assurance levels;
+- structured session-failure reasons for the host, without weakening the
+  generic public error contract (DEC-006 must survive intact).
+
+**Exit criteria**
+
+- RFCs accepted before implementation starts.
+- No change to the public redemption error surface.
+- Conformance suite extended; every adapter still passes.
+
+**Release implication:** 0.19.0. Likely breaking for `SessionManager`
+construction — acceptable pre-v1 under the standing owner decision.
+
+---
+
+## M7 — v1.0 readiness
+
+**Theme:** stabilization. **Owner-gated: DEC-014 — v1.0 is not cut without
+explicit owner confirmation.**
+
+**Deliverables**
+
+- Public API audit; naming and error-model freeze; feature-flag freeze.
+- MSRV freeze proposal.
+- `codlet-worker` publish decision (revisits DEC-013), decided together with
+  the crates.io namespace question from RFC-037 §7.
+- Confirmation that zinnias-ciao has migrated — the original Phase 9 exit
+  criterion, "at least one real service has migrated".
+- Security review checklist; supported-version table in SECURITY.md switched to
+  its post-v1 form.
+- Complete migration guide.
+
+---
+
+## Carried-forward item — resolved
+
+**`codlet-axum` (original roadmap Phase 5): withdrawn.** Owner decision,
+2026-08-31, Option 1. The decision and its risk assessment are recorded in
+**RFC-037**, which finds withdrawal reversible at no semver cost (a future
+`codlet-axum` would be additive, available even after v1.0), the adapter-
+readiness constraint guarded by `rfc_009_compile` rather than by the crate's
+existence, and upstream-Axum breakage still detected via
+`examples/axum_login_logout` in CI. Both of those guards are among the jobs
+RFC-036 restores, which is why RFC-037 may not ship first.
+
+One residual risk survives and is routed to M7: `codlet-axum`, `codlet-worker`,
+and `codlet-conformance` are unreserved on crates.io. That is a single namespace
+question covering all three, not an argument for keeping `codlet-axum` on the
+roadmap — see RFC-037 §7 and DEC-013.
+
+RFC-002's as-built divergence is recorded in the RFC index; RFC-002 itself is
+not edited, because Implemented RFCs are historical records.
+
+---
+
+## Risk register (current)
+
+| ID | Risk | Likelihood | Impact | Mitigation | Owner |
+|----|------|-----------|--------|------------|-------|
+| R-1 | Automated core-dependency gate has not run since v0.17.0 | Certain (verified) | High — runtime-neutrality could regress unnoticed | M4-1 | dev team |
+| R-2 | MSRV 1.85 is claimed in SECURITY.md but not enforced anywhere | Certain (verified) | Medium — a silent MSRV bump breaks downstreams | M4-2 | dev team |
+| R-3 | v0.17.1 gate evidence is hand-written summary, not tool output | Certain (verified) | Medium — release claims are unverified | M4 exit criteria require captured output | dev team |
+| R-4 | No supply-chain advisory scanning | Likely | Medium | M5-1 | dev team |
+| R-5 | Deferred work tracked only outside the repository | Certain (verified) | Medium — invisible backlog, contradicts RFC-000 | M6 converts it into RFCs; handoffs moved in-repo under RFC-035 §3.5 | architect |
+| R-7 | `codlet-axum`/`-worker`/`-conformance` unreserved on crates.io | Low | Medium — an unofficial crate in a security namespace | Official crate list in README (M4); reservation decided at M7 | owner |
+| R-6 | KV-backed rate limiting under-counts under distributed load | Known, documented | Medium | Documented in threat model; consider a D1-backed counter option in M5 | architect |
+
+---
+
+## Approval
+
+Approved by the project owner on 2026-08-31: milestone order M4→M7, scope as
+written, `codlet-axum` withdrawn, supply-chain blocking policy as recorded in
+M5-1, and handoffs relocated in-repo per RFC-000.
+
+Still reserved to the owner: the v1.0 cut (DEC-014), the crates.io namespace
+decision (R-7 / RFC-037 §7), and any change to milestone order or scope.
