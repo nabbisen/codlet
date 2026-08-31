@@ -45,8 +45,8 @@ ships with the latter and must not ship before RFC-036 (RFC-037 §4.2).
 **Exit criteria**
 
 - Every CI job passes on `main`, with the run URL recorded as evidence.
-- `cargo tree -p codlet` gate demonstrably fails when a forbidden crate is
-  introduced (verified by a deliberate local trial, then reverted).
+- `cargo tree -p codlet` gate demonstrably fails in two trials: a forbidden
+  crate introduced, and the check itself broken. Both reverted, both recorded.
 - A CI job builds the workspace on Rust 1.85 and fails on 1.84.
 - Every link in `rfcs/README.md` resolves; every file under `rfcs/` matches the
   naming convention; every `Status` field matches its folder.
@@ -172,9 +172,9 @@ not edited, because Implemented RFCs are historical records.
 
 | ID | Risk | Likelihood | Impact | Mitigation | Owner |
 |----|------|-----------|--------|------------|-------|
-| R-1 | Automated core-dependency gate has not run since v0.17.0 | Certain (verified) | High — runtime-neutrality could regress unnoticed | M4-1 | dev team |
+| R-1 | Core-dependency gate **fails open** — passed green while checking an empty string, for two releases | Certain (verified in CI run 28082000417) | High — runtime-neutrality regressions would be reported as passing | M4-1, RFC-036 §3.5 | dev team |
 | R-2 | MSRV 1.85 is claimed in SECURITY.md but not enforced anywhere | Certain (verified) | Medium — a silent MSRV bump breaks downstreams | M4-2 | dev team |
-| R-3 | v0.17.1 gate evidence is hand-written summary, not tool output | Certain (verified) | Medium — release claims are unverified | M4 exit criteria require captured output | dev team |
+| R-3 | v0.17.1 was published with 7 CI jobs failing; its gate evidence is hand-written summary, not tool output | Certain (verified) | High — a release shipped against red CI and the record says otherwise | M4 requires captured output and a CI-green release clause in SECURITY.md | dev team |
 | R-4 | No supply-chain advisory scanning | Likely | Medium | M5-1 | dev team |
 | R-5 | Deferred work tracked only outside the repository | Certain (verified) | Medium — invisible backlog, contradicts RFC-000 | M6 converts it into RFCs; handoffs moved in-repo under RFC-035 §3.5 | architect |
 | R-7 | `codlet-axum`/`-worker`/`-conformance` unreserved on crates.io | Low | Medium — an unofficial crate in a security namespace | Official crate list in README (M4); reservation decided at M7 | owner |

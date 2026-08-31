@@ -83,9 +83,41 @@ strings and the RFC-009 comment so they read `codlet`:
 | `core-deps` | 151–158 | `cargo tree -p codlet -e normal --prefix none` |
 
 Keep the forbidden-crate grep pattern in `core-deps` exactly as it is. Keep the
-RFC references in the comments; only the crate name changes.
+RFC references in the comments. For `core-deps` the crate name is **not** the
+only change — see §5.2.
 
-### 5.2 `test-examples` job
+### 5.2 `core-deps` is failing open — harden it
+
+Do not treat this job as a rename fix. On the released commit `0962ca4`, where
+`cargo tree -p codlet-core` errors, this job **passed**
+([run 28082000417](https://github.com/nabbisen/codlet/actions/runs/28082000417)).
+
+Cause: in `tree="$(cargo tree … | sort -u)"` the assignment takes the exit status
+of `sort`, not of `cargo tree`. The command errored, `$tree` became empty, the
+grep found nothing, and the job concluded "no forbidden crates". It has been
+reporting a false pass for two releases.
+
+Replace the step body with a version that cannot pass without checking:
+
+```yaml
+      - name: assert no framework/db/executor crates in codlet
+        run: |
+          set -euo pipefail
+          tree="$(cargo tree -p codlet -e normal --prefix none | sort -u)"
+          echo "$tree"
+          # a gate must fail when it cannot perform its check
+          test -n "$tree"
+          echo "$tree" | grep -q '^codlet ' || { echo "::error::unexpected cargo tree output"; exit 1; }
+          if echo "$tree" | grep -Eiq '^(axum|tower|tower-http|sqlx|tokio|async-std|worker|hyper|reqwest)( |$)'; then
+            echo "::error::forbidden runtime/db/framework crate found in codlet"
+            exit 1
+          fi
+```
+
+Apply `set -euo pipefail` to every other multi-command `run:` block in the
+workflow as well (RFC-036 §3.5).
+
+### 5.3 `test-examples` job
 
 The examples are five standalone packages, not bins of one package. Replace the
 job body with:
@@ -101,7 +133,7 @@ Build all five; run only these three. `axum_login_logout` binds a port and never
 exits, and `sqlite_file` is a deliberate two-invocation flow — neither belongs in
 a non-interactive job. This matches which examples the original job ran.
 
-### 5.3 New job: MSRV verification
+### 5.4 New job: MSRV verification
 
 Add a job that proves the workspace builds on Rust 1.85.
 
@@ -130,12 +162,42 @@ before building:
 Use `cargo check`, not `cargo test`: the goal is to prove the code compiles on
 the declared MSRV, not to re-run the suite on an old toolchain.
 
-### 5.4 `SECURITY.md` corrections
+### 5.5 Pre-existing `codlet-sqlx` job failures — fix one, investigate one
+
+Two jobs fail for reasons unrelated to the rename. They are in scope because
+both are CI configuration, not library code.
+
+**`test codlet-sqlx (SQLite adapter conformance)`** runs
+`cargo test -p codlet-sqlx --all-features`. `--all-features` activates
+`postgres-test`, which requires Docker via testcontainers — so a job named
+"SQLite adapter conformance" compiles and runs PostgreSQL tests and dies in
+`postgres_tests::postgres_admin_list_and_get`. Select the backend explicitly:
+
+```yaml
+      - run: cargo test -p codlet-sqlx --no-default-features --features sqlite
+```
+
+This mirrors the existing postgres job, which already selects its backend
+explicitly, and it is the same misconception as finding 6 in RFC-036 §2.
+
+**`test codlet-sqlx postgres adapter (RFC-034)`** also fails. Its command already
+selects features correctly, so the cause is elsewhere — most likely the Docker
+daemon or testcontainers setup on the runner. **Investigate and report; do not
+guess and do not disable it.** If it needs a service container or a Docker
+setup step, propose the change in your review request rather than applying an
+unreviewed fix. If it turns out to indicate a real defect in the PostgreSQL
+adapter, stop and escalate immediately — that adapter's conformance suite
+carries the INV-5 single-winner claim test.
+
+### 5.6 `SECURITY.md` corrections
 
 1. The MSRV section currently claims enforcement that did not exist. Once §5.3
    lands the claim becomes true — keep the sentence, and name the job so a reader
    can find it (e.g. "enforced by the `msrv` job in `.github/workflows/ci.yml`").
-2. The "Release discipline" list names four commands, two of which
+2. Add a sentence recording that a release requires CI green on the release
+   commit. v0.17.1 was published while seven CI jobs were failing; the release
+   discipline currently has no clause that forbids this.
+3. The "Release discipline" list names four commands, two of which
    (`cargo test --workspace --all-features`, `cargo clippy --workspace
    --all-features --all-targets`) cannot run in an environment without Docker:
    `--all-features` activates `codlet-sqlx`'s `postgres-test` feature, which
@@ -156,11 +218,17 @@ CI repair and the new MSRV gate.
 
 1. Every job in `ci.yml` names a package that exists in `cargo metadata`.
 2. All jobs pass on `main`.
-3. The `core-deps` gate is proven to still work: locally add `tokio` as a normal
-   dependency of `crates/codlet`, run the job's command, confirm it reports the
-   forbidden crate, then **revert completely** (`git checkout -- crates/codlet/Cargo.toml`
-   and restore `Cargo.lock`). Record the observed failure output as evidence. A
-   gate nobody has seen fail is not a verified gate.
+3. The `core-deps` gate is proven to work, in **two** trials, both recorded:
+   - **Forbidden crate.** Add `tokio` as a normal dependency of `crates/codlet`,
+     run the job's command, confirm it reports the forbidden crate, then revert
+     completely (`git checkout -- crates/codlet/Cargo.toml`, restore
+     `Cargo.lock`).
+   - **Broken check.** Temporarily change `-p codlet` to `-p codlet-nonexistent`
+     and confirm the job now **fails** rather than passing green. This is the
+     exact regression that went undetected for two releases; without this trial
+     the fix is unverified.
+
+   A gate nobody has seen fail is not a verified gate.
 4. The `msrv` job prints a `rustc 1.85.x` version line in its log.
 5. `SECURITY.md` describes only commands that can actually be run.
 
@@ -186,7 +254,8 @@ to restore enforcement, not to renegotiate it.
 
 | Risk | Mitigation |
 |------|------------|
-| A repaired job fails for a real, pre-existing reason (the gate was masked by the wrong package name) | Expected and valuable. Report it as a finding; do not fix library code here. |
+| A repaired job fails for a real, pre-existing reason | Already materialised in the two `codlet-sqlx` jobs (§5.5). Report; do not fix library code here. |
+| The postgres job failure turns out to be an adapter defect, not a runner issue | Escalate immediately — that suite carries the INV-5 single-winner test |
 | The MSRV job passes while secretly using stable | Guarded by the explicit `rustc --version` assertion in §5.3 |
 | Reverting the criterion-3 trial leaves `Cargo.lock` dirty | Check `git status` is clean before opening the review |
 

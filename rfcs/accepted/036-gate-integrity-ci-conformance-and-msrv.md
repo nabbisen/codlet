@@ -44,7 +44,42 @@ Three verified findings at commit `0962ca4`:
    language-feature bump could raise the effective MSRV silently and break
    downstream builds without any signal.
 
-3. **The documented release discipline cannot be executed.** SECURITY.md
+3. **The `core-deps` gate fails open — it reports success while checking
+   nothing.** This is the most serious finding, and it was found by reading the
+   CI history rather than the workflow file. On commit `0962ca4`, where
+   `cargo tree -p codlet-core` provably errors, the `core dependency gate` job
+   **passed**
+   ([run 28082000417](https://github.com/nabbisen/codlet/actions/runs/28082000417)).
+
+   Root cause is the shell, not the crate name:
+
+   ```sh
+   tree="$(cargo tree -p codlet-core -e normal --prefix none | sort -u)"
+   ```
+
+   `cargo tree` exits 101, but the exit status of the assignment is the status of
+   the *last command in the pipeline* — `sort` — which is 0. `$tree` is set to
+   the empty string, the subsequent `grep` matches nothing, and the job reports
+   success. The RFC-002 §10.5 runtime-neutrality check has therefore not merely
+   been absent; it has been **actively reporting a false pass**.
+
+   A red job is a visible defect. A green job that checks nothing is a defect
+   that also destroys the evidence that would reveal it.
+
+4. **v0.17.1 was published to crates.io with CI red.** Seven jobs failed on the
+   released commit `0962ca4`, and the preceding release commit `fc5737c` failed
+   too. The v0.17.1 handoff bundle states "Ready. All required gates passed at
+   v0.17.1", citing hand-written summary logs. Whatever was run locally, the
+   project's own CI disagreed and the release proceeded anyway.
+
+5. **Two `codlet-sqlx` job failures are real and pre-existing**, unrelated to the
+   rename. Both stem from finding 6 below: `test codlet-sqlx (SQLite adapter
+   conformance)` runs `--all-features`, which activates `postgres-test`,
+   which requires Docker — the job dies in
+   `postgres_tests::postgres_admin_list_and_get`. A job named "SQLite adapter
+   conformance" is failing on PostgreSQL tests it should never have compiled.
+
+6. **The documented release discipline cannot be executed.** SECURITY.md
    mandates `cargo test --workspace --all-features` and the equivalent clippy
    invocation. `--all-features` activates `codlet-sqlx`'s `postgres-test`
    feature, which requires Docker via testcontainers. In any environment without
@@ -81,6 +116,25 @@ SECURITY.md's command list is replaced with the gate set CI actually runs, with
 the PostgreSQL job marked Docker-dependent. The document is corrected to match
 the executable gates; the gates are not bent to match the document.
 
+The same misconception is corrected in CI itself: the SQLite conformance job
+selects the SQLite feature explicitly rather than `--all-features`, so it stops
+dragging in the Docker-dependent PostgreSQL path.
+
+### 3.5 Shell safety in every gate script
+
+Every multi-command `run:` block that a gate depends on must begin with:
+
+```sh
+set -euo pipefail
+```
+
+and must assert that the data it inspects is non-empty before drawing a
+conclusion from it. Finding 3 is what happens without this: a check whose input
+silently became empty concluded "no forbidden crates found."
+
+The general rule: **a gate must fail when it cannot perform its check.** Absence
+of evidence may never be reported as evidence of absence.
+
 ### 3.4 Standing rule: gates are proven by observed failure
 
 A gate is accepted as working only when it has been seen to fail on a
@@ -90,8 +144,12 @@ future gate added under M5.
 
 Rationale: all five `xtask` gates and the `core-deps` check are grep-based. A
 grep whose pattern no longer matches the code it guards fails open, silently and
-permanently. Finding 1 is exactly that failure mode, discovered by reading the
-workflow rather than by any signal the project produced on its own.
+permanently. Finding 3 is that failure mode, caught in production: the gate
+returned green for two releases while inspecting an empty string.
+
+This rule applies to the five `xtask` release gates as well. They have never been
+observed failing either, and they are the same shape of check. Verifying them is
+scoped to M5 rather than here, but it is now a known gap, not an assumption.
 
 ## 4. Non-goals
 
@@ -101,6 +159,8 @@ workflow rather than by any signal the project produced on its own.
   invariants.
 - No new advisory or supply-chain scanning — that is M5-1, deliberately
   separate.
+- No adversarial verification of the five `xtask` release gates — deferred to
+  M5, recorded in §3.4.
 
 ## 5. Security considerations
 
