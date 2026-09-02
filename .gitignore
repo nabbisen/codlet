@@ -22,3 +22,7 @@ target
 
 # Test assets from examples/sqlite_file
 codlet-example.db*
+
+# npm dependencies for the codlet-worker Miniflare tests
+# (package.json / package-lock.json stay tracked -- `npm ci` needs the lockfile)
+node_modules/
