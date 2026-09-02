@@ -7,7 +7,7 @@ they preserve the security invariants, then for everything else.
 
 Follow the workflow: requirement → external design → internal design →
 implementation → testing. Substantial changes start as an RFC under `rfcs/`
-(see `rfcs/000-rfc-lifecycle-policy.md`). The folder an RFC lives in is the
+(see `rfcs/done/000-rfc-lifecycle-policy.md`). The folder an RFC lives in is the
 source of truth for its state; keep each RFC's `Status` field consistent with
 its folder, and update `rfcs/README.md` in the same change that moves an RFC.
 

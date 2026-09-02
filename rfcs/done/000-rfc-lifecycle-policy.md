@@ -1,11 +1,15 @@
-# RFC 000 — RFC lifecycle policy
+# RFC-000: RFC Lifecycle Policy
 
-**Status.** Implemented
-**Tracks.** Cross-cutting documentation policy. Not tied to any
-single feature; applies to the RFC directory itself.
+- **Status:** Implemented (v0.0.0)
+- **Target milestone:** M0
+- **Primary crate(s):** none — repository governance only
+- **Tracks:** cross-cutting documentation policy, not tied to any single
+  feature; applies to the RFC directory itself
+
 **Touches.** `rfcs/` folder structure, the index file at
 `rfcs/README.md`, the Status field convention used inside each
-RFC, and any cross-references between RFCs.
+RFC, any cross-references between RFCs, and optional companion
+handoff documents under `rfcs/handoffs/`.
 
 ## Summary
 
@@ -21,8 +25,13 @@ will route around.
 The policy's central claim is that **completed RFCs are not
 deleted**. They move to a fixed location and stay there as a
 record of the design decisions, alternatives considered, and
-open questions resolved. The reasoning, anti-patterns, and
-adoption guidance are spelled out below.
+open questions resolved.
+
+This policy also defines a small convention for optional
+implementation handoffs. Handoffs are companion execution
+documents for RFCs; they do not have their own lifecycle state.
+Their status is inherited from the related RFC. The reasoning,
+anti-patterns, and adoption guidance are spelled out below.
 
 ## Why a written policy
 
@@ -65,6 +74,12 @@ project decides whether RFCs are tightly templated or
 free-form, whether they cover features only or also operational
 decisions, and whether they double as Architecture Decision
 Records. This RFC governs only their lifecycle and storage.
+
+Some projects also maintain developer handoffs, PR plans, or QA
+checklists that explain how to implement a particular RFC. Those
+are not RFCs and should not introduce a parallel status system.
+This policy gives them a small companion-document convention so
+they remain findable without becoming a second lifecycle.
 
 ## Lifecycle states
 
@@ -116,7 +131,27 @@ in a personal branch or a gist until they're ready to open a
 review. Add `draft/` only when multiple authors regularly
 need a shared place to share drafts.
 
-Each top-level folder corresponds 1-to-1 with a lifecycle state.
+A project may also add an optional `handoffs/` folder for
+implementation companion documents:
+
+```
+  handoffs/          ← optional; companion execution docs for RFCs
+    NNN-slug/
+      implementation-handoff.md
+      task-breakdown-pr-plan.md
+      acceptance-qa-checklist.md
+      README.md      ← optional index / scope note for this RFC's handoffs
+```
+
+`handoffs/` is deliberately not split into `proposed/`, `done/`,
+or `archive/`. A handoff's status is inherited from the matching
+RFC number. If `rfcs/proposed/057-slug.md` is Proposed, then
+`rfcs/handoffs/057-slug/` is a proposed implementation companion.
+If the RFC moves to `done/`, the handoff becomes historical with
+it. If the RFC moves to `archive/`, the handoff follows that
+meaning. Do not manage handoff status separately.
+
+Each top-level RFC state folder corresponds 1-to-1 with a lifecycle state.
 **The folder is the source of truth for the state.** A file's
 location is what determines its state, not the Status field
 inside the file (the file's Status field must be kept consistent
@@ -128,6 +163,10 @@ state. To accept an RFC for implementation, you move it from
 it in `proposed/` until it ships (in the 4-folder variant). To
 mark it Implemented, you move it to `done/`. To withdraw or
 supersede it, you move it to `archive/`.
+
+Handoffs do not move between state folders. They remain under
+`rfcs/handoffs/NNN-slug/`; their lifecycle meaning is derived
+from the RFC's current folder and Status field.
 
 ### Folder layout: 5-folder variant
 
@@ -150,8 +189,77 @@ otherwise — `accepted/` will sit empty in projects where the
 two events collapse, and an empty folder is a maintenance
 burden with no payoff.
 
-This RFC is written for the 4-folder variant. The 5-folder
-variant works identically with one extra transition.
+The portable policy above is written for the 4-folder variant. The
+5-folder variant works identically with one extra transition.
+
+### Adoption in codlet
+
+codlet adopts the **5-folder variant**:
+
+```text
+rfcs/
+  proposed/    under review
+  accepted/    review complete; implementer may start
+  done/        shipped
+  archive/     withdrawn or superseded
+  handoffs/    NNN-slug/ companion execution docs
+```
+
+- `draft/` is deliberately **not** created. This project has no
+  multi-author drafting need.
+- `accepted/` is meaningful here because design and implementation
+  are performed by different actors: the architect accepts, the dev
+  team implements. Those are two genuinely separate events, which is
+  the condition this policy sets for choosing the variant. The
+  anti-pattern below cautioning against `accepted/` in small projects
+  remains sound general advice; it does not apply where the roles are
+  actually separate.
+- RFC bodies are named `NNN-slug.md`. The `RFC-` prefix is redundant
+  inside a directory named `rfcs/`.
+- `proposed/` and `accepted/` carry a `.gitkeep`, because Git does not
+  track empty directories and both are empty between milestones.
+
+Companion documents that are **not** RFC handoffs live outside the
+repository, under `.git-exclude/`: developer review requests in
+`.git-exclude/review-request/NNN-slug.md` and architect review results
+in `.git-exclude/reviewed/NNN-slug.md`. Only `implementation-handoff.md`
+and the other companions named in this policy belong under
+`rfcs/handoffs/`.
+
+## Companion handoffs
+
+A handoff is an optional implementation companion to an RFC. It
+is useful when an RFC is large enough that implementers need a
+separate execution package: implementation notes, PR sequencing,
+acceptance checks, QA cases, migration reminders, or release
+risks.
+
+A handoff should answer a different question from the RFC:
+
+- the RFC records **what decision was made and why**;
+- the handoff records **how to implement and verify it safely**.
+
+Handoffs must not override RFC decisions. If handoff work
+uncovers a design conflict, update the RFC first, then update
+the handoff to match. The RFC remains the authority for design
+and lifecycle status.
+
+A conventional handoff directory is:
+
+```text
+rfcs/handoffs/NNN-slug/
+  implementation-handoff.md
+  task-breakdown-pr-plan.md
+  acceptance-qa-checklist.md
+  README.md                 ← optional
+```
+
+These filenames are recommendations, not mandatory policy. Small
+RFCs often need no handoff. Large multi-PR RFCs benefit from one.
+Projects should avoid putting rough chat transcripts, obsolete
+review notes, or every intermediate discussion into
+`rfcs/handoffs/`; only current, reviewed, implementation-useful
+companion documents belong there.
 
 ## Status field inside each RFC
 
@@ -253,6 +361,12 @@ If your project's review tool renders relative links (GitHub,
 GitLab, sourcehut all do), broken links become visible in the
 preview, which gives a second line of defence.
 
+If a handoff exists for an RFC, the RFC may link to it with a
+relative path such as `../handoffs/057-slug/README.md`, and the
+handoff should link back to the RFC. These links are references,
+not lifecycle state. Moving the RFC between `proposed/`, `done/`,
+and `archive/` requires the same link sweep described above.
+
 ## Review and transitions
 
 The transitions between states are:
@@ -317,6 +431,9 @@ The `rfcs/README.md` file serves as the index. It should:
 2. Use relative links that reflect each RFC's current folder.
 3. Be updated in the same commit that moves an RFC between
    folders.
+4. Optionally indicate that a handoff exists for RFCs that have
+   one, without treating the handoff as a separate lifecycle
+   item.
 
 A typical structure:
 
@@ -360,6 +477,10 @@ invariants are worth checking:
   path; every RFC under `rfcs/` is listed in `README.md`.
 - Filenames match the `NNN-slug.md` pattern and the slug
   matches the title (loosely).
+- Every `rfcs/handoffs/NNN-slug/` directory, if handoffs are
+  used, corresponds to an existing RFC number.
+- Handoff directories do not duplicate lifecycle state with
+  their own `proposed/`, `done/`, or `archive/` subfolders.
 
 A simple script in `scripts/check-rfcs.sh` or
 `xtask check-rfcs` can run these checks. None of them need
@@ -382,7 +503,13 @@ minimum viable adoption of this policy is:
 5. When the work ships, move it to `done/` with a Status
    field carrying the release tag.
 
-That's the entire policy in five steps. The other sections of
+If an RFC is large enough to need execution guidance, add an
+optional companion directory under `rfcs/handoffs/NNN-slug/`. Do
+not add a separate handoff status folder; the RFC's state is
+enough.
+
+That's the entire policy in five steps, plus optional handoffs
+when they are genuinely useful. The other sections of
 this RFC exist to handle edge cases as the directory grows;
 ignore them until you hit the relevant case.
 
@@ -393,6 +520,9 @@ If you're adopting this policy for an *existing* RFC directory:
 3. Add or update the Status field in each file.
 4. Rewrite cross-references with the new paths.
 5. Rebuild `rfcs/README.md` to reflect the new structure.
+6. If handoffs already exist, move only reviewed, current,
+   implementation-useful handoffs under `rfcs/handoffs/NNN-slug/`
+   and let their state inherit from the matching RFC.
 
 The migration is mechanical but tedious. Schedule it as a
 single dedicated change rather than spreading it across
@@ -478,19 +608,52 @@ The fix: when you decide not to pursue an RFC, move it to
 `archive/` with a one-line reason. Even "didn't pan out;
 priorities shifted" is enough. Silence is worse.
 
+### Turning handoffs into a second RFC lifecycle
+
+Implementation handoffs can be useful, but they become harmful
+when they gain their own parallel status system. A handoff in
+`handoffs/proposed/` beside an RFC in `done/` forces readers to
+ask which status is authoritative. A handoff that says "accepted"
+while the RFC says `Proposed` creates the same confusion as a
+lying Status field.
+
+The fix: keep handoffs under `rfcs/handoffs/NNN-slug/` and let
+the matching RFC's folder and Status field define their state.
+Handoffs are companions, not separate lifecycle artifacts.
+
+### Letting handoffs override RFC decisions
+
+A handoff is closer to an implementation guide than a design
+record. If it changes the architecture, narrows scope, or adds a
+new acceptance requirement that contradicts the RFC, future
+maintainers have to read two documents and guess which one wins.
+
+The fix: when a handoff discovers a design problem, patch or
+supersede the RFC first. Then update the handoff so it describes
+execution of the current RFC, not a competing design.
+
 ## Self-application
 
 This RFC describes its own placement: it is itself an RFC
-governed by the policy it defines, and it lives in
-`rfcs/done/` because it is implemented (the policy is now in
-effect for this project's RFC directory).
+governed by the policy it defines, and it lives at
+`rfcs/done/000-rfc-lifecycle-policy.md` because it is
+implemented (the policy is in effect for this project's RFC
+directory).
 
-The transition that landed this RFC is the simultaneous
-adoption of the policy and the migration of every existing
-RFC into the new folder structure. Both happened in the same
-release. This is the recommended adoption pattern for
-existing directories: combine the policy's introduction with
-the migration into a single, atomic change.
+It did not always sit there. Until RFC-035 this file lived
+loose at `rfcs/` root, in a stale 500-line revision that
+predated the companion-handoff convention, and whose text
+claimed a placement it did not have. The folder is the source
+of truth for state, so an RFC at the root of `rfcs/` had no
+state at all — the policy's own central rule was the first
+thing the directory violated.
+
+RFC-035 corrected it: this authoritative text was placed in
+`done/`, every RFC body was renamed to `NNN-slug.md`, the
+5-folder layout was created, and the index was rebuilt. That
+is the adoption pattern this policy recommends for an existing
+directory — combine the policy's introduction with the
+migration into a single, atomic change.
 
 ## Open questions
 

@@ -101,7 +101,7 @@ renumbering; RFC-000's permanence rule concerns numbers, and every number
 keeps its identity. Renaming is performed with `git mv` so history follows the
 file.
 
-### 3.3 RFC-000
+### 3.3 RFC-000 — executed by the architect, 2026-09-03
 
 - **Content:** replaced with the current authoritative 617-line text, which
   includes the `rfcs/handoffs/` convention absent from the repository copy.
@@ -118,6 +118,12 @@ file.
 - The duplicate under `.git-exclude/rules/` remains the portable upstream copy
   and is not edited by this RFC.
 
+**Status: done.** The owner directed this step be performed directly rather than
+delegated, so `rfcs/done/000-rfc-lifecycle-policy.md` is in place with the three
+corrections applied, and the stale root copy is removed. The governing policy
+had to become authoritative in-repo before the rest of the migration could be
+checked against it. The remainder of §3 is still the dev team's work.
+
 ### 3.4 Index and inbound links
 
 - `rfcs/README.md` rebuilt from the filesystem: `Proposed`, `Accepted`,
@@ -130,17 +136,38 @@ file.
   and similar are an accurate historical record of where those files were at
   the time. Rewriting history to match a later layout would be falsification.
 
-### 3.5 Handoffs move in-repo
+### 3.5 Handoffs move in-repo; review artefacts do not
 
 **Owner decision, 2026-08-31: follow RFC-000.** Developer handoffs move from the
 untracked `.git-exclude/tasks/dev-team/` into `rfcs/handoffs/NNN-slug/`, keyed
-to the governing RFC number, with `implementation-handoff.md` as the entry point
-and the dev team's review request filed beside it as `review-request.md`.
+to the governing RFC number, with `implementation-handoff.md` as the entry
+point.
+
+**Corrected 2026-09-03.** An earlier revision of this RFC also placed the dev
+team's review request in `rfcs/handoffs/NNN-slug/review-request.md`. That was an
+over-extension of the policy: RFC-000 names `implementation-handoff.md`,
+`task-breakdown-pr-plan.md`, `acceptance-qa-checklist.md`, and an optional
+`README.md` as handoff companions, and does not include review artefacts. The
+owner corrected it by moving the RFC-036 review request out. The rule is now:
+
+| Artefact | Location | Tracked |
+|---|---|---|
+| Developer handoff | `rfcs/handoffs/NNN-slug/implementation-handoff.md` | yes |
+| Developer review request | `.git-exclude/review-request/NNN-slug.md` | no |
+| Architect review result | `.git-exclude/reviewed/NNN-slug.md` | no |
+
+A handoff is a durable design companion and belongs with the RFC. A review
+request and its result are exchange documents between two actors on one
+iteration; they are workflow correspondence, not design record. The workflow
+remains file-based throughout — every exchange is a file at a known path, not a
+conversation.
 
 Consequences, all intended:
 
 - A handoff becomes citable evidence in a review. An untracked handoff cannot be
-  referenced from a commit, an RFC, or a release record.
+  referenced from a commit, an RFC, or a release record. What a review concludes
+  is instead carried into the record by the CHANGELOG entry and the RFC's
+  transition to `done/`.
 - A handoff has **no lifecycle state of its own**. It inherits the state of the
   matching RFC number. `handoffs/` is deliberately not subdivided into
   `proposed/`, `done/`, or `archive/` — RFC-000 names that as an anti-pattern.
@@ -218,6 +245,8 @@ Handoff:
   `handoffs/`, `README.md`.
 - 38 RFC bodies present at end of M4: 37 in `done/` (the existing 33, plus 000,
   plus RFC-035/036/037), 1 in `archive/`, none left in `accepted/`.
+- `rfcs/handoffs/NNN-slug/` contains handoffs only — no review requests or
+  review results (§3.5).
 - Every `rfcs/handoffs/NNN-slug/` directory corresponds to an existing RFC
   number, and none contains lifecycle subfolders.
 - Every filename matches `NNN-slug.md`.

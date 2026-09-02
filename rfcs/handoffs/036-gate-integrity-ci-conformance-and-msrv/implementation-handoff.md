@@ -277,5 +277,9 @@ focus.
 
 Report to the owner only the path of this file and your review-request file.
 
-Place the review request beside this handoff, at
-`rfcs/handoffs/036-gate-integrity-ci-conformance-and-msrv/review-request.md`.
+File the review request at
+`.git-exclude/review-request/036-gate-integrity-ci-conformance-and-msrv.md`.
+The architect's review result is returned at
+`.git-exclude/reviewed/036-gate-integrity-ci-conformance-and-msrv.md`.
+Review artefacts stay out of `rfcs/handoffs/`, which holds design companions
+only (RFC-035 §3.5).

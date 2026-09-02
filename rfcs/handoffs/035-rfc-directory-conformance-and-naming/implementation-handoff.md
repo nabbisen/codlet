@@ -26,8 +26,9 @@ escalate** — do not resolve it in the handoff.
 
 ## 3. Change scope
 
-- `rfcs/**` — folder layout, filenames, RFC-000 content, `README.md`, and the
-  `accepted/ → done/` transitions in §5.6
+- `rfcs/**` — folder layout, filenames, `README.md`, and the
+  `accepted/ → done/` transitions in §5.6. **Not** RFC-000's content — already
+  placed by the architect (§5.3).
 - `README.md` (repository root) — two RFC links, plus the official crate list (§5.7)
 - `CONTRIBUTING.md` — one path reference
 - `docs/src/rfc-process.md` — one path reference
@@ -89,62 +90,27 @@ git mv archive/018-future-server---idp-crate-strategy.md \
 Verify afterwards that every file matches `^[0-9]{3}-[a-z0-9-]+\.md$` and that
 no filename contains a double hyphen.
 
-### 5.3 RFC-000
+### 5.3 RFC-000 — already done; verify only
 
-1. Copy `.git-exclude/rules/000-rfc-lifecycle-policy.md` (617 lines — the
-   authoritative text, which includes the `rfcs/handoffs/` convention the
-   in-repo 500-line copy lacks) to `rfcs/done/000-rfc-lifecycle-policy.md`.
+**Do not perform this step.** The architect placed
+`rfcs/done/000-rfc-lifecycle-policy.md` on 2026-09-03 (the authoritative
+617-line text plus three project corrections: the project Status-header form, an
+"Adoption in codlet" subsection recording the 5-folder variant, and a corrected
+Self-application section) and removed the stale root copy in the same change.
+The governing policy had to be authoritative in-repo before the rest of this
+migration could be checked against it.
 
-   **Note:** `.git-exclude/` is excluded from version control
-   (`.git/info/exclude`), so this source file is present only in the owner's
-   working directory, not in a fresh clone. Work in that directory. If the file
-   is absent, **stop and escalate** — do not reconstruct the policy text by hand
-   or fall back to the stale 500-line copy. After this handoff the authoritative
-   text is tracked at `rfcs/done/000-rfc-lifecycle-policy.md` and this
-   dependency disappears.
-2. `git rm rfcs/000-rfc-lifecycle-policy.md`.
-3. Apply exactly these three project-specific corrections. Line numbers refer
-   to the authoritative source file:
+Verify only:
 
-   **(a) Status header (lines 3–9).** Convert to the form every other RFC in
-   this project uses:
+```sh
+test -f rfcs/done/000-rfc-lifecycle-policy.md
+test ! -e rfcs/000-rfc-lifecycle-policy.md
+diff .git-exclude/rules/000-rfc-lifecycle-policy.md rfcs/done/000-rfc-lifecycle-policy.md
+```
 
-   ```markdown
-   # RFC-000: RFC Lifecycle Policy
-
-   - **Status:** Implemented (v0.0.0)
-   - **Target milestone:** M0
-   - **Primary crate(s):** none — repository governance only
-   - **Tracks:** cross-cutting documentation policy; applies to the RFC
-     directory itself
-   ```
-
-   Keep the `Touches.` content as a normal paragraph beneath.
-
-   **(b) Line 189, "This RFC is written for the 4-folder variant."** Replace
-   with a sentence recording this project's adoption, and add an
-   **"Adoption in codlet"** subsection immediately after it stating:
-   - codlet uses the **5-folder variant**: `proposed/`, `accepted/`, `done/`,
-     `archive/`;
-   - `draft/` is deliberately omitted;
-   - RFC bodies are named `NNN-slug.md`;
-   - `accepted/` is meaningful here because the architect accepts and the dev
-     team implements — two genuinely separate events.
-
-   This subsection is the adoption record. Do not delete the surrounding
-   portable policy text, including the anti-pattern that cautions against
-   `accepted/` in small projects — it remains sound general advice, and the
-   adoption subsection is what explains why this project chose otherwise.
-
-   **(c) Self-application section (lines 598–610).** It currently asserts the
-   file "lives in `rfcs/done/`", which only becomes true with this change.
-   Rewrite it to describe reality: the file now lives at
-   `rfcs/done/000-rfc-lifecycle-policy.md`, and the migration that placed it
-   there was RFC-035, executed as a single atomic change.
-
-4. **Caution:** the strings `## Proposed`, `## Implemented`, and `## Archive`
-   at lines 406/412/418 are *inside a fenced code block* — they are an example
-   index, not real headings. Leave them alone.
+The diff must show changes in exactly three regions — the header, the
+folder-variant section, and Self-application. Anything else is a finding: report
+it, do not repair it.
 
 ### 5.4 Rebuild `rfcs/README.md`
 
@@ -181,11 +147,13 @@ Requirements:
 |------|---------|---------|
 | `README.md` line 131 | `./rfcs/done/RFC-001-project-scope-product-shape-non-goals.md` | `./rfcs/done/001-project-scope-product-shape-non-goals.md` |
 | `README.md` line 132 | `./rfcs/done/RFC-002-crate-architecture-feature-flags-runtime-matrix.md` | `./rfcs/done/002-crate-architecture-feature-flags-runtime-matrix.md` |
-| `CONTRIBUTING.md` line 10 | `rfcs/000-rfc-lifecycle-policy.md` | `rfcs/done/000-rfc-lifecycle-policy.md` |
-| `docs/src/rfc-process.md` line 4 | `rfcs/000-rfc-lifecycle-policy.md` | `rfcs/done/000-rfc-lifecycle-policy.md` |
 
 The link text in `README.md` reads `` `rfcs/done/RFC-001` ``; update the visible
 text to match the new filename too.
+
+`CONTRIBUTING.md` and `docs/src/rfc-process.md` already point at
+`rfcs/done/000-rfc-lifecycle-policy.md` — the architect repaired them when
+moving the file (§5.3). Leave them alone.
 
 There are no path cross-links between RFC bodies — verified by grep. If you find
 one, report it.
@@ -312,6 +280,11 @@ cause harm. Scope every bulk edit to the paths in §3.
 ## 13. Required review-request format
 
 Per §9.2 of `ai-multi-agent-software-development-organization-and-workflow.md`.
-Place the review request beside this handoff, at
-`rfcs/handoffs/035-rfc-directory-conformance-and-naming/review-request.md`.
+File the review request at
+`.git-exclude/review-request/035-rfc-directory-conformance-and-naming.md`.
+The architect's review result is returned at
+`.git-exclude/reviewed/035-rfc-directory-conformance-and-naming.md`.
+Review artefacts stay out of `rfcs/handoffs/`, which holds design companions
+only (RFC-035 §3.5).
+
 Report to the owner only the path of this file and your review-request file.
