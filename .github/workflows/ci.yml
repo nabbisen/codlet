@@ -218,6 +218,35 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo run -p xtask -- release-check
 
+  # RFC-039 §3.1: bans/licenses/sources change state only when a developer
+  # changes a dependency, so a failure always names something that just
+  # happened. Blocking is correct here.
+  supply-chain:
+    name: supply chain (bans, licenses, sources)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check bans licenses sources
+
+  # RFC-039 §3.1: advisories change state when a third party publishes a
+  # RUSTSEC entry, at an arbitrary time, against a dependency this project may
+  # not have touched. Blocking that on every pull request would let an
+  # upstream publication freeze unrelated work, which produces a permanent
+  # `ignore` list -- a gate switched off while still appearing to run.
+  # Reported here (non-blocking); blocking happens at release, in
+  # release-gates.yml.
+  advisories:
+    name: supply chain (advisories, non-blocking)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check advisories
+
   docs:
     name: doc build
     runs-on: ubuntu-latest

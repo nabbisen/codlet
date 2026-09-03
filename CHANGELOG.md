@@ -6,6 +6,25 @@ semantic versioning once it reaches a stable release.
 
 ## [Unreleased]
 
+### Added
+
+- **Supply-chain scanning via `cargo-deny` (RFC-039).** `deny.toml` at the
+  workspace root checks `bans`, `licenses`, and `sources` against the
+  workspace's dependency graph — 184 packages, including dev-dependencies
+  (`licenses.include-dev = true`). The license allow-list (`Apache-2.0`,
+  `Apache-2.0 WITH LLVM-exception`, `MIT`, `BSD-3-Clause`, `Unicode-3.0`,
+  `Zlib`, `Unlicense`, `BSL-1.0`) was derived from the actual graph, not a
+  template, and passes on the current graph with no exceptions. Duplicate-
+  version detection (`bans.multiple-versions`) starts at `warn`; sources are
+  restricted to the crates.io registry. Two new CI jobs in
+  `.github/workflows/ci.yml`: `supply-chain` (bans/licenses/sources, blocking)
+  and `advisories` (RUSTSEC advisories, reported but non-blocking on pull
+  requests — a third-party advisory publication should not freeze unrelated
+  work). A new `.github/workflows/release-gates.yml`, triggered on a version
+  tag push, makes the advisories check blocking at release: nothing is
+  published with a known advisory, even though day-to-day development is not
+  frozen by one. `SECURITY.md`'s release-discipline list names both gates.
+
 ## [0.18.0] — 2026-09-03
 
 ### Fixed

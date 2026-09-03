@@ -1,0 +1,20 @@
+name: release-gates
+
+# RFC-039 §3.1: advisories are non-blocking on pull requests (see ci.yml) and
+# blocking here, at release. The release procedure pushes the version tag
+# before publishing (SECURITY.md), so this runs at exactly the moment that
+# makes the check meaningful: this workflow must be green on the tag before
+# `cargo publish` is run.
+on:
+  push:
+    tags: ['[0-9]+.[0-9]+.[0-9]+']
+
+jobs:
+  advisories:
+    name: supply chain advisories (blocking at release)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check advisories

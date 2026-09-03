@@ -137,7 +137,19 @@ The gate set CI actually runs:
 16. `cargo run -p xtask -- release-check` (5 static security gates, documented
     in `xtask/src/main.rs`)
 17. `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps`
+18. `cargo deny check bans licenses sources` (`supply-chain` job) — supply-chain
+    policy in `deny.toml` (RFC-039); blocking on every run, since a failure
+    always names a dependency change a developer just made
+19. `cargo deny check advisories` (`advisories` job) — reported, non-blocking,
+    on pull requests; a third-party RUSTSEC publication should not freeze
+    unrelated work
 
 There is no locally-runnable command that reproduces the full set without
 Docker; gate 11 is the one exception and must be verified in an environment
 that has it (CI does).
+
+**Advisories are additionally blocking at release.** Before publishing, the
+`release-gates.yml` workflow — triggered by pushing the version tag — must be
+green: `cargo deny check advisories` against the tagged commit. This is what
+makes the non-blocking pull-request policy above safe: nothing ships with a
+known advisory, even though day-to-day development is not frozen by one.
