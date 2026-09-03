@@ -1,6 +1,7 @@
 # RFC-018: Future Server / IdP Crate Strategy
 
-- **Status:** Proposed
+- **Status:** Withdrawn — deferred to post-v1; no server/IdP work is planned
+  under the current roadmap. See `ROADMAP.md`.
 - **Target milestone:** M6 / post-v1
 - **Primary crate(s):** codlet-server future
 - **Source basis:** zinnias-ciao v0.36.1 service handoff

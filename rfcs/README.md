@@ -78,4 +78,4 @@ lifecycle state of its own — it inherits the state of its governing RFC.
 
 | ID | Title | Reason |
 |----|-------|--------|
-| [018](./archive/018-future-server-idp-crate-strategy.md) | Future Server / IdP Crate Strategy | Deferred post-v1 |
+| [018](./archive/018-future-server-idp-crate-strategy.md) | Future Server / IdP Crate Strategy | Withdrawn — deferred post-v1 |
