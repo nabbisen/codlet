@@ -1,6 +1,6 @@
 # RFC-042: Retire `cookie-attrs-present` — a Text Grep Cannot Assert Emitted Behaviour
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Target milestone:** M5
 - **Primary crate(s):** `xtask`, `docs`
 - **Source basis:** RFC-040 review finding C-1, 2026-09-03
@@ -83,10 +83,31 @@ tests, which are what actually ensure it.
 
 ### 4.2 Four gates, not five
 
-Every document naming "the five static release gates" — `SECURITY.md`,
-`CONTRIBUTING.md`, `ROADMAP.md`, the M4 RFCs — becomes wrong. The count must be
-corrected wherever it appears. It is stated in more places than is comfortable,
-which is itself worth noticing.
+Sixteen places in the repository say "five gates". **Only two of them may be
+edited**, and the distinction matters more than the count:
+
+**Live documents — correct these:**
+
+- `SECURITY.md` — the release-discipline list, item 16.
+- `xtask/src/main.rs` — the doc comment on `library_sources` describing what an
+  empty corpus would do to "all five gates".
+
+**Historical records — do not touch:**
+
+- `CHANGELOG.md` (3 occurrences) — an accurate account of what existed at those
+  releases. Rewriting it would be falsification, the same rule that has governed
+  every handoff in this milestone.
+- `rfcs/done/014-…` — an Implemented RFC, and a historical record.
+- `rfcs/accepted/040-…` and its handoff (7 occurrences) — they describe the
+  state at drafting and the work as executed. RFC-040's motivation *is* that
+  five gates shared a defect; that was true when written.
+- This RFC.
+
+*(§4.2 corrected 2026-09-03 before the handoff was written. The original text
+said the count "must be corrected wherever it appears", which would have
+directed the implementer to rewrite CHANGELOG history and an Implemented RFC —
+prohibited by every other handoff in this milestone. A count is only wrong in a
+document that asserts the present.)*
 
 ## 5. Non-goals
 
@@ -134,5 +155,6 @@ and corrects documentation.
 - `cargo run -p xtask -- self-test` green with four gates.
 - `cargo run -p xtask -- release-check` green with four gates.
 - `docs/src/threat-model.md` cites the behavioural tests, not the gate.
-- Every "five gates" reference corrected to four.
+- `SECURITY.md` and the `library_sources` doc comment say four; no historical
+  record edited.
 - No change to any emitted cookie, and `cookie/tests.rs` still passes unmodified.
