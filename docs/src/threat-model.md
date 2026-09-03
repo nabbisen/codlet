@@ -39,8 +39,14 @@ bound resource) prevents token reuse across forms or users.
 secrets are never stored in plaintext. Only keyed HMAC lookup values are
 persisted. The `no-plaintext-in-store-ops` release gate catches violations.
 
-**Cookie leakage via JS.** Session cookies are `HttpOnly` by default. The
-`cookie-attrs-present` gate ensures this cannot be accidentally removed.
+**Cookie leakage via JS.** Session cookies are `HttpOnly` by default. This is
+ensured by the behavioural tests in `crates/codlet/src/cookie/tests.rs`, which
+assert on the emitted `Set-Cookie` string across the production, lax, and
+development profiles — not by a static gate. A prior release-time text-scan
+gate (`cookie-attrs-present`) claimed to guard this too, but matched whole
+file text including documentation and enum literals, so it could not detect a
+builder that stopped emitting an attribute; it was retired (RFC-042) once
+`xtask self-test` (RFC-040) proved it against a realistic fixture.
 
 **Key exhaustion / weak HMAC.** codlet uses HMAC-SHA-256 which provides
 128-bit collision resistance. Key material must be ≥ 16 bytes; the

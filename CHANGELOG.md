@@ -6,6 +6,24 @@ semantic versioning once it reaches a stable release.
 
 ## [Unreleased]
 
+### Removed
+
+- **`cookie-attrs-present` release gate retired (RFC-042).** It matched
+  `HttpOnly`/`Secure`/`SameSite` as plain substrings across an entire source
+  file, comments and enum literals included, not just the emitted
+  `Set-Cookie` string. `crates/codlet/src/cookie.rs`'s own module
+  documentation and `enum SameSitePolicy`'s variant literals name all three
+  attributes, so the gate passed regardless of what `build_set_cookie`
+  actually returned — confirmed under RFC-040's `xtask self-test` with a
+  fixture modelling a realistic regression (documentation naming all three
+  attributes, a builder emitting only two): the gate did not catch it. This
+  removes a release gate. The invariant itself was never unguarded: the
+  behavioural tests in `crates/codlet/src/cookie/tests.rs`, which assert on
+  the emitted cookie string across the production, lax, and development
+  profiles, are what actually prove it and always have. `xtask` now runs four
+  release gates, not five; `SECURITY.md` and `docs/src/threat-model.md`
+  updated to match.
+
 ### Added
 
 - **Supply-chain scanning via `cargo-deny` (RFC-039).** `deny.toml` at the

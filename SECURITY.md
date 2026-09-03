@@ -134,7 +134,7 @@ The gate set CI actually runs:
     --all-targets` built on Rust 1.85 (`msrv` job); `cargo check -p codlet-sqlx
     --all-targets` built on Rust 1.94 (`msrv-sqlx` job) — see the MSRV table
     above for why the floor differs
-16. `cargo run -p xtask -- release-check` (5 static security gates, documented
+16. `cargo run -p xtask -- release-check` (4 static security gates, documented
     in `xtask/src/main.rs`)
 17. `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps`
 18. `cargo deny check bans licenses sources` (`supply-chain` job) — supply-chain
