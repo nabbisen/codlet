@@ -37,10 +37,19 @@ later work can rest on verifiable evidence.
 | M4-3 | RFC directory conformance: 5-folder layout, `NNN-slug.md` naming, RFC-000 relocated and refreshed, index links repaired, handoffs moved in-repo | RFC-035 |
 | M4-4 | Documentation consistency sweep (RFC counts, release-discipline commands, official crate list) | RFC-035, RFC-036, RFC-037 |
 | M4-5 | `codlet-axum` formally withdrawn | RFC-037 |
+| M4-6 | `run_postgres_migrations` repaired; migration runners stop parsing SQL | RFC-038 |
+| M4-7 | `codlet-sqlx` declares its true MSRV floor (1.94) | RFC-036, owner decision D-1 accepted 2026-09-03 |
 
 Handoffs: `rfcs/handoffs/036-gate-integrity-ci-conformance-and-msrv/` runs
 first, then `rfcs/handoffs/035-rfc-directory-conformance-and-naming/`. RFC-037
 ships with the latter and must not ship before RFC-036 (RFC-037 §4.2).
+
+RFC-038 was added mid-milestone: the RFC-036 CI repair made the `test-postgres`
+job legible for the first time, and its failure turned out to be a defect in the
+published PostgreSQL adapter rather than a runner problem. Its position in the
+sequence is an open owner decision (RFC-038 §10); the architect recommends it
+runs before the RFC-035 migration, since a broken published adapter outranks
+repository hygiene.
 
 **Exit criteria**
 
@@ -178,6 +187,8 @@ not edited, because Implemented RFCs are historical records.
 | R-4 | No supply-chain advisory scanning | Likely | Medium | M5-1 | dev team |
 | R-5 | Deferred work tracked only outside the repository | Certain (verified) | Medium — invisible backlog, contradicts RFC-000 | M6 converts it into RFCs; handoffs moved in-repo under RFC-035 §3.5 | architect |
 | R-7 | `codlet-axum`/`-worker`/`-conformance` unreserved on crates.io | Low | Medium — an unofficial crate in a security namespace | Official crate list in README (M4); reservation decided at M7 | owner |
+| R-8 | `run_postgres_migrations` broken in published `codlet-sqlx` since v0.12.0 | Certain (verified in CI log) | **High** — the PostgreSQL adapter cannot create its schema | RFC-038 | dev team |
+| R-9 | PostgreSQL adapter conformance, incl. the INV-5 concurrent-claim test, has **never executed** | Certain (follows from R-8) | **High** — an adapter documented as conformant is unverified | RFC-038 §5; suite may surface further defects (§7) | architect |
 | R-6 | KV-backed rate limiting under-counts under distributed load | Known, documented | Medium | Documented in threat model; consider a D1-backed counter option in M5 | architect |
 
 ---
