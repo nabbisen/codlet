@@ -57,10 +57,10 @@ No RFCs awaiting implementation.
 | [032](./done/032-code-delivery-channel-boundary.md) | Code Delivery Channel Boundary | v0.8.0 |
 | [033](./done/033-cloudflare-workers-d1-kv-adapter-implementation.md) | Cloudflare Workers / D1 / KV Adapter (`codlet-worker`) | v0.11.0 |
 | [034](./done/034-postgresql-adapter-implementation.md) | PostgreSQL Adapter (`codlet-sqlx` postgres feature) | v0.12.0 |
-| [035](./done/035-rfc-directory-conformance-and-naming.md) | RFC Directory Conformance, Naming, and Lifecycle-Policy Placement | Unreleased |
-| [036](./done/036-gate-integrity-ci-conformance-and-msrv.md) | Gate Integrity — CI Conformance, MSRV Enforcement, and Release-Discipline Accuracy | Unreleased |
-| [037](./done/037-withdraw-codlet-axum-framework-adapter.md) | Withdraw the `codlet-axum` Framework Adapter from Planned Scope | Unreleased |
-| [038](./done/038-migration-runner-must-not-parse-sql.md) | The Migration Runner Must Not Parse SQL | Unreleased |
+| [035](./done/035-rfc-directory-conformance-and-naming.md) | RFC Directory Conformance, Naming, and Lifecycle-Policy Placement | v0.18.0 |
+| [036](./done/036-gate-integrity-ci-conformance-and-msrv.md) | Gate Integrity — CI Conformance, MSRV Enforcement, and Release-Discipline Accuracy | v0.18.0 |
+| [037](./done/037-withdraw-codlet-axum-framework-adapter.md) | Withdraw the `codlet-axum` Framework Adapter from Planned Scope | v0.18.0 |
+| [038](./done/038-migration-runner-must-not-parse-sql.md) | The Migration Runner Must Not Parse SQL | v0.18.0 |
 
 RFC-002 describes `crates/codlet-axum` and `crates/codlet-test` in its
 workspace layout; neither was built. `codlet-test`'s role was filled by

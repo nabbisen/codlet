@@ -6,6 +6,8 @@ semantic versioning once it reaches a stable release.
 
 ## [Unreleased]
 
+## [0.18.0] — 2026-09-03
+
 ### Fixed
 
 - **CI repaired: package names, MSRV gate, gate integrity (RFC-036).**
