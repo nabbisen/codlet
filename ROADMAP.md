@@ -18,7 +18,28 @@ the automated gates that any later review depends on for evidence.
 
 ---
 
-## M4 — Governance and gate integrity
+## M4 — Governance and gate integrity · **COMPLETE 2026-09-03**
+
+**Evidence:** CI run
+[33736488609](https://github.com/nabbisen/codlet/actions/runs/33736488609) on
+`a543fde` — 19 jobs, 19 green, zero failures. Compare the v0.17.1 released
+commit `0962ca4`: seven jobs failing and `core-deps` passing while inspecting an
+empty string.
+
+**Delivered:** RFC-035 (directory conformance), RFC-036 (gate integrity, MSRV),
+RFC-037 (`codlet-axum` withdrawn), RFC-038 (migration runner). All four in
+`done/` at `Implemented (Unreleased)` pending the release decision below.
+
+**What M4 actually found**, beyond its original scope: a runtime-neutrality gate
+that had been reporting false passes for two releases; an MSRV claim enforced
+nowhere; a release-discipline document listing commands that could not be run;
+and — via the CI repair making the failure legible — a **broken PostgreSQL
+migration runner in every published version since v0.12.0**, which had prevented
+that adapter's conformance suite, including the INV-5 concurrent-claim test,
+from ever executing. The suite now passes.
+
+**Release blocked on an owner decision — see "M4 release" below.**
+
 
 **Theme:** repair the process machinery. No library behaviour changes.
 
@@ -60,8 +81,15 @@ repository hygiene.
 - Every link in `rfcs/README.md` resolves; every file under `rfcs/` matches the
   naming convention; every `Status` field matches its folder.
 
-**Release implication:** patch release 0.17.2, or fold into the next minor.
-Owner decides; no API change either way.
+**Release implication — resolved by policy, not preference.** The original
+entry offered "patch release 0.17.2, or fold into the next minor". **0.17.2 is
+not permissible.** SECURITY.md states *"MSRV is never raised in a patch
+release"*, and accepted decision D-1 raised `codlet-sqlx`'s declared MSRV from
+1.85 to 1.94. M4 must therefore ship as a **minor release, 0.18.0**, with the
+CHANGELOG note SECURITY.md's pre-v1 clause requires — which is already written.
+
+Confirmation of the version number remains the owner's, but the choice is
+constrained to a minor by the project's own published policy.
 
 **Release-time task (RFC-035 review, C-1 follow-up).** The four M4 RFCs ship
 with `Status: Implemented (Unreleased)` because the version was undecided at
