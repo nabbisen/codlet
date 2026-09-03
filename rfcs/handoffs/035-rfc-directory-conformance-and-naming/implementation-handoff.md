@@ -5,7 +5,9 @@
 - **Date:** 2026-08-31
 - **Milestone:** M4 (`ROADMAP.md`)
 - **Governing RFC:** [`../../accepted/035-rfc-directory-conformance-and-naming.md`](../../accepted/035-rfc-directory-conformance-and-naming.md)
-- **Priority:** after the RFC-036 handoff is merged.
+- **Priority:** last in M4. The RFC-036 handoff merged at `7142f72` and the
+  RFC-038 handoff at `47e4e3d` plus its documentation close-out. Start from a
+  tree where those are committed and CI is green.
 
 ## 1. Purpose
 
@@ -130,8 +132,7 @@ Requirements:
   RFC-014 and RFC-015 exactly as they are.
 - Counts in the section headings must match the files on disk. **End state after
   §5.6:** Proposed (0), Accepted (0), Implemented (38), Archive (1) — the
-  existing 33, plus RFC-000, plus RFC-035/036/037/038. If RFC-038 is held back
-  per §5.6, it is Accepted (1) / Implemented (37); say so in the index note.
+  existing 33, plus RFC-000, plus RFC-035/036/037/038.
 - Mark RFC-018's Archive row reason as `Deferred post-v1`, unchanged, and add
   RFC-037's withdrawal of `codlet-axum` to the notes below the tables.
 - Note which RFCs have a companion handoff under `rfcs/handoffs/`, per RFC-000
@@ -183,11 +184,13 @@ with the file.
 §4.2 depends on the `test-send-compat` job actually running again. RFC-036
 merged at `7142f72`; confirm that job is green before moving RFC-037.
 
-**RFC-038 ships only if verified.** Move it to `done/` only when its handoff is
-merged *and* the PostgreSQL conformance suite has actually executed. If that
-verification is still outstanding, leave RFC-038 in `accepted/`, ship the other
-three, and note why — do not mark an RFC Implemented on the strength of an
-unverified fix.
+**RFC-038's verification condition is satisfied — ship it with the others.**
+The condition was that the PostgreSQL conformance suite must actually have
+executed, not merely that the fix looked right. It has: commit `47e4e3d`,
+[run 33707714372](https://github.com/nabbisen/codlet/actions/runs/33707714372),
+`test-postgres` 7 passed / 0 failed against a live server, including the
+concurrent single-winner claim test. Verified by the architect on 2026-09-03.
+No judgement call is left to you here — all four RFCs move to `done/`.
 
 `accepted/` is then empty; this is expected, and `.gitkeep` preserves it.
 
@@ -235,7 +238,7 @@ for d in rfcs/handoffs/*/; do n=$(basename "$d" | cut -d- -f1); \
 # 3. every link in the index resolves -- and the count proves links were found
 #    (a zero-match grep would otherwise "pass" silently)
 links=$(grep -o '](\.\?/\?[^)]*\.md)' rfcs/README.md | sed 's|](||;s|)||;s|^\./||')
-echo "$links" | wc -l                                  # expect: 39 (38 if RFC-038 held back)
+echo "$links" | wc -l                                  # expect: 39
 echo "$links" | while read -r p; do [ -f "rfcs/$p" ] || echo "BROKEN: $p"; done   # expect: no output
 
 # 4. no stale RFC- path references remain outside CHANGELOG.md
