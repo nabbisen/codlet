@@ -13,8 +13,16 @@ requests; advisory findings are reported on pull requests and block at release.
 
 ## 2. Motivation
 
-codlet is a security library with 137 distinct packages in its workspace
-dependency graph, and no automated visibility into any of them. The v0.17.1
+codlet is a security library with **137 distinct package names** in its normal
+(non-dev) workspace dependency graph — **188 packages in total** once
+dev-dependencies are included — and no automated visibility into any of them.
+
+*(Corrected 2026-09-03 by the RFC-039 review. The original text gave only the
+137 figure while §3.2's licence table was derived from the full 188-package
+graph, presenting two measurements of different graphs as one. The distinction
+matters: `cargo-deny`'s `licenses` check excludes dev-dependencies by default,
+so the enforced scope and the audited scope diverge unless `include-dev` is
+set — see §3.2.)* The v0.17.1
 handoff bundle records this as an open operational risk: *"security gates are
 project-internal (no `cargo audit`/`deny` yet)"*.
 
