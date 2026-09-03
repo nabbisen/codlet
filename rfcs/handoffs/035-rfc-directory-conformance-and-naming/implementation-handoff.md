@@ -129,8 +129,9 @@ Requirements:
 - Preserve the existing "Version" column values and the `*(partial)*` markers on
   RFC-014 and RFC-015 exactly as they are.
 - Counts in the section headings must match the files on disk. **End state after
-  §5.6:** Proposed (0), Accepted (0), Implemented (37), Archive (1) — the
-  existing 33, plus RFC-000, plus RFC-035/036/037.
+  §5.6:** Proposed (0), Accepted (0), Implemented (38), Archive (1) — the
+  existing 33, plus RFC-000, plus RFC-035/036/037/038. If RFC-038 is held back
+  per §5.6, it is Accepted (1) / Implemented (37); say so in the index note.
 - Mark RFC-018's Archive row reason as `Deferred post-v1`, unchanged, and add
   RFC-037's withdrawal of `codlet-axum` to the notes below the tables.
 - Note which RFCs have a companion handoff under `rfcs/handoffs/`, per RFC-000
@@ -158,15 +159,17 @@ moving the file (§5.3). Leave them alone.
 There are no path cross-links between RFC bodies — verified by grep. If you find
 one, report it.
 
-### 5.6 Shipping RFC-035, RFC-036, and RFC-037
+### 5.6 Shipping RFC-035, RFC-036, RFC-037, and RFC-038
 
-All three M4 RFCs transition to `done/` in this change — RFC-036's
-implementation was merged by the preceding handoff, and RFC-037's acceptance
-criteria are satisfied by §5.7 below.
+All four M4 RFCs transition to `done/` in this change — RFC-036's
+implementation merged at `7142f72`, RFC-038's in the handoff that runs
+immediately before this one, and RFC-037's acceptance criteria are satisfied by
+§5.7 below.
 
 For each of `035-rfc-directory-conformance-and-naming.md`,
-`036-gate-integrity-ci-conformance-and-msrv.md`, and
-`037-withdraw-codlet-axum-framework-adapter.md`:
+`036-gate-integrity-ci-conformance-and-msrv.md`,
+`037-withdraw-codlet-axum-framework-adapter.md`, and
+`038-migration-runner-must-not-parse-sql.md`:
 
 ```sh
 git mv rfcs/accepted/<file> rfcs/done/<file>
@@ -177,8 +180,14 @@ Update `rfcs/README.md` in the same commit — RFC-000 requires the index to mov
 with the file.
 
 **Order matters for RFC-037:** it must not ship before RFC-036, because RFC-037
-§4.2 depends on the `test-send-compat` job actually running again. Verify that
-job passed in the preceding handoff before moving RFC-037.
+§4.2 depends on the `test-send-compat` job actually running again. RFC-036
+merged at `7142f72`; confirm that job is green before moving RFC-037.
+
+**RFC-038 ships only if verified.** Move it to `done/` only when its handoff is
+merged *and* the PostgreSQL conformance suite has actually executed. If that
+verification is still outstanding, leave RFC-038 in `accepted/`, ship the other
+three, and note why — do not mark an RFC Implemented on the strength of an
+unverified fix.
 
 `accepted/` is then empty; this is expected, and `.gitkeep` preserves it.
 
@@ -226,7 +235,7 @@ for d in rfcs/handoffs/*/; do n=$(basename "$d" | cut -d- -f1); \
 # 3. every link in the index resolves -- and the count proves links were found
 #    (a zero-match grep would otherwise "pass" silently)
 links=$(grep -o '](\.\?/\?[^)]*\.md)' rfcs/README.md | sed 's|](||;s|)||;s|^\./||')
-echo "$links" | wc -l                                  # expect: 38
+echo "$links" | wc -l                                  # expect: 39 (38 if RFC-038 held back)
 echo "$links" | while read -r p; do [ -f "rfcs/$p" ] || echo "BROKEN: $p"; done   # expect: no output
 
 # 4. no stale RFC- path references remain outside CHANGELOG.md
