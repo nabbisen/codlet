@@ -43,3 +43,4 @@ getrandom = { workspace = true, features = ["wasm_js"] }
 serde_json        = { workspace = true }
 static_assertions = { workspace = true }
 tokio             = { workspace = true, features = ["rt", "macros"] }
+trybuild          = { workspace = true }

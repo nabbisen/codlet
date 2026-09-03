@@ -80,16 +80,30 @@ or platform-provided header).
 
 These must hold for codlet to be secure:
 
-| # | Invariant |
-|---|-----------|
-| INV-1 | Secrets are stored only as HMAC lookup values — never plaintext. |
-| INV-2 | Missing key material fails the operation — no fallback key exists. |
-| INV-3 | RNG failure fails the operation — no deterministic fallback value. |
-| INV-4 | Normalization is identical on issue and redeem paths, and idempotent. |
-| INV-5 | `claim_code` uses a conditional UPDATE; `changed == 0` never proceeds. |
-| INV-6 | `consume_form_token` uses a conditional UPDATE; `changed == 0` never proceeds. |
-| INV-7 | Session issuance requires a `RedeemSuccess` proof from a won claim. |
-| INV-8 | All non-success redemption states map to one generic public error. |
+Per RFC-040: each invariant names its guard **and** the negative test proving
+that guard can fail. A guard with no recorded negative test is not treated as
+verified — see RFC-036 §3.4, generalised in RFC-040 §3.1 to "a gate must fail
+when it cannot perform its check". INV-4 is the one open row: its guard is
+deferred to RFC-041 and is shown as such rather than omitted.
 
-The `xtask release-check` command enforces a subset of these statically on
-every release.
+| # | Invariant | Guard | Negative test |
+|---|-----------|-------|----------------|
+| INV-1 | Secrets are stored only as HMAC lookup values — never plaintext. | `xtask` gate `no-plaintext-in-store-ops` | `xtask self-test` fixture `xtask/fixtures/no_plaintext_in_store_ops.rs` (RFC-040 §3.2) |
+| INV-2 | Missing key material fails the operation — no fallback key exists. | `xtask` gate `no-fallback-key` | `xtask self-test` fixture `xtask/fixtures/no_fallback_key.rs` |
+| INV-3 | RNG failure fails the operation — no deterministic fallback value. | `xtask` gate `rng-no-silent-fallback` | `xtask self-test` fixture `xtask/fixtures/rng_no_silent_fallback.rs` |
+| INV-4 | Normalization is identical on issue and redeem paths, and idempotent. | *(none yet)* | **Deferred to RFC-041.** No guard exists yet; the gap is recorded here rather than silently omitted (RFC-040 §4). |
+| INV-5 | `claim_code` uses a conditional UPDATE; `changed == 0` never proceeds. | `codlet-conformance` concurrent-claim test, run against every adapter (in-memory, SQLite, PostgreSQL, D1) | `crates/codlet/tests/rfc_040_invariant_verification.rs`: `inv5_claim_with_changed_zero_reports_lost_not_won`, `inv5_second_claim_of_an_already_won_code_also_reports_lost`, `inv5_changed_greater_than_one_surfaces_as_invariant_violation_not_lost` |
+| INV-6 | `consume_form_token` uses a conditional UPDATE; `changed == 0` never proceeds. | `codlet-conformance` form-token consume test, run against every adapter | `crates/codlet/tests/rfc_040_invariant_verification.rs`: `inv6_consume_with_changed_zero_reports_invalid_not_proceed`, `inv6_second_consume_of_an_already_consumed_token_replays_not_proceeds`, `inv6_changed_greater_than_one_surfaces_as_invariant_violation_not_replay` |
+| INV-7 | Session issuance requires a `RedeemSuccess` proof from a won claim. | Type system: `RedeemSuccess::_claim_proof` is `pub(crate)`, constructible only via a won `claim_code` | `crates/codlet/tests/rfc_040_inv7_compile_fail.rs` — `trybuild` `compile_fail`; the only invariant proven by a compile-failure test rather than a runtime assertion |
+| INV-8 | All non-success redemption states map to one generic public error. | `PublicRedemptionError::from_reason` | `crates/codlet/tests/rfc_040_invariant_verification.rs`: `inv8_every_redemption_fail_reason_is_classified_by_an_exhaustive_match` — an exhaustive `match` with no wildcard arm, so an unhandled new `RedemptionFailReason` variant fails to compile rather than silently escaping the check |
+
+`cargo run -p xtask -- release-check` runs four static gates, three of which
+enforce INV-1, INV-2, and INV-3 above; the fourth, `no-debug-prints`, guards
+against secret-bearing debug output and is not tied to a single numbered
+invariant in this table. `xtask self-test` (also run in CI) proves each of the
+four can fail against a deliberate violation, not merely that it exists
+(RFC-040 §3.2). A fifth gate, `cookie-attrs-present`, guarded the
+`HttpOnly`/`Secure`/`SameSite` cookie invariant described under "Cookie
+leakage via JS" above — also outside this numbered list — and was retired
+under this same standard once self-test proved it could not actually detect
+a violation; see RFC-042.

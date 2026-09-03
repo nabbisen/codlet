@@ -43,6 +43,38 @@ semantic versioning once it reaches a stable release.
   published with a known advisory, even though day-to-day development is not
   frozen by one. `SECURITY.md`'s release-discipline list names both gates.
 
+- **Every release gate proven capable of failing (RFC-040).** The five
+  `xtask` release gates shared the `core-deps` fail-open defect (RFC-036
+  §3.5): `library_sources()` returned an empty vector, not an error, when it
+  found no sources, so all five gates would report `Ok(())` simultaneously
+  and silently if the corpus ever went missing. `library_sources()` now
+  errors on an empty corpus, and each gate additionally asserts its corpus
+  covers `crates/codlet/src/` before drawing any conclusion. A new
+  `cargo run -p xtask -- self-test` subcommand (wired into CI, blocking) runs
+  each gate against a fixture under `xtask/fixtures/` that deliberately
+  violates the exact pattern that gate exists to catch, and fails if any gate
+  passes its own fixture — turning "observed failing" from a one-off manual
+  trial (RFC-036 §3.4) into a standing, automated property. The self-test
+  infrastructure caught two real bugs before this landed: its own first
+  `cookie-attrs-present` fixture draft had an explanatory comment that
+  happened to mention the omitted attribute by name, producing a false pass;
+  and once fixed to model a realistic regression, self-test correctly proved
+  that gate could never detect one at all — the `cookie-attrs-present` gate
+  was retired as a result (RFC-042). Negative tests added for INV-5, INV-6,
+  and INV-8 in `crates/codlet/tests/rfc_040_invariant_verification.rs`,
+  exercising `MemCodeStore`/`MemFormTokenStore` through the public
+  `CodeStore`/`FormTokenStore` traits (including a genuine `changed > 1`
+  case, reachable because `insert_code`/`insert_form_token` do not enforce
+  id uniqueness) and an exhaustive `match` over `RedemptionFailReason` with
+  no wildcard arm, so an unhandled future variant fails to compile instead of
+  silently escaping the check. INV-7 (session issuance requires a won-claim
+  proof) is proven by a new `trybuild` compile-failure test — `trybuild` is a
+  dev-dependency only, per `[workspace.dependencies]` (DEC-012); the
+  `core-deps` gate confirms it does not enter `codlet`'s published dependency
+  tree. INV-4's guard remains deferred to RFC-041 and is shown as an open
+  row, not omitted. `docs/src/threat-model.md`'s invariant table gains Guard
+  and Negative-test columns for all eight invariants.
+
 ## [0.18.0] — 2026-09-03
 
 ### Fixed

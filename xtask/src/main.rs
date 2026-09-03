@@ -3,10 +3,12 @@
 //! `cargo run -p xtask -- <task>`
 //!
 //! Tasks:
-//!   - `release-check` Static release gates (RFC-015 §9). Currently a skeleton;
-//!     gates are added as the primitives they guard are implemented
-//!     (no-fallback-key, no `unwrap_or_default` near RNG, cookie attribute
-//!     enforcement, etc.).
+//!   - `release-check` Static release gates (RFC-015 §9), scanning
+//!     `crates/*/src`.
+//!   - `self-test` Proves each gate can fail (RFC-040 §3.2): runs every gate's
+//!     check logic against a fixture in `fixtures/` that deliberately violates
+//!     the pattern that gate exists to catch, and fails if any gate does not
+//!     fail on its own fixture.
 //!
 //! This binary intentionally avoids external dependencies for now.
 
@@ -16,6 +18,7 @@ fn main() -> ExitCode {
     let task = std::env::args().nth(1);
     match task.as_deref() {
         Some("release-check") => release_check(),
+        Some("self-test") => self_test(),
         Some(other) => {
             eprintln!("unknown task: {other}");
             print_usage();
@@ -32,11 +35,17 @@ fn print_usage() {
     eprintln!("usage: cargo run -p xtask -- <task>");
     eprintln!("tasks:");
     eprintln!("  release-check   run static release gates (RFC-015)");
+    eprintln!("  self-test       prove every gate can fail (RFC-040 §3.2)");
 }
 
 /// A named static release gate: returns `Ok(())` when the invariant holds, or
 /// `Err(reason)` describing the violation.
 type Gate = (&'static str, fn() -> Result<(), String>);
+
+/// A gate's pure pattern-matching logic, operating on an explicit source
+/// corpus rather than reading `crates/` itself — this is what makes a gate's
+/// check callable against a self-test fixture (RFC-040 §3.2).
+type SourcesCheck = fn(&[(String, String)]) -> Result<(), String>;
 
 /// Static release gates. Each gate is added alongside the RFC that introduces
 /// the pattern it guards, so the gate and the code it protects land together.
@@ -59,10 +68,6 @@ fn release_check() -> ExitCode {
         }
     }
 
-    if gates.is_empty() {
-        println!("release-check: no gates registered yet");
-    }
-
     if failed == 0 {
         ExitCode::SUCCESS
     } else {
@@ -71,10 +76,102 @@ fn release_check() -> ExitCode {
     }
 }
 
-/// Collect `.rs` files under `crates/*/src`, excluding test modules is not
-/// attempted here (gates are conservative and also scan tests intentionally
-/// for the fallback-key literal). Returns (path, contents).
-fn library_sources() -> Vec<(String, String)> {
+/// RFC-040 §3.2: each gate's fixture deliberately violates exactly the
+/// pattern that gate exists to catch. A gate that passes its own violation
+/// fixture cannot actually protect anything — this converts "observed
+/// failing" (RFC-036 §3.4, previously a manual trial) into a standing,
+/// automated property.
+struct SelfTestCase {
+    gate_name: &'static str,
+    check: SourcesCheck,
+    /// Filename under `xtask/fixtures/`.
+    fixture_file: &'static str,
+}
+
+fn self_test() -> ExitCode {
+    let cases: &[SelfTestCase] = &[
+        SelfTestCase {
+            gate_name: "no-fallback-key",
+            check: check_no_fallback_key,
+            fixture_file: "no_fallback_key.rs",
+        },
+        SelfTestCase {
+            gate_name: "rng-no-silent-fallback",
+            check: check_rng_no_silent_fallback,
+            fixture_file: "rng_no_silent_fallback.rs",
+        },
+        SelfTestCase {
+            gate_name: "no-debug-prints",
+            check: check_no_debug_prints,
+            fixture_file: "no_debug_prints.rs",
+        },
+        SelfTestCase {
+            gate_name: "no-plaintext-in-store-ops",
+            check: check_no_plaintext_store,
+            fixture_file: "no_plaintext_in_store_ops.rs",
+        },
+    ];
+
+    let fixtures_dir = fixtures_dir();
+    let mut failed: Vec<&str> = Vec::new();
+    for case in cases {
+        let path = fixtures_dir.join(case.fixture_file);
+        let content = match std::fs::read_to_string(&path) {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!(
+                    "self-test FAILED: gate {}: could not read fixture {}: {e}",
+                    case.gate_name,
+                    path.display()
+                );
+                failed.push(case.gate_name);
+                continue;
+            }
+        };
+        let sources = [(path.display().to_string(), content)];
+        match (case.check)(&sources) {
+            Ok(()) => {
+                eprintln!(
+                    "self-test FAILED: gate {} did not fail against its own violation \
+                     fixture — it cannot detect the pattern it exists to catch",
+                    case.gate_name
+                );
+                failed.push(case.gate_name);
+            }
+            Err(reason) => {
+                println!(
+                    "self-test ok: gate {} correctly failed on its fixture: {reason}",
+                    case.gate_name
+                );
+            }
+        }
+    }
+
+    if failed.is_empty() {
+        ExitCode::SUCCESS
+    } else {
+        eprintln!(
+            "self-test: {} gate(s) failed to catch their own fixture: {}",
+            failed.len(),
+            failed.join(", ")
+        );
+        ExitCode::FAILURE
+    }
+}
+
+fn fixtures_dir() -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("fixtures")
+}
+
+/// Collect `.rs` files under `crates/*/src`. Returns `(path, contents)`.
+///
+/// RFC-040 §3.1: a gate must fail when it cannot perform its check. Returning
+/// an empty vector here let all four gates in `release_check` report `Ok(())`
+/// simultaneously and silently if the corpus ever went missing (the `core-deps`
+/// failure mode, RFC-036 §3.5, previously unfixed for `xtask`) — so an empty
+/// result is now an error, not a value the caller could mistake for "checked,
+/// no violations found".
+fn library_sources() -> Result<Vec<(String, String)>, String> {
     let mut out = Vec::new();
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
@@ -82,7 +179,39 @@ fn library_sources() -> Vec<(String, String)> {
         .unwrap_or_else(|| std::path::PathBuf::from("."));
     let crates = root.join("crates");
     visit(&crates, &mut out);
-    out
+    require_nonempty(out, &crates.display().to_string())
+}
+
+/// Absence of evidence is never reported as evidence of absence (RFC-040
+/// §3.1): a gate given zero sources to inspect must not conclude "no
+/// violations found".
+fn require_nonempty(
+    sources: Vec<(String, String)>,
+    corpus_desc: &str,
+) -> Result<Vec<(String, String)>, String> {
+    if sources.is_empty() {
+        Err(format!(
+            "no source files found under {corpus_desc}; a gate cannot verify \
+             anything against an empty corpus"
+        ))
+    } else {
+        Ok(sources)
+    }
+}
+
+/// Each gate asserts its corpus covers the crate it claims to guard, not just
+/// that the corpus is non-empty (RFC-040 §3.1) — a corpus that silently
+/// dropped `codlet` but still contained other crates would otherwise pass
+/// `require_nonempty` while checking nothing relevant.
+fn assert_covers(sources: &[(String, String)], must_contain: &str) -> Result<(), String> {
+    if sources.iter().any(|(path, _)| path.contains(must_contain)) {
+        Ok(())
+    } else {
+        Err(format!(
+            "corpus does not include {must_contain:?} — cannot verify the \
+             invariant this gate guards"
+        ))
+    }
 }
 
 fn visit(dir: &std::path::Path, out: &mut Vec<(String, String)>) {
@@ -112,12 +241,20 @@ fn is_comment(line: &str) -> bool {
     t.starts_with("//") || t.starts_with("/*") || t.starts_with('*')
 }
 
+// ── W-1 / no-fallback-key ─────────────────────────────────────────────────
+
 /// W-1: no development fallback key may exist. Bans the source service's
 /// sentinel and any obvious `*-change-in-production` style literal in code.
 fn gate_no_fallback_key() -> Result<(), String> {
+    let sources = library_sources()?;
+    assert_covers(&sources, "crates/codlet/src/")?;
+    check_no_fallback_key(&sources)
+}
+
+fn check_no_fallback_key(sources: &[(String, String)]) -> Result<(), String> {
     let needles = ["dev-pepper-change-in-production", "change-in-production"];
     let mut hits = Vec::new();
-    for (path, src) in library_sources() {
+    for (path, src) in sources {
         for (i, line) in src.lines().enumerate() {
             if is_comment(line) {
                 continue;
@@ -136,12 +273,20 @@ fn gate_no_fallback_key() -> Result<(), String> {
     }
 }
 
+// ── INV-3 / rng-no-silent-fallback ─────────────────────────────────────────
+
 /// INV-3: RNG results must not be silently defaulted or swallowed. Bans
 /// `unwrap_or_default()` and `.ok()` appearing on the same line as a
 /// `fill_bytes`/`getrandom` call in non-comment code.
 fn gate_rng_no_silent_fallback() -> Result<(), String> {
+    let sources = library_sources()?;
+    assert_covers(&sources, "crates/codlet/src/")?;
+    check_rng_no_silent_fallback(&sources)
+}
+
+fn check_rng_no_silent_fallback(sources: &[(String, String)]) -> Result<(), String> {
     let mut hits = Vec::new();
-    for (path, src) in library_sources() {
+    for (path, src) in sources {
         for (i, line) in src.lines().enumerate() {
             if is_comment(line) {
                 continue;
@@ -159,13 +304,21 @@ fn gate_rng_no_silent_fallback() -> Result<(), String> {
     }
 }
 
+// ── no-debug-prints ─────────────────────────────────────────────────────────
+
 /// No `println!`/`dbg!`/`eprintln!` in library code (they risk leaking
 /// secrets and are not a logging interface). The xtask crate itself is exempt
 /// because it is a CLI, not a library; `library_sources` only scans `crates/`.
 fn gate_no_debug_prints() -> Result<(), String> {
+    let sources = library_sources()?;
+    assert_covers(&sources, "crates/codlet/src/")?;
+    check_no_debug_prints(&sources)
+}
+
+fn check_no_debug_prints(sources: &[(String, String)]) -> Result<(), String> {
     let banned = ["println!", "eprintln!", "dbg!", "print!"];
     let mut hits = Vec::new();
-    for (path, src) in library_sources() {
+    for (path, src) in sources {
         // Allow prints inside integration tests and example binaries:
         // tests never ship; example binaries are demonstration programs
         // that intentionally produce terminal output.
@@ -190,6 +343,8 @@ fn gate_no_debug_prints() -> Result<(), String> {
     }
 }
 
+// ── RFC-005/015 / no-plaintext-in-store-ops ─────────────────────────────────
+
 /// RFC-005/015: No raw secret string (the bearer value) should appear in a
 /// store-insertion call. Bans patterns like `insert(secret.expose())` in
 /// library source that would persist the plaintext rather than the lookup key.
@@ -198,8 +353,14 @@ fn gate_no_debug_prints() -> Result<(), String> {
 /// `.expose()` and an insert/update/bind in the same line, which would
 /// indicate the plaintext is being passed to the DB layer.
 fn gate_no_plaintext_store() -> Result<(), String> {
+    let sources = library_sources()?;
+    assert_covers(&sources, "crates/codlet/src/")?;
+    check_no_plaintext_store(&sources)
+}
+
+fn check_no_plaintext_store(sources: &[(String, String)]) -> Result<(), String> {
     let mut hits = Vec::new();
-    for (path, src) in library_sources() {
+    for (path, src) in sources {
         if path.contains("/tests/") {
             continue;
         }
@@ -219,3 +380,6 @@ fn gate_no_plaintext_store() -> Result<(), String> {
         Err(hits.join("; "))
     }
 }
+
+#[cfg(test)]
+mod tests;

@@ -218,6 +218,17 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo run -p xtask -- release-check
 
+  # RFC-040 §3.2: proves each release gate can fail, not merely that it
+  # exists. A gate that passes its own violation fixture is itself a
+  # failure and makes this job (and self-test's own exit code) non-zero.
+  self-test:
+    name: xtask self-test (RFC-040)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo run -p xtask -- self-test
+
   # RFC-039 §3.1: bans/licenses/sources change state only when a developer
   # changes a dependency, so a failure always names something that just
   # happened. Blocking is correct here.

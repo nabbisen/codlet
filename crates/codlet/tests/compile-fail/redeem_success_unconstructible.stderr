@@ -1,0 +1,7 @@
+error: cannot construct `RedeemSuccess` with struct literal syntax due to private fields
+ --> tests/compile-fail/redeem_success_unconstructible.rs:7:13
+  |
+7 |     let _ = codlet::RedeemSuccess {
+  |             ^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: ...and other private field `_claim_proof` that was not provided

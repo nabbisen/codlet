@@ -54,6 +54,11 @@ axum                    = "0.8"
 static_assertions       = "1"
 testcontainers-modules  = "0.15"
 tempfile                = "3"
+# dev-dependency only (RFC-040 §8 open question 2, owner-approved 2026-09-03):
+# proves INV-7 (RedeemSuccess unconstructible outside a won claim) as a
+# compile-failure test. Must never enter a published crate's normal
+# dependency tree; the `core-deps` CI gate is what enforces that boundary.
+trybuild                = "1"
 
 # Shared lint policy. forbid(unsafe_code) is also asserted in each crate root
 # (implementation handoff §5) so it is visible at the top of the source file.
