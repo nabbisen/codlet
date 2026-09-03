@@ -18,7 +18,7 @@ the automated gates that any later review depends on for evidence.
 
 ---
 
-## M4 — Governance and gate integrity · **COMPLETE 2026-09-03**
+## M4 — Governance and gate integrity · **COMPLETE — RELEASED 0.18.0, 2026-09-03**
 
 **Evidence:** CI run
 [33736488609](https://github.com/nabbisen/codlet/actions/runs/33736488609) on
@@ -38,7 +38,10 @@ migration runner in every published version since v0.12.0**, which had prevented
 that adapter's conformance suite, including the INV-5 concurrent-claim test,
 from ever executing. The suite now passes.
 
-**Release blocked on an owner decision — see "M4 release" below.**
+**Released as 0.18.0** on 2026-09-03 (tag `0.18.0`, commit `a80186a`).
+`codlet` and `codlet-sqlx` are live on crates.io; `codlet-worker` and
+`codlet-conformance` remain unpublished per DEC-013. Post-release evaluation:
+`.git-exclude/reviewed/release-0.18.0.md` Part 2.
 
 
 **Theme:** repair the process machinery. No library behaviour changes.
