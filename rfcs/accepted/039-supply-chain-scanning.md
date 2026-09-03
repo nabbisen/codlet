@@ -1,6 +1,6 @@
 # RFC-039: Supply-Chain Scanning
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Target milestone:** M5
 - **Primary crate(s):** workspace-wide (CI and policy configuration)
 - **Source basis:** `ops-security.md` operational risk; RFC-015; `ROADMAP.md` M5-1

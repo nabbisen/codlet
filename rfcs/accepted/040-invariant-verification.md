@@ -1,6 +1,6 @@
 # RFC-040: Invariant Verification — Every Guard Observed Failing
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Target milestone:** M5
 - **Primary crate(s):** `xtask`, `codlet`, workspace CI
 - **Source basis:** RFC-036 §3.4; M4 post-release evaluation; `ROADMAP.md` M5-5 (revised)
@@ -168,10 +168,13 @@ The deliverable *is* the verification. Exit criteria:
 1. Should the self-test fixtures live under `xtask/fixtures/` or a dedicated
    `xtask/tests/`? Implementation detail; implementer's call, provided they are
    excluded from the workspace build.
-2. INV-7's compile-failure test needs a harness (`trybuild` or equivalent),
-   which is a new dev-dependency. Acceptable under RFC-002? Recommend yes —
-   dev-dependency only, no effect on published dependency trees — but flagging
-   it as a dependency decision rather than assuming it.
+2. ~~INV-7's compile-failure test needs a harness (`trybuild` or equivalent),
+   a new dev-dependency.~~ **Resolved: approved by the owner, 2026-09-03**,
+   accepting this RFC including the recommendation. `trybuild` (or equivalent)
+   may be added as a **dev-dependency only** — it must not appear in any
+   published crate's normal dependency tree, and the `core-deps` CI gate
+   remains the check that enforces that boundary. Its version belongs in
+   `[workspace.dependencies]` per DEC-012.
 
 ## 9. Acceptance criteria
 

@@ -15,9 +15,12 @@ Counts below are derived from the filesystem, not hand-maintained.
 
 No open RFCs.
 
-## Accepted (0)
+## Accepted (2)
 
-No RFCs awaiting implementation.
+| ID | Title | Milestone |
+|----|-------|-----------|
+| [039](./accepted/039-supply-chain-scanning.md) | Supply-Chain Scanning | M5 |
+| [040](./accepted/040-invariant-verification.md) | Invariant Verification — Every Guard Observed Failing | M5 |
 
 ## Implemented (38)
 
