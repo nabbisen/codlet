@@ -6,7 +6,33 @@ semantic versioning once it reaches a stable release.
 
 ## [Unreleased]
 
-Nothing yet.
+### Fixed
+
+- **CI repaired: package names, MSRV gate, gate integrity (RFC-036).**
+  `.github/workflows/ci.yml` referenced `codlet-core` (renamed to `codlet` at
+  v0.17.0, DEC-002) and `codlet-examples` (split into five standalone
+  packages at v0.16.2, DEC-003) — every affected job now names an existing
+  package. The `core-deps` job (RFC-002 §10.5 runtime-neutrality check) was
+  failing open: a pipeline exit-status bug made it report success while
+  checking nothing, for two releases. It now asserts non-empty, expected
+  `cargo tree` output before drawing any conclusion (`set -euo pipefail` plus
+  an explicit non-empty check), and fails if the check cannot run. Added two
+  new MSRV jobs — `msrv` (`codlet`, `codlet-conformance`, `codlet-worker`,
+  `xtask` on Rust 1.85) and `msrv-sqlx` (`codlet-sqlx` on Rust 1.94) — with
+  `RUSTUP_TOOLCHAIN` overriding `rust-toolchain.toml` and an explicit `rustc`
+  version assertion in each, so neither can silently pass on `stable`. The
+  SQLite conformance job now selects `--features sqlite` explicitly instead
+  of `--all-features`, so it no longer pulls in the Docker-dependent
+  `postgres-test` path. `SECURITY.md`'s MSRV claim and release-discipline
+  command list now describe gates that can actually be run.
+
+- **`codlet-sqlx` now declares its own MSRV: Rust 1.94** (previously inherited
+  the workspace default of 1.85). This documents a pre-existing fact — its
+  `sqlx` 0.9.0 dependency has required rustc 1.94.0 since RFC-034 (v0.12.0) —
+  rather than changing any requirement; nothing about building `codlet-sqlx`
+  changes for a consumer already on a current toolchain. `codlet` itself, the
+  runtime-neutral core most dependents use, remains at 1.85 (RFC-036 review
+  R-1).
 
 ## [0.17.1] — 2026-06-24
 

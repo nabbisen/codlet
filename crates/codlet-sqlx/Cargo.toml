@@ -4,7 +4,11 @@ description = "SQLite and PostgreSQL storage adapters for codlet, backed by SQLx
 readme = "README.md"
 version.workspace      = true
 edition.workspace      = true
-rust-version.workspace = true
+# Not workspace-inherited: the sqlx 0.9.0 dependency itself declares
+# rust-version 1.94.0, which is stricter than the workspace default of 1.85
+# (RFC-036 review R-1). This documents a pre-existing fact about the sqlx
+# dependency, not a newly introduced requirement.
+rust-version           = "1.94"
 license.workspace      = true
 authors.workspace      = true
 repository.workspace   = true

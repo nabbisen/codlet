@@ -20,8 +20,23 @@ version receives security backports; prior majors do not.
 
 ## Minimum supported Rust version (MSRV)
 
-codlet requires **Rust 1.85** or later (edition 2024). The MSRV is set in
-`Cargo.toml` under `[workspace.package]` and is enforced by CI.
+`rust-version` is declared per crate, not once for the whole workspace — the
+floor differs between the runtime-neutral core and the SQLx adapter:
+
+| Crate | MSRV | Why |
+|---|---|---|
+| `codlet` | **Rust 1.85** (edition 2024) | `[workspace.package].rust-version`, inherited by `rust-version.workspace = true` |
+| `codlet-sqlx` | **Rust 1.94** | Its own `sqlx` 0.9.0 dependency declares `rust-version = "1.94.0"`; `codlet-sqlx` declares this explicitly rather than inheriting the workspace default |
+
+`codlet-conformance`, `codlet-worker`, and `xtask` also hold to 1.85
+(dev/internal tooling, not published).
+
+Enforced by two CI jobs in `.github/workflows/ci.yml`: `msrv` builds `codlet`,
+`codlet-conformance`, `codlet-worker`, and `xtask` with
+`RUSTUP_TOOLCHAIN=1.85.0`; `msrv-sqlx` builds `codlet-sqlx` with
+`RUSTUP_TOOLCHAIN=1.94.0`. Both assert the active `rustc` version before
+building, so neither can silently pass on the `stable` toolchain that
+`rust-toolchain.toml` pins for local development.
 
 MSRV policy:
 - MSRV is never raised in a patch release.
@@ -72,10 +87,38 @@ Non-exhaustive examples treated as security bugs (see also `docs/src/threat-mode
 
 ## Release discipline
 
-Every release must pass:
-1. `cargo test --workspace --all-features`
-2. `cargo clippy --workspace --all-features --all-targets -- -D warnings`
-3. `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps`
-4. `cargo run -p xtask -- release-check` (5 static security gates)
+A release requires every job in `.github/workflows/ci.yml` to be green on the
+release commit. Publishing while CI is red on that commit is a release-process
+violation, regardless of what was run locally.
 
-The gates and their rationale are documented in `xtask/src/main.rs`.
+The gate set CI actually runs:
+
+1. `cargo fmt --all --check`
+2. `cargo clippy --workspace --all-targets -- -D warnings`
+3. `cargo test --workspace` (Linux and macOS)
+4. `cargo build -p codlet --target wasm32-unknown-unknown`
+5. `cargo build -p codlet-worker --target wasm32-unknown-unknown`
+6. Miniflare integration tests: `cd crates/codlet-worker/tests && npm ci && npx vitest run`
+7. `cargo test -p codlet --test rfc_009_compile --all-features`
+8. `cargo test -p codlet --all-features`
+9. `cargo test -p codlet-conformance --all-features`
+10. `cargo test -p codlet-sqlx --no-default-features --features sqlite`
+11. `cargo test -p codlet-sqlx --no-default-features --features postgres-test`
+    — **requires a Docker daemon** (testcontainers); this is the only gate
+    that cannot run in a Docker-less environment.
+12. Build and run the example packages (`test-examples` job)
+13. Core feature matrix: `cargo build -p codlet` with `--no-default-features`,
+    with defaults, and with `--features serde,test-utils`
+14. Core dependency gate: asserts no framework, database, or async-executor
+    crate has entered `codlet`'s dependency tree (RFC-002 §10.5)
+15. MSRV: `cargo check -p codlet -p codlet-conformance -p codlet-worker -p xtask
+    --all-targets` built on Rust 1.85 (`msrv` job); `cargo check -p codlet-sqlx
+    --all-targets` built on Rust 1.94 (`msrv-sqlx` job) — see the MSRV table
+    above for why the floor differs
+16. `cargo run -p xtask -- release-check` (5 static security gates, documented
+    in `xtask/src/main.rs`)
+17. `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps`
+
+There is no locally-runnable command that reproduces the full set without
+Docker; gate 11 is the one exception and must be verified in an environment
+that has it (CI does).

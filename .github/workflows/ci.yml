@@ -42,17 +42,17 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test --workspace
 
-  # RFC-009 item 2: codlet-core must compile for wasm32-unknown-unknown
+  # RFC-009 item 2: codlet must compile for wasm32-unknown-unknown
   # (required for the Cloudflare Workers D1 adapter).
   wasm32-compile:
-    name: codlet-core wasm32 compile check
+    name: codlet wasm32 compile check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
-      - run: cargo build -p codlet-core --target wasm32-unknown-unknown
+      - run: cargo build -p codlet --target wasm32-unknown-unknown
 
   # RFC-033: codlet-worker must compile for wasm32-unknown-unknown.
   wasm32-worker-compile:
@@ -76,21 +76,21 @@ jobs:
       - run: cd crates/codlet-worker/tests && npm ci && npx vitest run
 
   # RFC-009 item 3: a Send+Sync store satisfies the trait without adapter
-  # shims — proven by the rfc_009_compile test in codlet-core.
+  # shims — proven by the rfc_009_compile test in codlet.
   test-send-compat:
     name: RFC-009 Send/!Send compile tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo test -p codlet-core --test rfc_009_compile --all-features
+      - run: cargo test -p codlet --test rfc_009_compile --all-features
   test-core:
-    name: test codlet-core (all features)
+    name: test codlet (all features)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo test -p codlet-core --all-features
+      - run: cargo test -p codlet --all-features
 
   test-conformance:
     name: test codlet-conformance + in-memory stores
@@ -106,7 +106,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo test -p codlet-sqlx --all-features
+      # `--all-features` would also activate `postgres-test`, which requires
+      # Docker via testcontainers — select the SQLite backend explicitly so
+      # this job stays Docker-free (RFC-036 §5.5).
+      - run: cargo test -p codlet-sqlx --no-default-features --features sqlite
 
   # RFC-034: PostgreSQL adapter conformance (requires Docker for testcontainers).
   test-postgres:
@@ -120,27 +123,31 @@ jobs:
       - run: cargo test -p codlet-sqlx --no-default-features --features postgres-test
 
   test-examples:
-    name: build and run codlet-examples
+    name: build and run codlet examples
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo build -p codlet-examples
-      - run: cargo run -p codlet-examples --bin sqlite_quickstart
-      - run: cargo run -p codlet-examples --bin key_rotation
-      - run: cargo run -p codlet-examples --bin form_token_csrf
+      # Examples are five standalone packages (DEC-003), not bins of one
+      # package. Build all five; run only the non-interactive ones —
+      # axum_login_logout binds a port and never exits, and sqlite_file is a
+      # deliberate two-invocation flow (RFC-036 §5.3).
+      - run: cargo build -p axum_login_logout -p sqlite_quickstart -p sqlite_file -p key_rotation -p form_token_csrf
+      - run: cargo run -p sqlite_quickstart
+      - run: cargo run -p key_rotation
+      - run: cargo run -p form_token_csrf
 
   core-feature-matrix:
-    name: codlet-core feature matrix
+    name: codlet feature matrix
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
       # RFC-002 acceptance: core must build without adapter features and in
       # representative feature combinations.
-      - run: cargo build -p codlet-core --no-default-features
-      - run: cargo build -p codlet-core
-      - run: cargo build -p codlet-core --features serde,test-utils
+      - run: cargo build -p codlet --no-default-features
+      - run: cargo build -p codlet
+      - run: cargo build -p codlet --features serde,test-utils
 
   core-deps:
     name: core dependency gate
@@ -148,16 +155,60 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
-      # RFC-002 §10.5: codlet-core must not pull in framework, DB, or executor
+      # RFC-002 §10.5: codlet must not pull in framework, DB, or executor
       # crates. Fail the build if any forbidden crate appears in its tree.
-      - name: assert no framework/db/executor crates in codlet-core
+      # A gate must fail when it cannot perform its check (RFC-036 §3.5) —
+      # this step asserts non-empty, expected output before drawing any
+      # conclusion from it, rather than trusting a possibly-empty grep input.
+      - name: assert no framework/db/executor crates in codlet
         run: |
-          tree="$(cargo tree -p codlet-core -e normal --prefix none | sort -u)"
+          set -euo pipefail
+          tree="$(cargo tree -p codlet -e normal --prefix none | sort -u)"
           echo "$tree"
+          test -n "$tree"
+          echo "$tree" | grep -q '^codlet ' || { echo "::error::unexpected cargo tree output"; exit 1; }
           if echo "$tree" | grep -Eiq '^(axum|tower|tower-http|sqlx|tokio|async-std|worker|hyper|reqwest)( |$)'; then
-            echo "::error::forbidden runtime/db/framework crate found in codlet-core"
+            echo "::error::forbidden runtime/db/framework crate found in codlet"
             exit 1
           fi
+
+  # RFC-036 §3.2 / review R-1: rust-version is a per-package field, not a
+  # single workspace-wide floor. codlet, codlet-conformance, codlet-worker,
+  # and xtask hold to 1.85 (rust-version.workspace = true); codlet-sqlx does
+  # not — see the msrv-sqlx job below. rust-toolchain.toml stays pinned to
+  # `stable` for local development; RUSTUP_TOOLCHAIN overrides it here so this
+  # job actually builds on the declared MSRV rather than silently passing on
+  # stable.
+  msrv:
+    name: MSRV 1.85 build (codlet, codlet-conformance, codlet-worker, xtask)
+    runs-on: ubuntu-latest
+    env:
+      RUSTUP_TOOLCHAIN: "1.85.0"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@1.85.0
+      - name: assert the MSRV toolchain is actually in use
+        run: |
+          rustc --version
+          rustc --version | grep -q '1\.85\.' || { echo "::error::not building with 1.85"; exit 1; }
+      - run: cargo check -p codlet -p codlet-conformance -p codlet-worker -p xtask --all-targets
+
+  # codlet-sqlx declares rust-version = "1.94" (RFC-036 review R-1): its own
+  # sqlx 0.9.0 dependency requires rustc 1.94.0, stricter than the workspace
+  # default. Checked on its own declared floor, not the workspace's.
+  msrv-sqlx:
+    name: MSRV 1.94 build (codlet-sqlx)
+    runs-on: ubuntu-latest
+    env:
+      RUSTUP_TOOLCHAIN: "1.94.0"
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@1.94.0
+      - name: assert the MSRV toolchain is actually in use
+        run: |
+          rustc --version
+          rustc --version | grep -q '1\.94\.' || { echo "::error::not building with 1.94"; exit 1; }
+      - run: cargo check -p codlet-sqlx --all-targets
 
   release-check:
     name: release gates
