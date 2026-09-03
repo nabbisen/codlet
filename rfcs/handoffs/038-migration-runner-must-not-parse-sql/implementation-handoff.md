@@ -244,3 +244,54 @@ My review result is returned at
 `.git-exclude/reviewed/038-migration-runner-must-not-parse-sql.md`.
 
 Report to the owner only the path of this handoff and your review request.
+
+---
+
+## 15. Addendum — close-out after CI verification (architect, 2026-09-03)
+
+The PostgreSQL suite has now run. Commit `47e4e3d`, run
+[33707714372](https://github.com/nabbisen/codlet/actions/runs/33707714372):
+19/19 jobs green, `test-postgres` passing with `7 passed; 0 failed` in 15.86s
+against a live testcontainers PostgreSQL.
+
+Your submission was approved as written. The documentation you worded under
+uncertainty is now **understated**, and correcting it closes RFC-038. This is a
+small, final piece of the same handoff — not new scope.
+
+### 15.1 Required
+
+1. **`docs/src/adapter-matrix-and-config.md`** — restore `✓` to the
+   `PostgresStore` atomic-claim and atomic-consume columns and drop the
+   "pending conformance verification" qualifier. Rewrite the RFC-038 note to
+   record what actually happened: the migration defect, that it prevented the
+   suite from ever running, and that the suite now passes — naming the run URL
+   and the date. Keep the history; a note that only says "verified" loses the
+   reason the row was ever in doubt.
+
+2. **`CHANGELOG.md`** — replace "remains **unverified**, not disproven, until
+   the suite is observed passing in CI" with the verified outcome: the suite
+   executed for the first time and passed, including the concurrent
+   single-winner claim test that proves INV-5 for this adapter. Cite the run.
+
+Everything else in your submission stands unchanged. Do not touch the runners,
+the migration files, or the regression test.
+
+### 15.2 Wording constraint
+
+State exactly what the run proves and no more: the suite passed on
+`47e4e3d`. Do not write that the adapter is "fully verified" or
+"production-ready" in general terms — RFC-023 makes conformance the
+precondition for that claim, not the whole of it. The failure mode this
+milestone exists to correct is documentation that outruns its evidence, and
+that applies to good news as well as bad.
+
+### 15.3 Evidence
+
+Diff plus the CI run URL. No new tests required.
+
+### 15.4 Review request
+
+Append to your existing
+`.git-exclude/review-request/038-migration-runner-must-not-parse-sql.md` as a
+§0-style close-out section, as you did for R-1 in the RFC-036 round, rather
+than opening a new file.

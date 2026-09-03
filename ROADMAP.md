@@ -187,8 +187,8 @@ not edited, because Implemented RFCs are historical records.
 | R-4 | No supply-chain advisory scanning | Likely | Medium | M5-1 | dev team |
 | R-5 | Deferred work tracked only outside the repository | Certain (verified) | Medium — invisible backlog, contradicts RFC-000 | M6 converts it into RFCs; handoffs moved in-repo under RFC-035 §3.5 | architect |
 | R-7 | `codlet-axum`/`-worker`/`-conformance` unreserved on crates.io | Low | Medium — an unofficial crate in a security namespace | Official crate list in README (M4); reservation decided at M7 | owner |
-| R-8 | `run_postgres_migrations` broken in published `codlet-sqlx` since v0.12.0 | Certain (verified in CI log) | **High** — the PostgreSQL adapter cannot create its schema | RFC-038 | dev team |
-| R-9 | PostgreSQL adapter conformance, incl. the INV-5 concurrent-claim test, has **never executed** | Certain (follows from R-8) | **High** — an adapter documented as conformant is unverified | RFC-038 §5; suite may surface further defects (§7) | architect |
+| R-8 | ~~`run_postgres_migrations` broken in published `codlet-sqlx` since v0.12.0~~ | **Resolved** 2026-09-03 | — | RFC-038; verified green in run 33707714372 | closed |
+| R-9 | ~~PostgreSQL adapter conformance, incl. the INV-5 concurrent-claim test, has **never executed**~~ | **Resolved** 2026-09-03 | — | Suite ran for the first time and passed 7/7; no further defects surfaced | closed |
 | R-6 | KV-backed rate limiting under-counts under distributed load | Known, documented | Medium | Documented in threat model; consider a D1-backed counter option in M5 | architect |
 
 ---
