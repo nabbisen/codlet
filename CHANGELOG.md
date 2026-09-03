@@ -34,6 +34,26 @@ semantic versioning once it reaches a stable release.
   runtime-neutral core most dependents use, remains at 1.85 (RFC-036 review
   R-1).
 
+- **`run_postgres_migrations` could not create its own schema (RFC-038).**
+  Both `codlet-sqlx` migration runners (`postgres.rs`, `migration.rs`)
+  hand-rolled a SQL statement splitter — split on `;`, then strip `--`
+  comment lines. The order was backwards: a semicolon inside a comment cut
+  the comment in half, and the tail was submitted to the database as a
+  statement. `migrations/0002_postgres.sql` contains such a comment, so
+  every call to `run_postgres_migrations` against a real PostgreSQL server
+  has failed with a syntax error since the adapter shipped in **v0.12.0**
+  (RFC-034) — present in every published version through v0.17.1. Both
+  runners now hand the migration file to the driver whole via
+  `sqlx::raw_sql` instead of parsing it. As a side effect, a failed
+  PostgreSQL migration now rolls back as a single implicit transaction
+  instead of leaving a half-created schema behind. No schema byte changed;
+  hosts that already applied the schema by hand are unaffected. Because
+  migrations never succeeded, the PostgreSQL `codlet-conformance` suite —
+  including the concurrent single-winner claim test — has never actually
+  executed against `PostgresStore`; that remains **unverified**, not
+  disproven, until the suite is observed passing in CI (see
+  `docs/src/adapter-matrix-and-config.md`).
+
 ## [0.17.1] — 2026-06-24
 
 Housekeeping release: module layout, test organisation, and dependency

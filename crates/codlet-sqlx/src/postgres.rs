@@ -58,28 +58,22 @@ impl PostgresStore {
 
 /// Run codlet's PostgreSQL migrations against `pool` (RFC-034 §9).
 ///
-/// Applies `migrations/0002_postgres.sql` statement by statement. Uses
-/// `IF NOT EXISTS` throughout — safe to call on every startup.
+/// Applies `migrations/0002_postgres.sql` as a single multi-statement script.
+/// Uses `IF NOT EXISTS` throughout — safe to call on every startup.
 ///
 /// # Errors
 ///
-/// Returns [`sqlx::Error`] if any statement fails.
+/// Returns [`sqlx::Error`] if any statement fails. PostgreSQL wraps a
+/// multi-statement script submitted this way in an implicit transaction, so a
+/// failure rolls the whole migration back rather than leaving partial schema.
 pub async fn run_postgres_migrations(pool: &sqlx::PgPool) -> Result<(), sqlx::Error> {
     let migration_sql = include_str!("../migrations/0002_postgres.sql");
-    for stmt in migration_sql.split(';') {
-        let trimmed: String = stmt
-            .lines()
-            .filter(|l| !l.trim_start().starts_with("--"))
-            .collect::<Vec<_>>()
-            .join("\n");
-        let trimmed = trimmed.trim().to_owned();
-        if trimmed.is_empty() {
-            continue;
-        }
-        // Safety: SQL comes from our own static migration files, not user input.
-        sqlx::query(sqlx::AssertSqlSafe(trimmed.as_str()))
-            .execute(pool)
-            .await?;
-    }
+    // codlet does not parse SQL (RFC-038 §3): a hand-rolled split-on-`;`
+    // splitter cuts a semicolon inside a `--` comment in half and submits the
+    // tail as a statement. The server already parses this correctly.
+    // Safety: SQL comes from our own static migration file, not user input.
+    sqlx::raw_sql(sqlx::AssertSqlSafe(migration_sql))
+        .execute(pool)
+        .await?;
     Ok(())
 }

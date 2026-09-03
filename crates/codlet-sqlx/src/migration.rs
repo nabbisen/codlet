@@ -25,29 +25,24 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         .await?;
 
     let migration_sql = include_str!("../migrations/0001_initial.sql");
+    apply_sqlite_script(pool, migration_sql).await
+}
 
-    // Split on statement boundaries and execute each statement separately,
-    // since SQLx's `execute` does not support multiple statements in one call.
-    for stmt in migration_sql.split(';') {
-        // Strip leading comment lines and whitespace from each segment, then
-        // execute only non-empty segments. A segment that is entirely comments
-        // (e.g. the preamble before the first real statement) is silently
-        // skipped; a segment that starts with comments but contains SQL is
-        // executed with the comments stripped.
-        let trimmed: String = stmt
-            .lines()
-            .filter(|l| !l.trim_start().starts_with("--"))
-            .collect::<Vec<_>>()
-            .join("\n");
-        let trimmed = trimmed.trim().to_owned();
-        if trimmed.is_empty() {
-            continue;
-        }
-        // Safety: SQL comes from our own static migration files, not user input.
-        sqlx::query(sqlx::AssertSqlSafe(trimmed.as_str()))
-            .execute(pool)
-            .await?;
-    }
-
+/// Execute a multi-statement SQL script against `pool` as a single call.
+///
+/// codlet does not parse SQL (RFC-038 §3): a hand-rolled split-on-`;` splitter
+/// cuts a semicolon inside a `--` comment in half and submits the tail as a
+/// statement. The driver already parses this correctly.
+///
+/// `pub(crate)` — this is a testability seam for the regression test in
+/// `migration/tests.rs`, not public API.
+pub(crate) async fn apply_sqlite_script(pool: &SqlitePool, sql: &str) -> Result<(), sqlx::Error> {
+    // Safety: SQL comes from our own static migration files, not user input.
+    sqlx::raw_sql(sqlx::AssertSqlSafe(sql))
+        .execute(pool)
+        .await?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests;
