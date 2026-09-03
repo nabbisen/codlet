@@ -91,6 +91,36 @@ two `AND` expressions, which require *every* named licence to be allowed rather
 than any one. Both are common omissions from a copied allow-list and both would
 have failed on day one.
 
+### 3.2.1 Scope: `all-features`, and why the audited and enforced scopes must be the same
+
+*(Added 2026-09-03 after a post-merge escalation. See §10.)*
+
+`cargo-deny-action`'s default `arguments` is `--all-features`, and a CLI flag
+overrides `deny.toml`. The original configuration set
+`[graph] all-features = false`, so CI checked a **broader** graph than any local
+`cargo deny check` invocation — and broader than the §3.2 survey. The result was
+a blocking job red from the moment RFC-039 merged.
+
+Two corrections:
+
+1. **`[graph] all-features = true`.** Local and CI now resolve the same graph by
+   construction, rather than by remembering to pass a flag. The divergence, not
+   the licence list, was the defect: a policy whose enforced scope differs from
+   its verified scope is unverified.
+2. **`ISC` joins the allow-list**, covering `ring`, `rustls-webpki`, and
+   `untrusted`, reached via `testcontainers-modules`.
+
+**Why audit that subtree rather than exclude it.** `testcontainers-modules` is an
+*optional normal dependency* of `codlet-sqlx`, not a dev-dependency — so
+`postgres-test` is a **published feature** and its dependencies are reachable by
+any consumer who enables it. Whether or not anyone should, they can. That
+settles it: the subtree is in scope because it ships, not merely because broader
+auditing feels safer.
+
+`ISC` is OSI-approved, FSF Free, permissive, and carries no copyleft or
+attribution obligation beyond those already accepted. Adding it does not widen
+the policy in any way that matters.
+
 ### 3.3 `sources`
 
 Restrict to the crates.io registry. codlet has no git or alternate-registry
@@ -169,3 +199,31 @@ established and RFC-040 generalises.
   blocks in the release path.
 - All three §6 negative trials performed, reverted, and their output recorded.
 - SECURITY.md's release-discipline list names the new gates.
+
+## 10. Post-merge amendment record (2026-09-03)
+
+RFC-039 §3.2 claimed the policy "must pass on the day it lands" and the
+implementation was verified against that claim. **The claim was true only for
+the scope local verification checked, and false for the scope CI enforces.**
+The `supply-chain` job was red from `da5297a` onward.
+
+**Cause, and where it originated.** The implementation handoff instructed local
+verification with bare `cargo deny check`. `cargo-deny-action` defaults to
+`--all-features`. Those are different graphs, and the handoff — mine — specified
+the one that does not match CI. The §6 negative trials were run in the same
+narrower scope, so they too proved less than they appeared to.
+
+**Consequence beyond the licence failure.** Running the broadened scope surfaced
+a genuine advisory that the narrow scope had been hiding:
+
+> **RUSTSEC-2026-0258** — *h2 unbounded empty DATA frames*, `h2 v0.4.15`,
+> fixed in `>= 0.4.16`.
+
+Reachability, verified: **not present** in `codlet`'s or `codlet-sqlx`'s
+default-feature dependency trees. It enters only via `postgres-test`
+(`bollard` → `hyper`) and via the `axum_login_logout` example, which is
+`publish = false`. No consumer on default features is exposed.
+
+This is the first real finding the supply-chain policy has produced, and it was
+produced by fixing the scope rather than by the policy as originally merged —
+which is the argument for §3.2.1's first correction being the important one.
