@@ -96,8 +96,32 @@ a deliberate two-invocation flow).
 
 ### 3.2 MSRV verification
 
-A dedicated `msrv` job builds the workspace on Rust 1.85 with `cargo check
---workspace --all-targets`.
+MSRV is verified **per crate, against each crate's own declared floor**.
+`rust-version` is a per-package field; `[workspace.package].rust-version` only
+supplies a default that a package opts into with `rust-version.workspace = true`.
+A single workspace-wide floor would be a claim the dependency tree does not
+support.
+
+| Crate | Floor | Determined by |
+|---|---|---|
+| `codlet`, `codlet-conformance`, `codlet-worker`, `xtask` | 1.85 | workspace default; verified to build clean |
+| `codlet-sqlx` | 1.94 | its own `sqlx` 0.9.0 dependency declares `rust-version = "1.94.0"` |
+
+Two jobs enforce this: `msrv` checks the 1.85 crates on 1.85, `msrv-sqlx` checks
+`codlet-sqlx` on 1.94. The `publish = false` examples that depend on
+`codlet-sqlx` keep inheriting 1.85 and are excluded from enforcement — nothing
+consumes their declared `rust-version` as a promise.
+
+Raising the whole workspace to 1.94 was rejected: it would impose a bleeding-edge
+toolchain on every consumer of the runtime-neutral core to satisfy a constraint
+only the SQLx adapter has. Downgrading `sqlx` to preserve a version number was
+also rejected — it inverts the priority between a dependency choice made under
+RFC-034 and a number in a manifest. An MSRV is a factual claim about a crate,
+not an aspiration for a workspace.
+
+*(§3.2 revised 2026-09-03 by the RFC-036 review, finding R-1. The original text
+specified a single `cargo check --workspace --all-targets` on 1.85, which the
+dependency tree cannot satisfy.)*
 
 `rust-toolchain.toml` stays pinned to `stable`. It is not downgraded: the
 default developer toolchain and the MSRV floor are different things, and
