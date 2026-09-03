@@ -1,6 +1,6 @@
 # RFC-035: RFC Directory Conformance, Naming, and Lifecycle-Policy Placement
 
-- **Status:** Accepted
+- **Status:** Implemented (Unreleased)
 - **Target milestone:** M4
 - **Primary crate(s):** none — repository governance only
 - **Source basis:** RFC-000 (lifecycle policy); owner direction 2026-08-31

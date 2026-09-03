@@ -1,6 +1,6 @@
 # RFC-036: Gate Integrity — CI Conformance, MSRV Enforcement, and Release-Discipline Accuracy
 
-- **Status:** Accepted
+- **Status:** Implemented (Unreleased)
 - **Target milestone:** M4
 - **Primary crate(s):** none — CI and policy documentation
 - **Source basis:** review findings 2026-08-31; RFC-002 §10.5; RFC-009; RFC-015; RFC-028

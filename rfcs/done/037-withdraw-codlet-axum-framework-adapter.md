@@ -1,6 +1,6 @@
 # RFC-037: Withdraw the `codlet-axum` Framework Adapter from Planned Scope
 
-- **Status:** Accepted
+- **Status:** Implemented (Unreleased)
 - **Target milestone:** M4
 - **Primary crate(s):** none — planning scope only
 - **Source basis:** RFC-002 §4; original design-package roadmap Phase 5; owner direction 2026-08-31

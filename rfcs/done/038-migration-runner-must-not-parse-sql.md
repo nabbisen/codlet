@@ -1,6 +1,6 @@
 # RFC-038: The Migration Runner Must Not Parse SQL
 
-- **Status:** Accepted
+- **Status:** Implemented (Unreleased)
 - **Target milestone:** M4 (defect fix in a published crate; sequencing per §10)
 - **Primary crate(s):** `codlet-sqlx`
 - **Source basis:** RFC-036 review finding F-1, 2026-09-03; RFC-034 §9; RFC-023

@@ -56,6 +56,28 @@ semantic versioning once it reaches a stable release.
   failed, proving INV-5 (single-winner atomic claim) for this adapter (see
   `docs/src/adapter-matrix-and-config.md`).
 
+### Changed
+
+- **`rfcs/` brought into conformance with its own lifecycle policy
+  (RFC-035).** Adopted the 5-folder variant: added `rfcs/proposed/` and
+  `rfcs/accepted/` (both previously missing, so there was nowhere to file a
+  new RFC). Every RFC body renamed from `RFC-NNN-slug.md` to `NNN-slug.md`
+  via `git mv` (history preserved); RFC-018's malformed triple-hyphen slug
+  collapsed to a single hyphen. RFC numbers and technical content are
+  unchanged — this is a filename and location normalization only.
+  `rfcs/000-rfc-lifecycle-policy.md`, previously a stale 500-line copy sitting
+  at the directory root with no lifecycle state, was replaced with the
+  current 617-line authoritative text (including the `rfcs/handoffs/`
+  companion-document convention it lacked) and moved to
+  `rfcs/done/000-rfc-lifecycle-policy.md`. `rfcs/README.md` rebuilt from the
+  filesystem with all 39 links repaired; every RFC index link was previously
+  broken. Developer implementation handoffs moved in-repo to
+  `rfcs/handoffs/NNN-slug/`; developer review requests and architect review
+  results stay untracked under `.git-exclude/review-request/` and
+  `.git-exclude/reviewed/` respectively — workflow correspondence, not design
+  record. RFC-035, RFC-036, RFC-037, and RFC-038 move to `done/` in this
+  change.
+
 ## [0.17.1] — 2026-06-24
 
 Housekeeping release: module layout, test organisation, and dependency

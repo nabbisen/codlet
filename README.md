@@ -126,10 +126,18 @@ let _ = lookup_key; // store this + key_version; never store `code`
   form-token consume are trait-level contracts backed by conditional writes;
   every adapter must pass a shared conformance suite.
 
+## Official crates
+
+The only crates this project publishes to crates.io are `codlet` and
+`codlet-sqlx`. No other `codlet-*` package on crates.io is official —
+`codlet-axum` was withdrawn from planned scope before being built
+([RFC-037](./rfcs/done/037-withdraw-codlet-axum-framework-adapter.md)), and
+`codlet-worker`/`codlet-conformance` are internal, unpublished crates.
+
 ## More detail
 
-- Architecture, scope, and non-goals: [`rfcs/done/RFC-001`](./rfcs/done/RFC-001-project-scope-product-shape-non-goals.md),
-  [`rfcs/done/RFC-002`](./rfcs/done/RFC-002-crate-architecture-feature-flags-runtime-matrix.md).
+- Architecture, scope, and non-goals: [`rfcs/done/001`](./rfcs/done/001-project-scope-product-shape-non-goals.md),
+  [`rfcs/done/002`](./rfcs/done/002-crate-architecture-feature-flags-runtime-matrix.md).
 - All design proposals and their lifecycle: [`rfcs/README.md`](./rfcs/README.md).
 - **Threat model** (what codlet protects against): [`docs/src/threat-model.md`](./docs/src/threat-model.md).
 - **Adapter guarantee matrix** and secure configuration guide: [`docs/src/adapter-matrix-and-config.md`](./docs/src/adapter-matrix-and-config.md).
