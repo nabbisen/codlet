@@ -63,6 +63,19 @@ padded to force a pass is the same thing more slowly.
 The licence data in RFC-039 §3.2 says it should pass. If it does not, either the
 graph changed or the allow-list is wrong — both are worth knowing.
 
+**Correction (§10, 2026-09-03):** at the time this was written, a bare
+`cargo deny check` did not resolve the same graph `cargo-deny-action` enforces
+in CI (the action's default is `--all-features`, which overrides `deny.toml`
+unless `[graph] all-features = true` is also set there). That caused the two
+`supply-chain` jobs to pass this local verification while failing in CI for
+two commits, on `codlet-sqlx`'s `postgres-test` feature's `ISC`-licensed
+dependency chain. `[graph] all-features = true` is now set in `deny.toml`, so
+the instruction above — run `cargo deny check` locally — is correct as
+written: local and CI now resolve the same graph by construction, not by
+remembering to append a flag. See
+`.git-exclude/reviewed/039-supply-chain-all-features-scope-gap.md` for the
+full incident.
+
 ### 3.3 CI wiring — the split blocking policy
 
 **Blocking on pull requests**, in `ci.yml`:

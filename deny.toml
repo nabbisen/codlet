@@ -10,7 +10,14 @@
 # off while still appearing to run.
 
 [graph]
-all-features = false
+# `cargo-deny-action`'s default invocation is `cargo deny check --all-features`
+# (a CLI flag, which overrides this file). Setting this `true` closes that gap
+# at the source: a bare local `cargo deny check` now resolves the same graph
+# CI enforces, by construction, rather than by remembering to append a flag.
+# This was `false` until RFC-039 review found it silently produced a narrower
+# local-verification scope than what CI actually checked, for two commits
+# (see `.git-exclude/reviewed/039-supply-chain-all-features-scope-gap.md`).
+all-features = true
 no-default-features = false
 
 [output]
@@ -40,6 +47,13 @@ allow = [
     "Zlib",
     "Unlicense",
     "BSL-1.0",
+    # Covers `ring`, `rustls-webpki`, `untrusted` -- reached via
+    # `codlet-sqlx`'s `postgres-test` feature (testcontainers -> bollard ->
+    # rustls). `postgres-test` is a published, optional *normal* dependency
+    # feature of `codlet-sqlx`, not a dev-dependency, so a consumer who
+    # enables it receives this subtree: in scope because it ships. Permissive,
+    # OSI-approved, no copyleft.
+    "ISC",
 ]
 confidence-threshold = 0.8
 # `cargo-deny` defaults this to false ("dev-dependencies are not used by
