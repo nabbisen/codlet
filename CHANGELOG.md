@@ -49,9 +49,11 @@ semantic versioning once it reaches a stable release.
   instead of leaving a half-created schema behind. No schema byte changed;
   hosts that already applied the schema by hand are unaffected. Because
   migrations never succeeded, the PostgreSQL `codlet-conformance` suite —
-  including the concurrent single-winner claim test — has never actually
-  executed against `PostgresStore`; that remains **unverified**, not
-  disproven, until the suite is observed passing in CI (see
+  including the concurrent single-winner claim test — had never actually
+  executed against `PostgresStore`. On commit `47e4e3d`
+  ([CI run 33707714372](https://github.com/nabbisen/codlet/actions/runs/33707714372)),
+  the suite ran for the first time and passed: `test-postgres`, 7 passed, 0
+  failed, proving INV-5 (single-winner atomic claim) for this adapter (see
   `docs/src/adapter-matrix-and-config.md`).
 
 ## [0.17.1] — 2026-06-24

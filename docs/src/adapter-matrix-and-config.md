@@ -20,23 +20,22 @@ requirement are not production-safe for codlet's core use case.
 |---------|:-----------:|:--------------:|:-------------:|-------|
 | `MemCodeStore` (test-utils) | ✓ (Mutex) | ✓ (Mutex) | ✗ | In-process only; not for production. |
 | `SqliteStore` (codlet-sqlx) | ✓ (cond. UPDATE) | ✓ (cond. UPDATE) | ✓ (WAL mode) | SQLite serialises writes; WAL recommended for concurrent reads. Also implements `CodeAdminStore`. |
-| `PostgresStore` (codlet-sqlx, `--features postgres`) | ⚠ unverified (cond. UPDATE, READ COMMITTED row-lock — by design, not yet proven) | ⚠ unverified (cond. UPDATE — by design, not yet proven) | ✓ | Multi-instance production, **pending conformance verification**. No `RETURNING`, no `FOR UPDATE`. Also implements `CodeAdminStore`. See note below. |
+| `PostgresStore` (codlet-sqlx, `--features postgres`) | ✓ (cond. UPDATE, READ COMMITTED row-lock) | ✓ (cond. UPDATE) | ✓ | Multi-instance production. No `RETURNING`, no `FOR UPDATE`. Also implements `CodeAdminStore`. See note below. |
 | `D1CodeStore` / `D1SessionStore` / `D1FormTokenStore` (codlet-worker) | ✓ (cond. UPDATE + `meta().changes`) | ✓ (cond. UPDATE + `meta().changes`) | ✓ (D1 global) | wasm32 target only; timestamps as REAL (f64). Also implements `CodeAdminStore`. |
 
 > **`PostgresStore` conformance status (RFC-038).** Until v0.17.1,
 > `run_postgres_migrations` could not create its own schema: a hand-rolled SQL
 > splitter mishandled a semicolon inside a migration comment, so every call
 > failed. Because migrations never succeeded, the `codlet-conformance` suite —
-> including the concurrent single-winner claim test that would prove the
-> atomic-claim guarantee above — has never actually executed against this
-> adapter. RFC-038 fixed the migration runner (it no longer parses SQL) and
-> `run_postgres_migrations` now succeeds. The conformance suite itself has not
-> yet been run to completion against a live PostgreSQL server as part of this
-> fix; the atomic-claim and atomic-consume guarantees above reflect the
-> `postgres/code.rs` implementation's design (RFC-022, RFC-034) and code
-> review, not an executed proof. Do not treat `PostgresStore` as
-> conformance-verified until `test-postgres` is observed green in CI with the
-> run recorded.
+> including the concurrent single-winner claim test that proves the
+> atomic-claim guarantee above — had never actually executed against this
+> adapter. RFC-038 fixed the migration runner (it no longer parses SQL); on
+> commit `47e4e3d`, [CI run
+> 33707714372](https://github.com/nabbisen/codlet/actions/runs/33707714372),
+> the PostgreSQL conformance suite ran for the first time and passed —
+> `test-postgres`: 7 passed, 0 failed, including the concurrent single-winner
+> claim test. The atomic-claim and atomic-consume guarantees above reflect
+> that run.
 
 ## Rate-limit adapters
 
