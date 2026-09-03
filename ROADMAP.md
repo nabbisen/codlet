@@ -63,6 +63,12 @@ repository hygiene.
 **Release implication:** patch release 0.17.2, or fold into the next minor.
 Owner decides; no API change either way.
 
+**Release-time task (RFC-035 review, C-1 follow-up).** The four M4 RFCs ship
+with `Status: Implemented (Unreleased)` because the version was undecided at
+migration time — deliberately, rather than inventing one. When the owner names
+the release, update all four Status lines in `rfcs/done/03{5,6,7,8}-*.md` and
+the Version column in `rfcs/README.md` as part of the release commit.
+
 ---
 
 ## M5 — Security hardening
