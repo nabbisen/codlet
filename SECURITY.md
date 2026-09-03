@@ -69,6 +69,25 @@ public disclosure. We will credit reporters unless they request anonymity.
 Advisories will be published via the GitHub Security Advisory tab after a fix
 is available.
 
+## Remediation of a defective published release
+
+When a published release is found defective, the remedy is a fixed release, not
+a withdrawal.
+
+**Crates are not yanked except for a specific, stated reason** — for example
+published key material or a defect that cannot fail safely and cannot be
+remedied by upgrading. A yank does not repair an existing lockfile; it only
+prevents new selection, while breaking reproducibility for anyone pinning the
+affected version. A superseding release fixes the problem for everyone who
+upgrades and leaves the historical record intact.
+
+Where a defect fails closed and loudly — the operator sees an error rather than
+silent incorrect behaviour — that weighs against withdrawal, because no user can
+be unknowingly affected.
+
+This is a standing project decision (owner, 2026-09-03), not a case-by-case
+judgement. A yank requires explicit owner approval and a recorded reason.
+
 ## What constitutes a security bug
 
 Non-exhaustive examples treated as security bugs (see also `docs/src/threat-model.md`):
