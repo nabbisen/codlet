@@ -123,7 +123,7 @@ an open operational risk.
 | M5-1 | Supply-chain scanning: `cargo-deny` (licences, bans, advisories) in CI | new RFC-036 |
 | M5-2 | Property tests for code normalization (INV-4 is idempotence — currently asserted by example, not by property) | RFC-015 completion |
 | M5-3 | Distribution tests for code generation (rejection sampling / modulo-bias evidence) | RFC-015 completion |
-| M5-4 | Fuzz targets for normalization and code-input validation, CI smoke mode | RFC-015 completion |
+| ~~M5-4~~ | ~~Fuzz targets, CI smoke mode~~ — **withdrawn from M5 scope**, owner decision 2026-09-03 (RFC-041 §4, §8.1). Deferred, not dropped: revisit when codlet acquires a component that parses untrusted structured input. | RFC-041 |
 | M5-5 | Threat-model re-audit against as-built code; INV-1…8 each mapped to a named test or gate | RFC-015 completion |
 
 **Exit criteria**

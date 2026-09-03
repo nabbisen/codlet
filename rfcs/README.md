@@ -11,18 +11,17 @@ inside each file mirrors it.
 
 Counts below are derived from the filesystem, not hand-maintained.
 
-## Proposed (1)
+## Proposed (0)
 
-| ID | Title | Milestone |
-|----|-------|-----------|
-| [041](./proposed/041-property-and-distribution-testing.md) | Property and Distribution Testing — and Guarding INV-4 | M5 |
+No open RFCs.
 
-## Accepted (3)
+## Accepted (4)
 
 | ID | Title | Milestone |
 |----|-------|-----------|
 | [039](./accepted/039-supply-chain-scanning.md) | Supply-Chain Scanning | M5 |
 | [040](./accepted/040-invariant-verification.md) | Invariant Verification — Every Guard Observed Failing | M5 |
+| [041](./accepted/041-property-and-distribution-testing.md) | Property and Distribution Testing — and Guarding INV-4 | M5 |
 | [042](./accepted/042-retire-the-cookie-attrs-gate.md) | Retire `cookie-attrs-present` — a Text Grep Cannot Assert Emitted Behaviour | M5 |
 
 ## Implemented (38)

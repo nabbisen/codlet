@@ -1,6 +1,6 @@
 # RFC-041: Property and Distribution Testing — and Guarding INV-4
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Target milestone:** M5
 - **Primary crate(s):** `codlet`
 - **Source basis:** `ROADMAP.md` M5-2/M5-3/M5-4; RFC-015 (partial); RFC-040 §3.3 (INV-4 left open)
@@ -184,8 +184,16 @@ policy. That claim is currently supported by example tests and a code comment.
 
 ## 8. Open questions
 
-1. **M5-4 fuzzing: defer or build?** Owner decision, §4. Recommended: defer,
-   with the trigger condition recorded.
+1. ~~**M5-4 fuzzing: defer or build?**~~ **Resolved: deferred, by owner
+   approval 2026-09-03**, accepting this RFC including its §4 recommendation.
+   M5-4 is formally withdrawn from M5 scope — recorded in `ROADMAP.md` rather
+   than dropped silently, per the anti-pattern RFC-037 exists to close.
+
+   **Trigger to revisit:** codlet acquiring a component that parses untrusted
+   structured input — a cookie or header parser, a token decoder, a wire
+   format. None exists today. If that changes, fuzzing gets its own RFC
+   covering the nightly toolchain, corpus policy, and whether findings block a
+   release.
 2. If P-3 fails against alphabets `Alphabet::new` currently accepts — likely,
    since it validates only length ≥ 2 — is the remedy to constrain
    `Alphabet::new` or to normalize on the issue path? A public-API question,
