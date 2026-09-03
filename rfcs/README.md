@@ -11,9 +11,11 @@ inside each file mirrors it.
 
 Counts below are derived from the filesystem, not hand-maintained.
 
-## Proposed (0)
+## Proposed (1)
 
-No open RFCs.
+| ID | Title | Milestone |
+|----|-------|-----------|
+| [042](./proposed/042-retire-the-cookie-attrs-gate.md) | Retire `cookie-attrs-present` — a Text Grep Cannot Assert Emitted Behaviour | M5 |
 
 ## Accepted (2)
 
