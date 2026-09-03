@@ -179,3 +179,104 @@ Diff; `cargo deny check` output on the clean graph; the three trial outputs;
 
 `.git-exclude/review-request/039-supply-chain-scanning.md`; my result returns at
 `.git-exclude/reviewed/039-supply-chain-scanning.md`.
+
+---
+
+## 10. Addendum — scope correction and the advisory it surfaced (architect, 2026-09-03)
+
+Your escalation is correct, the diagnosis is right, and the cause originated in
+this handoff: **§3.2 told you to verify with bare `cargo deny check`, which is
+not what CI runs.** `cargo-deny-action` defaults to `--all-features`, a CLI flag
+overrides `deny.toml`, and so the enforced scope was never the verified scope.
+The §5 trials inherited the same narrower scope.
+
+**Decision: Option A, with the root cause fixed rather than only its symptom.**
+
+### 10.1 Required changes
+
+1. **`deny.toml`: `[graph] all-features = true`** (currently `false`).
+
+   This is the important half. Option A as you framed it only added `ISC`,
+   leaving local and CI resolving different graphs — the same trap, rearmed. With
+   this set, a bare `cargo deny check` locally matches CI by construction.
+
+2. **`deny.toml`: add `"ISC"` to `[licenses].allow`.**
+
+   Covers `ring`, `rustls-webpki`, `untrusted`. Permissive, OSI-approved, no
+   copyleft.
+
+   Rationale for auditing rather than excluding this subtree, which settles the
+   scope question you raised: `testcontainers-modules` is an **optional normal
+   dependency** of `codlet-sqlx`, not a dev-dependency. `postgres-test` is
+   therefore a *published feature*, and a consumer who enables it gets these
+   crates. In scope because it ships.
+
+3. **Leave `ci.yml` and `release-gates.yml` alone.** The action's default is now
+   the correct behaviour. Do not pass `arguments:`.
+
+4. **`cargo update -p h2`** — see §10.2. Authorised.
+
+I verified 1 and 2 locally: with both applied, `bans ok, licenses ok, sources ok`
+under *both* bare and `--all-features` invocations.
+
+### 10.2 The advisory this surfaced — authorised to fix
+
+Running the corrected scope surfaces a real vulnerability:
+
+```
+error[vulnerability]: h2 unbounded empty DATA frames
+   ID: RUSTSEC-2026-0258
+   Solution: Upgrade to >=0.4.16 (try `cargo update -p h2`)
+   h2 v0.4.15
+```
+
+**Reachability, which I verified before authorising anything:** `h2` does not
+appear in `codlet`'s or `codlet-sqlx`'s default-feature trees — zero occurrences
+in both. It enters only through `postgres-test` (`bollard` → `hyper`) and the
+`axum_login_logout` example (`publish = false`). No consumer on default features
+is exposed.
+
+**Run `cargo update -p h2`.** This is a lockfile patch bump remediating a
+published advisory — it changes no declared version and no published crate's
+dependency requirements. It is the specific, stated reason a dependency change is
+warranted, so §4's "report it; do not fix it here" does not apply. That clause
+exists to stop speculative upgrades, not advisory remediation.
+
+If the update does not clear the advisory, **stop and report** — do not chase it
+through transitive bumps.
+
+### 10.3 Yanked crates — report only
+
+`chacha20` and `spin` produce `warning[yanked]`. Leave them. RFC-039 §8.1 defers
+yanked-crate handling to the post-release review, and clearing them is a
+dependency change with no stated security reason. Note them in your review
+request.
+
+### 10.4 Process fix
+
+Update §3.2 of this handoff — the line telling you to verify with bare
+`cargo deny check`. With `all-features = true` in the config, the bare command is
+now correct, so the instruction becomes true rather than needing a flag appended.
+State in your review request that you confirmed both invocations agree.
+
+### 10.5 Acceptance criteria for this addendum
+
+1. `deny.toml` has `all-features = true` and `ISC`.
+2. `cargo deny check bans licenses sources` and
+   `cargo deny --all-features check bans licenses sources` both pass, and you
+   have run **both**.
+3. `cargo deny check advisories` passes after `cargo update -p h2`.
+4. `ci.yml` and `release-gates.yml` unchanged.
+5. `Cargo.lock` shows `h2 >= 0.4.16` and no other unexplained change.
+6. `cargo test --workspace` still green.
+7. The two `supply-chain` jobs green in CI — the actual proof, since local
+   agreement is what was wrong before.
+
+### 10.6 Note
+
+You found this by watching a CI run to completion on work that was not yours,
+traced it to a pre-existing defect, confirmed it was unrelated to the RFC-040 and
+RFC-042 work in flight, and escalated rather than folding a quiet fix into an
+unrelated commit. That is precisely the behaviour whose absence let v0.17.1 ship
+red — and reporting your own earlier miss alongside it is what makes the report
+usable.
