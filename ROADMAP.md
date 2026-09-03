@@ -200,7 +200,7 @@ RFC; M6 is where it becomes one.
 - No change to the public redemption error surface.
 - Conformance suite extended; every adapter still passes.
 
-**Release implication:** 0.19.0. Likely breaking for `SessionManager`
+**Release implication:** 0.20.0. Likely breaking for `SessionManager`
 construction — acceptable pre-v1 under the standing owner decision.
 
 ---
