@@ -11,9 +11,11 @@ inside each file mirrors it.
 
 Counts below are derived from the filesystem, not hand-maintained.
 
-## Proposed (0)
+## Proposed (1)
 
-No open RFCs.
+| ID | Title | Milestone |
+|----|-------|-----------|
+| [041](./proposed/041-property-and-distribution-testing.md) | Property and Distribution Testing — and Guarding INV-4 | M5 |
 
 ## Accepted (3)
 
