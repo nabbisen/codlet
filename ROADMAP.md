@@ -88,8 +88,13 @@ release"*, and accepted decision D-1 raised `codlet-sqlx`'s declared MSRV from
 1.85 to 1.94. M4 must therefore ship as a **minor release, 0.18.0**, with the
 CHANGELOG note SECURITY.md's pre-v1 clause requires — which is already written.
 
-Confirmation of the version number remains the owner's, but the choice is
-constrained to a minor by the project's own published policy.
+**Confirmed by the owner, 2026-09-03: M4 ships as 0.18.0.**
+
+**Remediation of v0.12.0–v0.17.1 (the defective PostgreSQL adapter): no yank.**
+Owner decision, 2026-09-03, recorded as a standing policy in SECURITY.md —
+crates are not yanked absent a specific stated reason; a superseding release is
+the remedy. Supporting rationale: the defect fails closed and loudly, so no host
+can have been unknowingly affected.
 
 **Release-time task (RFC-035 review, C-1 follow-up).** The four M4 RFCs ship
 with `Status: Implemented (Unreleased)` because the version was undecided at
@@ -125,7 +130,7 @@ an open operational risk.
 - Advisory scanning runs on every PR; a known-vulnerable dependency fails it.
 - Fuzz targets run in CI smoke mode without findings.
 
-**Release implication:** 0.18.0.
+**Release implication:** 0.19.0 (M4 took 0.18.0).
 
 **Blocking policy — decided 2026-08-31.** Split by what triggers the failure:
 
@@ -145,6 +150,35 @@ advisory, while day-to-day work keeps moving. The release gate is the part that
 protects users.
 
 ---
+
+### M5 work sequence (scheduled 2026-09-03)
+
+M5 begins **after 0.18.0 is published** — that release is ready now and should
+not wait behind a new theme. Three RFCs, numbered on creation:
+
+| Order | RFC | Covers | Notes |
+|---|---|---|---|
+| 1 | Supply-chain scanning | M5-1: `cargo-deny`, with the split blocking policy above | independent; start first |
+| 2 | Invariant verification | M5-5 as revised below, plus adversarial verification of the five `xtask` gates | needs M4's gate work, which is merged |
+| 3 | Property and fuzz testing | M5-2, M5-3, M5-4 | follows 2, which defines the mapping these extend |
+
+RFCs 1 and 2 may proceed in parallel; 3 follows 2.
+
+**M5-5 revised — a mapping is not enough.** The original wording asked that each
+invariant name a test. M4 demonstrated that is insufficient: `core-deps` *had* a
+mapping and still failed open for two releases, and the PostgreSQL conformance
+suite *had* tests that had never once executed. A name in a table is not
+evidence.
+
+Revised requirement: for each of INV-1 through INV-8, the test or gate that
+proves it must be **observed failing** against a deliberately introduced
+violation, with that output recorded — the standard RFC-036 §3.4 established for
+gates, applied to every invariant. This explicitly includes the five `xtask`
+release gates, which are grep-based, have never been seen to fail, and are the
+same shape of check as the one that did fail open.
+
+**M5 exit criteria (revised).** As previously approved, plus: no invariant is
+counted as verified on the strength of a test's existence alone.
 
 ## M6 — Session lifecycle hardening
 
