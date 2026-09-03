@@ -243,8 +243,8 @@ Handoff:
 
 - `rfcs/` contains exactly `proposed/`, `accepted/`, `done/`, `archive/`,
   `handoffs/`, `README.md`.
-- 38 RFC bodies present at end of M4: 37 in `done/` (the existing 33, plus 000,
-  plus RFC-035/036/037), 1 in `archive/`, none left in `accepted/`.
+- 39 RFC bodies present at end of M4: 38 in `done/` (the existing 33, plus 000,
+  plus RFC-035/036/037/038), 1 in `archive/`, none left in `accepted/`.
 - `rfcs/handoffs/NNN-slug/` contains handoffs only — no review requests or
   review results (§3.5).
 - Every `rfcs/handoffs/NNN-slug/` directory corresponds to an existing RFC
