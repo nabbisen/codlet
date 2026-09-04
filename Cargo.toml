@@ -59,6 +59,9 @@ tempfile                = "3"
 # compile-failure test. Must never enter a published crate's normal
 # dependency tree; the `core-deps` CI gate is what enforces that boundary.
 trybuild                = "1"
+# dev-dependency only, trial (RFC-041 §3.4): must build on the 1.85 MSRV or
+# fall back to a hand-rolled deterministic generator. See handoff evidence.
+proptest                = "1"
 
 # Shared lint policy. forbid(unsafe_code) is also asserted in each crate root
 # (implementation handoff §5) so it is visible at the top of the source file.

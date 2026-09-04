@@ -26,6 +26,28 @@ semantic versioning once it reaches a stable release.
 
 ### Added
 
+- **Property and distribution testing for INV-4 (RFC-041).** `proptest`
+  (dev-dependency only) added and confirmed to build on the 1.85 MSRV.
+  Seven properties close INV-4's previously-open threat-model row: P-1/P-4
+  (`normalize` is idempotent and never panics on arbitrary Unicode), P-5/P-7
+  (the alphabet's rejection-sampling ceiling is the largest multiple of its
+  length `<= 256`, and every accepted byte maps to an alphabet symbol with
+  exact uniformity), P-2/P-6 (a generated code under a normalization-safe
+  policy is itself a normalization fixed-point, and every byte at or above
+  the ceiling is rejected, never mapped), and P-3, which generates arbitrary
+  `Alphabet::new`-valid symbol sets and checks each symbol against
+  `normalize`. Each property was confirmed capable of detecting a real
+  violation via a deliberately reverted production-code trial (RFC-041
+  §3.3), continuing RFC-036 §3.4/RFC-040 §3.2's standing requirement that a
+  check be observed failing, not merely assumed to work. P-3 found a genuine
+  gap: `Alphabet::new` currently accepts symbols that are not normalization
+  fixed-points (e.g. the tab byte, `0x09`), which would violate INV-4 if such
+  a symbol reached `issue_code`. No production code changed to fix this —
+  `p3_every_accepted_symbol_is_a_normalization_fixed_point` is left
+  `#[ignore]`d and the finding reported to the architect pending a decision
+  on where the fix belongs. `docs/src/threat-model.md`'s INV-4 row updated;
+  no invariant row in that table remains open.
+
 - **Supply-chain scanning via `cargo-deny` (RFC-039).** `deny.toml` at the
   workspace root checks `bans`, `licenses`, and `sources` against the
   workspace's dependency graph — 184 packages, including dev-dependencies

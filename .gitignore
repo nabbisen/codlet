@@ -26,3 +26,9 @@ codlet-example.db*
 # npm dependencies for the codlet-worker Miniflare tests
 # (package.json / package-lock.json stay tracked -- `npm ci` needs the lockfile)
 node_modules/
+
+# proptest auto-saves a seed file here whenever a property fails, including
+# during the deliberate negative-demonstration trials RFC-041 requires.
+# Regression cases are not curated for commit; a real regression is recorded
+# in the test's assertion output, not this directory.
+**/proptest-regressions/

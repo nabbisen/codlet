@@ -3,6 +3,7 @@ use super::*;
 use crate::code::alphabet::Alphabet;
 use crate::rng::{AlwaysFailRandom, FixedBytesRandom, SystemRandom};
 use core::time::Duration;
+use proptest::prelude::*;
 
 fn human() -> CodePolicy {
     CodePolicy::default_human(Duration::from_secs(3600)).unwrap()
@@ -65,4 +66,69 @@ fn validate_accepts_normalizes_and_rejects() {
         validate_code_input(&long, &policy),
         Err(CodeInputError::TooLongRaw)
     );
+}
+
+// ── RFC-041: INV-4 properties P-2 (issue/redeem agreement) and P-6 (rejection) ─
+
+/// A subsequence of uppercase ASCII letters and digits: normalization
+/// fixed-points, so `Alphabet::new` accepts them and (unlike P-3's arbitrary
+/// ASCII alphabets) using them for generation cannot itself violate INV-4.
+/// P-2 checks "for any [safe] policy"; P-3 is the general form that checks
+/// `Alphabet::new`'s own acceptance boundary, which is broader and fires
+/// (see `code::alphabet::tests::p3_*`, ignored, reported separately).
+fn safe_alphabet_symbols() -> impl Strategy<Value = Vec<u8>> {
+    let pool: Vec<u8> = (b'A'..=b'Z').chain(b'0'..=b'9').collect();
+    proptest::sample::subsequence(pool, 2..=36)
+}
+
+proptest! {
+    #[test]
+    fn p2_generated_code_is_a_normalization_fixed_point_under_safe_policies(
+        symbols in safe_alphabet_symbols(),
+        length in 1usize..=16,
+    ) {
+        // P-2: normalize(generate_code(p)) == generate_code(p), for any
+        // policy built from a normalization-safe alphabet.
+        let alphabet = Alphabet::new(&symbols).unwrap();
+        #[allow(deprecated)]
+        let policy =
+            CodePolicy::short_compat(alphabet, length, Duration::from_secs(3600)).unwrap();
+        let mut rng = SystemRandom::new();
+        let code = generate_code(&policy, &mut rng).unwrap();
+        let plain = code.expose().to_string();
+        prop_assert_eq!(normalize(&plain), plain);
+    }
+}
+
+#[test]
+fn p6_every_byte_at_or_above_ceiling_is_rejected_never_mapped() {
+    // P-6: exhaustive over the default alphabet's rejected byte range
+    // (248..256). Each rejected byte is fed first, then a distinguishable
+    // accepted byte -- distinguishable so a broken (non-rejecting)
+    // implementation would produce an observably different symbol, not one
+    // that coincidentally matches.
+    let alphabet = Alphabet::unambiguous();
+    let ceiling = alphabet.unbiased_ceiling();
+    let len = alphabet.len();
+    #[allow(deprecated)]
+    let policy = CodePolicy::short_compat(alphabet.clone(), 1, Duration::from_secs(3600)).unwrap();
+
+    for rejected in ceiling..256 {
+        let rejected = rejected as u8;
+        let rejected_residue = rejected as usize % len;
+        let accepted = ((rejected_residue + 1) % len) as u8;
+        assert!(
+            (accepted as usize) < ceiling,
+            "test construction error: accepted byte must itself be < ceiling"
+        );
+
+        let mut rng = FixedBytesRandom::new(vec![rejected, accepted]);
+        let code = generate_code(&policy, &mut rng).unwrap();
+        let expected = alphabet.symbol_for_byte(accepted) as char;
+        assert_eq!(
+            code.expose(),
+            &expected.to_string(),
+            "byte {rejected} (>= ceiling {ceiling}) was not rejected"
+        );
+    }
 }
