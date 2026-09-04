@@ -136,11 +136,14 @@ The gate set CI actually runs:
     above for why the floor differs
 16. `cargo run -p xtask -- release-check` (4 static security gates, documented
     in `xtask/src/main.rs`)
-17. `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps`
-18. `cargo deny check bans licenses sources` (`supply-chain` job) — supply-chain
+17. `cargo run -p xtask -- self-test` — proves each of those 4 gates actually
+    fails against a fixture that deliberately violates the pattern it exists
+    to catch (`xtask/fixtures/`); blocking (RFC-040 §3.2)
+18. `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps`
+19. `cargo deny check bans licenses sources` (`supply-chain` job) — supply-chain
     policy in `deny.toml` (RFC-039); blocking on every run, since a failure
     always names a dependency change a developer just made
-19. `cargo deny check advisories` (`advisories` job) — reported, non-blocking,
+20. `cargo deny check advisories` (`advisories` job) — reported, non-blocking,
     on pull requests; a third-party RUSTSEC publication should not freeze
     unrelated work
 

@@ -1,6 +1,6 @@
 # RFC-043: `Alphabet::new` Must Reject Symbols That Normalization Would Alter
 
-- **Status:** Implemented (Unreleased)
+- **Status:** Implemented (v0.19.0)
 - **Target milestone:** M5 (scope addition — owner decision required)
 - **Primary crate(s):** `codlet`
 - **Source basis:** RFC-041 property P-3, which fired against real `Alphabet::new`

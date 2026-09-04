@@ -6,6 +6,8 @@ semantic versioning once it reaches a stable release.
 
 ## [Unreleased]
 
+## [0.19.0] — 2026-09-04
+
 ### Removed
 
 - **`cookie-attrs-present` release gate retired (RFC-042).** It matched
