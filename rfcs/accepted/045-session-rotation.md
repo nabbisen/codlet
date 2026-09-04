@@ -1,6 +1,6 @@
 # RFC-045: Session Rotation on Privilege Change
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Target milestone:** M6
 - **Primary crate(s):** `codlet`, adapters, `codlet-conformance`
 - **Source basis:** `ROADMAP.md` M6; OWASP Session Management Cheat Sheet

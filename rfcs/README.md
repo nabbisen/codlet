@@ -11,17 +11,17 @@ inside each file mirrors it.
 
 Counts below are derived from the filesystem, not hand-maintained.
 
-## Proposed (3)
+## Proposed (0)
+
+No open RFCs.
+
+## Accepted (3)
 
 | ID | Title | Milestone |
 |----|-------|-----------|
-| [044](./proposed/044-session-inactivity-timeout.md) | Session Inactivity Timeout | M6 |
-| [045](./proposed/045-session-rotation.md) | Session Rotation on Privilege Change | M6 |
-| [046](./proposed/046-host-visible-session-failure-reasons.md) | Host-Visible Session Failure Reasons | M6 |
-
-## Accepted (0)
-
-No RFCs awaiting implementation.
+| [044](./accepted/044-session-inactivity-timeout.md) | Session Inactivity Timeout | M6 |
+| [045](./accepted/045-session-rotation.md) | Session Rotation on Privilege Change | M6 |
+| [046](./accepted/046-host-visible-session-failure-reasons.md) | Host-Visible Session Failure Reasons | M6 |
 
 ## Implemented (43)
 
