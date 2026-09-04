@@ -25,7 +25,32 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         .await?;
 
     let migration_sql = include_str!("../migrations/0001_initial.sql");
-    apply_sqlite_script(pool, migration_sql).await
+    apply_sqlite_script(pool, migration_sql).await?;
+
+    // RFC-044: `last_seen_at` was added to `codlet_sessions` after this
+    // table's initial release. `CREATE TABLE IF NOT EXISTS` is a no-op on a
+    // table that already exists, so a database created before RFC-044 needs
+    // this column added explicitly. SQLite has no `ADD COLUMN IF NOT EXISTS`
+    // (verified: it is a parse error), so this checks column presence first
+    // via `PRAGMA table_info`, staying additive with no backfill either way
+    // (RFC-044 §5).
+    ensure_session_last_seen_at_column(pool).await
+}
+
+/// Add `codlet_sessions.last_seen_at` if the table exists without it.
+/// Idempotent: a no-op if the column is already present.
+async fn ensure_session_last_seen_at_column(pool: &SqlitePool) -> Result<(), sqlx::Error> {
+    let columns: Vec<(i64, String)> =
+        sqlx::query_as("SELECT cid, name FROM pragma_table_info('codlet_sessions')")
+            .fetch_all(pool)
+            .await?;
+    let has_column = columns.iter().any(|(_, name)| name == "last_seen_at");
+    if !has_column {
+        sqlx::query("ALTER TABLE codlet_sessions ADD COLUMN last_seen_at INTEGER")
+            .execute(pool)
+            .await?;
+    }
+    Ok(())
 }
 
 /// Execute a multi-statement SQL script against `pool` as a single call.

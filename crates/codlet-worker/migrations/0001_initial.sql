@@ -30,13 +30,19 @@ CREATE INDEX IF NOT EXISTS idx_codlet_codes_scope
     ON codlet_codes (scope, used_at, revoked_at, expires_at);
 
 CREATE TABLE IF NOT EXISTS codlet_sessions (
-    id          TEXT    NOT NULL PRIMARY KEY,
-    lookup_key  TEXT    NOT NULL UNIQUE,
-    key_version TEXT    NOT NULL,
-    subject     TEXT    NOT NULL,       -- host-owned subject identifier
-    created_at  INTEGER NOT NULL,       -- Unix seconds UTC
-    expires_at  INTEGER NOT NULL,       -- Unix seconds UTC
-    revoked_at  INTEGER                 -- NULL = active
+    id            TEXT    NOT NULL PRIMARY KEY,
+    lookup_key    TEXT    NOT NULL UNIQUE,
+    key_version   TEXT    NOT NULL,
+    subject       TEXT    NOT NULL,     -- host-owned subject identifier
+    created_at    INTEGER NOT NULL,     -- Unix seconds UTC
+    expires_at    INTEGER NOT NULL,     -- Unix seconds UTC
+    revoked_at    INTEGER,              -- NULL = active
+    last_seen_at  INTEGER               -- NULL = never touched (RFC-044); bound
+                                         -- as D1Type::Real like every other
+                                         -- timestamp column here (RFC-033 §6);
+                                         -- added by migration.rs's idempotent
+                                         -- ALTER for databases created before
+                                         -- RFC-044
 );
 
 CREATE INDEX IF NOT EXISTS idx_codlet_sessions_lookup

@@ -50,6 +50,12 @@ fn event_keys_are_stable() {
             },
         ),
         (
+            "session.touch.failed",
+            CodeAuthEvent::SessionTouchFailed {
+                session_id: SessionId::new("s1".into()),
+            },
+        ),
+        (
             "form_token.consume.replay",
             CodeAuthEvent::FormTokenReplay {
                 purpose: "logout".into(),

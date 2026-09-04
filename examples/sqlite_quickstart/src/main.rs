@@ -113,15 +113,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .and_then(|kv| kv.split_once('=').map(|(_, v)| v))
         .expect("well-formed Set-Cookie");
 
-    let outcome = session_mgr.validate(cookie_val).await?;
+    let outcome = session_mgr.validate(Some(cookie_val)).await?;
     match outcome {
         SessionValidationOutcome::Authenticated { subject, .. } => {
             println!("[request] authenticated subject: {}", subject.as_str());
             // Host now performs its own authorization check:
             // e.g. load membership, check community role, etc.
         }
-        SessionValidationOutcome::Unauthenticated => {
-            println!("[request] no valid session — redirect to join page");
+        SessionValidationOutcome::Unauthenticated { reason } => {
+            // `reason` is host-only (RFC-046); do not render it to end users.
+            println!("[request] no valid session ({reason:?}) — redirect to join page");
         }
     }
 

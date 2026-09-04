@@ -31,14 +31,22 @@ CREATE INDEX IF NOT EXISTS idx_codlet_codes_scope
     ON codlet_codes (scope, used_at, revoked_at, expires_at);
 
 CREATE TABLE IF NOT EXISTS codlet_sessions (
-    id          TEXT    NOT NULL PRIMARY KEY,
-    lookup_key  TEXT    NOT NULL UNIQUE,
-    key_version TEXT    NOT NULL,
-    subject     TEXT    NOT NULL,
-    created_at  BIGINT  NOT NULL,
-    expires_at  BIGINT  NOT NULL,
-    revoked_at  BIGINT
+    id            TEXT    NOT NULL PRIMARY KEY,
+    lookup_key    TEXT    NOT NULL UNIQUE,
+    key_version   TEXT    NOT NULL,
+    subject       TEXT    NOT NULL,
+    created_at    BIGINT  NOT NULL,
+    expires_at    BIGINT  NOT NULL,
+    revoked_at    BIGINT,
+    last_seen_at  BIGINT  -- NULL = never touched (RFC-044)
 );
+
+-- RFC-044: additive for a database created before this column existed.
+-- `CREATE TABLE IF NOT EXISTS` above is a no-op on an existing table, so this
+-- statement is what actually adds the column there; unlike SQLite, PostgreSQL
+-- (9.6+) supports `IF NOT EXISTS` directly on `ADD COLUMN`, so no separate
+-- introspection step is needed here.
+ALTER TABLE codlet_sessions ADD COLUMN IF NOT EXISTS last_seen_at BIGINT;
 
 CREATE INDEX IF NOT EXISTS idx_codlet_sessions_lookup
     ON codlet_sessions (lookup_key, revoked_at, expires_at);

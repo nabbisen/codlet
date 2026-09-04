@@ -149,15 +149,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .and_then(|kv| kv.split_once('=').map(|(_, v)| v))
                 .expect("well-formed Set-Cookie");
 
-            match session_mgr.validate(cookie_val).await? {
+            match session_mgr.validate(Some(cookie_val)).await? {
                 SessionValidationOutcome::Authenticated { subject, .. } => {
                     println!(
                         "Session validated. Authenticated subject: {}",
                         subject.as_str()
                     );
                 }
-                SessionValidationOutcome::Unauthenticated => {
-                    println!("Session not valid.");
+                SessionValidationOutcome::Unauthenticated { reason } => {
+                    // `reason` is host-only diagnostic information (RFC-046) --
+                    // safe to print here since this example logs to a local
+                    // terminal, not to an end user's browser.
+                    println!("Session not valid: {reason:?}");
                 }
             }
 

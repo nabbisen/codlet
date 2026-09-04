@@ -89,8 +89,8 @@ pub use secret::{
     SessionSecret, SubjectId,
 };
 pub use state::{
-    ClaimOutcome, SessionValidationOutcome, TokenConsumeOutcome, classify_claim, classify_session,
-    classify_token_consume,
+    ClaimOutcome, SessionFailure, SessionValidationOutcome, TokenConsumeOutcome, classify_claim,
+    classify_session, classify_token_consume,
 };
 pub use store::{
     error::{PublicAuthError, StoreError},

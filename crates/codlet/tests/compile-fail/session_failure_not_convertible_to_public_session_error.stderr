@@ -1,0 +1,7 @@
+error[E0277]: the trait bound `PublicSessionError: From<SessionFailure>` is not satisfied
+ --> tests/compile-fail/session_failure_not_convertible_to_public_session_error.rs:8:55
+  |
+8 |     let _public: codlet::PublicSessionError = failure.into();
+  |                                                       ^^^^ the trait `From<SessionFailure>` is not implemented for `PublicSessionError`
+  |
+  = note: required for `SessionFailure` to implement `Into<PublicSessionError>`

@@ -112,7 +112,7 @@ async fn two_step_issue_find_claim_session() {
         .next()
         .unwrap()
         .trim_start_matches("sid=");
-    let outcome = sm.validate(cookie_val).await.unwrap();
+    let outcome = sm.validate(Some(cookie_val)).await.unwrap();
     assert!(outcome.is_authenticated());
     assert_eq!(outcome.subject().unwrap().as_str(), "user-1");
 }
@@ -248,9 +248,11 @@ async fn validate_expired_session_returns_unauthenticated() {
 
     let store = MemSessionStore::new();
     let h = hasher();
-    let (lk, kv) = h
-        .lookup_key(SecretDomain::Session, "cookie-secret-xyz")
-        .unwrap();
+    // A well-formed (64 lowercase hex chars) secret, so this test exercises
+    // the store's expiry collapse rather than tripping the malformed-shape
+    // check (RFC-046) before ever reaching the store.
+    let secret = "0123456789abcdef".repeat(4);
+    let (lk, kv) = h.lookup_key(SecretDomain::Session, &secret).unwrap();
 
     // Insert an already-expired session.
     store
@@ -273,8 +275,13 @@ async fn validate_expired_session_returns_unauthenticated() {
         cookie(),
     );
 
-    let outcome = sm.validate("cookie-secret-xyz").await.unwrap();
-    assert_eq!(outcome, SessionValidationOutcome::Unauthenticated);
+    let outcome = sm.validate(Some(&secret)).await.unwrap();
+    assert_eq!(
+        outcome,
+        SessionValidationOutcome::Unauthenticated {
+            reason: codlet::SessionFailure::NotFound
+        }
+    );
 }
 
 // ── Logout: revoke + clear cookie ─────────────────────────────────────────────
@@ -312,7 +319,12 @@ async fn revoke_session_and_clear_cookie() {
         .to_string();
 
     // Confirm active before revocation.
-    assert!(sm.validate(&cookie_val).await.unwrap().is_authenticated());
+    assert!(
+        sm.validate(Some(&cookie_val))
+            .await
+            .unwrap()
+            .is_authenticated()
+    );
 
     // Revoke.
     let clear_cookie = sm.revoke(&session_id).await.unwrap();
@@ -327,8 +339,10 @@ async fn revoke_session_and_clear_cookie() {
 
     // Now invalid.
     assert_eq!(
-        sm.validate(&cookie_val).await.unwrap(),
-        SessionValidationOutcome::Unauthenticated
+        sm.validate(Some(&cookie_val)).await.unwrap(),
+        SessionValidationOutcome::Unauthenticated {
+            reason: codlet::SessionFailure::NotFound
+        }
     );
 }
 

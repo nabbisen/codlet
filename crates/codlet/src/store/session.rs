@@ -14,8 +14,16 @@ pub struct ActiveSessionRecord {
     pub id: SessionId,
     /// The subject this session authenticates.
     pub subject: SubjectId,
+    /// Creation time as Unix seconds (UTC). Used as the idle-timeout
+    /// fallback when `last_seen_at` is `NULL` (RFC-044 §5).
+    pub created_at: u64,
     /// Expiry as Unix seconds (UTC).
     pub expires_at: u64,
+    /// Last-touched time as Unix seconds (UTC), or `None` if the session has
+    /// never been touched. `None` must be treated as `created_at` by the
+    /// caller (RFC-044 §5) — the store does not perform that substitution,
+    /// so a `NULL` column reads back honestly as "never recorded".
+    pub last_seen_at: Option<u64>,
 }
 
 /// Parameters for inserting a new session.
@@ -56,6 +64,23 @@ pub trait SessionStore {
     /// Revoke a session by its record ID (logout / incident response).
     /// Revocation is monotonic: a revoked session cannot be unrevoked.
     fn revoke_session(
+        &self,
+        session_id: &SessionId,
+        now: u64,
+    ) -> impl Future<Output = Result<(), StoreError>>;
+
+    /// Record that a session was used at `now` (RFC-044 idle timeout).
+    ///
+    /// Deliberately **not** part of [`find_active_session`](Self::find_active_session):
+    /// keeping the read and the write separate means the read path can never be
+    /// made conditional on a write succeeding, and a `touch_session` failure
+    /// must never invalidate an otherwise-valid session (RFC-044 §4.5) — the
+    /// caller decides that, not this method.
+    ///
+    /// Implementations should perform this as a single unconditional write
+    /// (e.g. `UPDATE ... WHERE id = ?`, no existence check required); the
+    /// caller is responsible for throttling how often this is called.
+    fn touch_session(
         &self,
         session_id: &SessionId,
         now: u64,

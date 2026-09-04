@@ -11,8 +11,8 @@ fn to_err(e: sqlx::Error) -> StoreError {
     StoreError::Backend(e.to_string())
 }
 
-// (id, subject, expires_at)
-type ActiveRow = (String, String, i64);
+// (id, subject, created_at, expires_at, last_seen_at)
+type ActiveRow = (String, String, i64, i64, Option<i64>);
 
 impl SessionStore for PostgresStore {
     async fn find_active_session(
@@ -23,7 +23,7 @@ impl SessionStore for PostgresStore {
         let now_i = now as i64;
         for candidate in candidates {
             let row: Option<ActiveRow> = sqlx::query_as(
-                "SELECT id, subject, expires_at
+                "SELECT id, subject, created_at, expires_at, last_seen_at
                  FROM codlet_sessions
                  WHERE lookup_key = $1
                    AND revoked_at IS NULL
@@ -36,11 +36,13 @@ impl SessionStore for PostgresStore {
             .await
             .map_err(to_err)?;
 
-            if let Some((id, subject, expires_at)) = row {
+            if let Some((id, subject, created_at, expires_at, last_seen_at)) = row {
                 return Ok(Some(ActiveSessionRecord {
                     id: SessionId::new(id),
                     subject: SubjectId::new(subject),
+                    created_at: created_at as u64,
                     expires_at: expires_at as u64,
+                    last_seen_at: last_seen_at.map(|v| v as u64),
                 }));
             }
         }
@@ -70,6 +72,20 @@ impl SessionStore for PostgresStore {
             "UPDATE codlet_sessions
              SET revoked_at = $1
              WHERE id = $2 AND revoked_at IS NULL",
+        )
+        .bind(now as i64)
+        .bind(session_id.as_str())
+        .execute(&self.pool)
+        .await
+        .map_err(to_err)?;
+        Ok(())
+    }
+
+    async fn touch_session(&self, session_id: &SessionId, now: u64) -> Result<(), StoreError> {
+        sqlx::query(
+            "UPDATE codlet_sessions
+             SET last_seen_at = $1
+             WHERE id = $2",
         )
         .bind(now as i64)
         .bind(session_id.as_str())

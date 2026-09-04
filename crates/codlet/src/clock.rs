@@ -68,5 +68,40 @@ impl Clock for FixedClock {
     }
 }
 
+/// A clock whose time can be advanced in place, via interior mutability, so a
+/// single long-lived component (e.g. a `SessionManager`) can observe the
+/// passage of time across repeated calls without being reconstructed.
+/// `FixedClock` cannot do this: it hands out a new value rather than mutating
+/// one in place. Available under `test-utils` and in this crate's own tests.
+#[cfg(any(test, feature = "test-utils"))]
+#[derive(Debug, Clone, Default)]
+pub struct MutableClock(std::rc::Rc<std::cell::Cell<u64>>);
+
+#[cfg(any(test, feature = "test-utils"))]
+impl MutableClock {
+    /// A clock pinned to `unix_secs`.
+    #[must_use]
+    pub fn at(unix_secs: u64) -> Self {
+        Self(std::rc::Rc::new(std::cell::Cell::new(unix_secs)))
+    }
+
+    /// Set the clock to `unix_secs`.
+    pub fn set(&self, unix_secs: u64) {
+        self.0.set(unix_secs);
+    }
+
+    /// Advance the clock by `secs`.
+    pub fn advance(&self, secs: u64) {
+        self.0.set(self.0.get().saturating_add(secs));
+    }
+}
+
+#[cfg(any(test, feature = "test-utils"))]
+impl Clock for MutableClock {
+    fn unix_now(&self) -> u64 {
+        self.0.get()
+    }
+}
+
 #[cfg(test)]
 mod tests;

@@ -163,13 +163,14 @@ fn extract_cookie<'a>(headers: &'a HeaderMap, name: &str) -> Option<&'a str> {
 
 /// `GET /` — show either the login form or the "you are signed in" page.
 async fn home(State(state): State<AppState>, headers: HeaderMap) -> Html<String> {
-    // Try to validate the session cookie.
-    if let Some(cookie_val) = extract_cookie(&headers, &state.cookie_name) {
-        if let Ok(SessionValidationOutcome::Authenticated { subject, .. }) =
-            state.session_mgr.validate(cookie_val).await
-        {
-            return Html(page_signed_in(subject.as_str()));
-        }
+    // Pass the cookie through as `Option` rather than pre-filtering: codlet
+    // itself distinguishes "no cookie" from "cookie present but invalid"
+    // (RFC-046), which this host does not need to duplicate.
+    let cookie_val = extract_cookie(&headers, &state.cookie_name);
+    if let Ok(SessionValidationOutcome::Authenticated { subject, .. }) =
+        state.session_mgr.validate(cookie_val).await
+    {
+        return Html(page_signed_in(subject.as_str()));
     }
     Html(page_login(None))
 }
@@ -213,14 +214,13 @@ async fn login(State(state): State<AppState>, Form(form): Form<LoginForm>) -> Re
 
 /// `POST /logout` — revoke the session and clear the cookie.
 async fn logout(State(state): State<AppState>, headers: HeaderMap) -> Response {
-    if let Some(cookie_val) = extract_cookie(&headers, &state.cookie_name) {
-        if let Ok(SessionValidationOutcome::Authenticated { session_id, .. }) =
-            state.session_mgr.validate(cookie_val).await
-        {
-            // Revoke the session record and get the clear-cookie header value.
-            if let Ok(clear_cookie) = state.session_mgr.revoke(&session_id).await {
-                return ([(header::SET_COOKIE, clear_cookie)], Redirect::to("/")).into_response();
-            }
+    let cookie_val = extract_cookie(&headers, &state.cookie_name);
+    if let Ok(SessionValidationOutcome::Authenticated { session_id, .. }) =
+        state.session_mgr.validate(cookie_val).await
+    {
+        // Revoke the session record and get the clear-cookie header value.
+        if let Ok(clear_cookie) = state.session_mgr.revoke(&session_id).await {
+            return ([(header::SET_COOKIE, clear_cookie)], Redirect::to("/")).into_response();
         }
     }
     Redirect::to("/").into_response()

@@ -31,6 +31,28 @@ revoked, already used, format error — map to the same public error
 (`PublicRedemptionError::InvalidOrExpired`). An attacker cannot distinguish
 whether a code exists.
 
+**Session enumeration.** The end-user-visible response to a failed session
+validation is identical regardless of cause (RFC-006 §13.5): a missing,
+malformed, not-found, expired, idle-timed-out, or revoked session all look the
+same to whoever is holding the cookie. `SessionManager::validate` does return a
+richer `SessionFailure` reason alongside `Unauthenticated` (RFC-046) — but that value is returned
+in-process to the **host**, about a credential the caller already presented,
+which is a different question from what an attacker guessing a value they do
+not hold can learn (RFC-046 §3.1). `SessionFailure` has no conversion to
+`PublicSessionError`, enforced by a compile-fail test, and its rustdoc carries
+an explicit warning: `NotFound` and `Revoked` must not be echoed to an
+unauthenticated visitor, even though `Expired` and `IdleTimeout` are safe to
+surface as "please sign in again".
+
+**Abandoned-session exposure.** By default a session stays valid for its full
+absolute lifetime whether or not it is used again after issuance — realistic
+exposure on a shared or borrowed device. `SessionManager::with_idle_timeout`
+(RFC-044, opt-in, off by default) adds a second, independent bound: a session
+past its idle timeout is rejected even if its absolute expiry has not arrived.
+Enabling it costs one throttled write per `max(idle_timeout / 20, 30s)` of
+continuous activity, not one per request (RFC-044 §4.2) — the throttle is
+exact and proven by a write-count test, not a general appeal to caching.
+
 **Form-token replay and CSRF.** Form tokens are single-use. A duplicate submit
 returns `Replay`, not a second execution. Token binding (subject, purpose,
 bound resource) prevents token reuse across forms or users.

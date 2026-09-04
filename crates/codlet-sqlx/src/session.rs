@@ -15,8 +15,8 @@ impl SessionStore for SqliteStore {
     ) -> Result<Option<ActiveSessionRecord>, StoreError> {
         let now_i = now as i64;
         for candidate in candidates {
-            let row: Option<(String, String, String, i64)> = sqlx::query_as(
-                "SELECT id, subject, key_version, expires_at
+            let row: Option<(String, String, i64, i64, Option<i64>)> = sqlx::query_as(
+                "SELECT id, subject, created_at, expires_at, last_seen_at
                  FROM codlet_sessions
                  WHERE lookup_key  = ?
                    AND revoked_at  IS NULL
@@ -29,11 +29,13 @@ impl SessionStore for SqliteStore {
             .await
             .map_err(|e| StoreError::Backend(e.to_string()))?;
 
-            if let Some((id, subject, _kv, exp)) = row {
+            if let Some((id, subject, created_at, exp, last_seen_at)) = row {
                 return Ok(Some(ActiveSessionRecord {
                     id: SessionId::new(id),
                     subject: SubjectId::new(subject),
+                    created_at: created_at as u64,
                     expires_at: exp as u64,
+                    last_seen_at: last_seen_at.map(|v| v as u64),
                 }));
             }
         }
@@ -63,6 +65,20 @@ impl SessionStore for SqliteStore {
             "UPDATE codlet_sessions
              SET revoked_at = ?
              WHERE id = ? AND revoked_at IS NULL",
+        )
+        .bind(now as i64)
+        .bind(session_id.as_str())
+        .execute(&self.pool)
+        .await
+        .map_err(|e| StoreError::Backend(e.to_string()))?;
+        Ok(())
+    }
+
+    async fn touch_session(&self, session_id: &SessionId, now: u64) -> Result<(), StoreError> {
+        sqlx::query(
+            "UPDATE codlet_sessions
+             SET last_seen_at = ?
+             WHERE id = ?",
         )
         .bind(now as i64)
         .bind(session_id.as_str())

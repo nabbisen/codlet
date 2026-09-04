@@ -8,5 +8,5 @@ pub mod session;
 pub mod token;
 
 pub use claim::{ClaimOutcome, classify_claim};
-pub use session::{SessionValidationOutcome, classify_session};
+pub use session::{SessionFailure, SessionValidationOutcome, classify_session};
 pub use token::{TokenConsumeOutcome, classify_token_consume};

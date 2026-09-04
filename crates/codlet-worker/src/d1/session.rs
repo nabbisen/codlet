@@ -38,7 +38,9 @@ impl D1SessionStore {
 struct ActiveRow {
     id: String,
     subject: String,
+    created_at: f64,
     expires_at: f64,
+    last_seen_at: Option<f64>,
 }
 
 impl SessionStore for D1SessionStore {
@@ -50,7 +52,7 @@ impl SessionStore for D1SessionStore {
         use worker::d1::D1Type;
         for candidate in candidates {
             let sql = format!(
-                "SELECT id, subject, expires_at FROM {t}
+                "SELECT id, subject, created_at, expires_at, last_seen_at FROM {t}
                  WHERE lookup_key = ? AND revoked_at IS NULL AND expires_at > ?
                  LIMIT 1",
                 t = self.table
@@ -64,7 +66,9 @@ impl SessionStore for D1SessionStore {
                 return Ok(Some(ActiveSessionRecord {
                     id: SessionId::new(r.id),
                     subject: SubjectId::new(r.subject),
+                    created_at: r.created_at as u64,
                     expires_at: r.expires_at as u64,
+                    last_seen_at: r.last_seen_at.map(|v| v as u64),
                 }));
             }
         }
@@ -97,6 +101,20 @@ impl SessionStore for D1SessionStore {
         use worker::d1::D1Type;
         let sql = format!(
             "UPDATE {t} SET revoked_at = ? WHERE id = ? AND revoked_at IS NULL",
+            t = self.table
+        );
+        let stmt = bind(
+            self.db.prepare(&sql),
+            &[ts(now), D1Type::Text(session_id.as_str())],
+        )?;
+        stmt.run().await.map_err(to_store_err)?;
+        Ok(())
+    }
+
+    async fn touch_session(&self, session_id: &SessionId, now: u64) -> Result<(), StoreError> {
+        use worker::d1::D1Type;
+        let sql = format!(
+            "UPDATE {t} SET last_seen_at = ? WHERE id = ?",
             t = self.table
         );
         let stmt = bind(

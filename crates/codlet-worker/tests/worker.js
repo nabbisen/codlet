@@ -31,7 +31,8 @@ CREATE TABLE IF NOT EXISTS codlet_sessions (
   key_version TEXT NOT NULL,
   subject TEXT NOT NULL,
   created_at REAL NOT NULL, expires_at REAL NOT NULL,
-  revoked_at REAL
+  revoked_at REAL,
+  last_seen_at REAL
 );
 CREATE TABLE IF NOT EXISTS codlet_form_tokens (
   lookup_key TEXT NOT NULL PRIMARY KEY,
@@ -50,6 +51,21 @@ async function migrate(db) {
   for (const stmt of MIGRATION_SQL.split(';')) {
     const s = stmt.replace(/--[^\n]*/g, '').trim();
     if (s) await db.prepare(s).run();
+  }
+  await ensureSessionLastSeenAtColumn(db);
+}
+
+// Mirrors codlet-worker's Rust migration.rs: RFC-044's last_seen_at column is
+// additive, so a codlet_sessions table created before this ran (this
+// function's own CREATE TABLE IF NOT EXISTS is a no-op on it) needs the
+// column added explicitly. D1 has no `ADD COLUMN IF NOT EXISTS`, so this
+// checks column presence first via PRAGMA table_info -- proving that pragma
+// is actually usable against a real D1 binding, not assumed from SQLite docs.
+async function ensureSessionLastSeenAtColumn(db) {
+  const { results } = await db.prepare("PRAGMA table_info('codlet_sessions')").run();
+  const hasColumn = results.some((r) => r.name === 'last_seen_at');
+  if (!hasColumn) {
+    await db.prepare('ALTER TABLE codlet_sessions ADD COLUMN last_seen_at REAL').run();
   }
 }
 
@@ -113,10 +129,40 @@ export default {
     if (url.pathname === '/sessions/find' && req.method === 'POST') {
       const b = await req.json();
       const row = await db.prepare(
-        `SELECT id, subject, expires_at FROM codlet_sessions
+        `SELECT id, subject, created_at, expires_at, last_seen_at FROM codlet_sessions
          WHERE lookup_key = ? AND revoked_at IS NULL AND expires_at > ? LIMIT 1`
       ).bind(b.lookup_key, b.now).first();
       return Response.json(row ?? null);
+    }
+
+    // POST /sessions/touch  body: {id, now}
+    // Mirrors D1SessionStore::touch_session (RFC-044).
+    if (url.pathname === '/sessions/touch' && req.method === 'POST') {
+      const b = await req.json();
+      await db.prepare(
+        'UPDATE codlet_sessions SET last_seen_at = ? WHERE id = ?'
+      ).bind(b.now, b.id).run();
+      return Response.json({ ok: true });
+    }
+
+    // POST /sessions/simulate-pre-rfc-044  body: {}
+    // Drops and recreates codlet_sessions in its pre-RFC-044 shape (no
+    // last_seen_at), so /migrate's idempotent-ALTER path can be exercised
+    // against a table that predates this column, exactly like the Rust
+    // migration.rs test does against a real SQLite pool.
+    if (url.pathname === '/sessions/simulate-pre-rfc-044' && req.method === 'POST') {
+      await db.prepare('DROP TABLE IF EXISTS codlet_sessions').run();
+      await db.prepare(
+        `CREATE TABLE codlet_sessions (
+          id TEXT NOT NULL PRIMARY KEY,
+          lookup_key TEXT NOT NULL UNIQUE,
+          key_version TEXT NOT NULL,
+          subject TEXT NOT NULL,
+          created_at REAL NOT NULL, expires_at REAL NOT NULL,
+          revoked_at REAL
+        )`
+      ).run();
+      return Response.json({ ok: true });
     }
 
     // POST /tokens/insert  body: {lookup_key, key_version, subject_kind, purpose, issued_at, expires_at}

@@ -90,6 +90,17 @@ pub enum CodeAuthEvent {
         session_id: SessionId,
     },
 
+    /// A `touch_session` write failed while updating idle-timeout bookkeeping
+    /// (RFC-044 §4.5). The request that triggered this remains authenticated
+    /// — a bookkeeping write failure must not invalidate an otherwise-valid
+    /// session. This event exists so hosts can alert on it separately.
+    ///
+    /// Event key: `session.touch.failed`
+    SessionTouchFailed {
+        /// The session record ID the touch was attempted for.
+        session_id: SessionId,
+    },
+
     /// A form-token consume returned `Replay` (idempotent second submit).
     ///
     /// Event key: `form_token.consume.replay`
@@ -133,6 +144,7 @@ impl CodeAuthEvent {
             Self::SessionIssued { .. } => "session.issue.succeeded",
             Self::SessionValidateFailed => "session.validate.failed",
             Self::SessionRevoked { .. } => "session.revoke.succeeded",
+            Self::SessionTouchFailed { .. } => "session.touch.failed",
             Self::FormTokenReplay { .. } => "form_token.consume.replay",
             Self::RateLimitHit { .. } => "rate_limit.blocked",
             Self::KeyVersionMissing { .. } => "key_provider.missing_version",

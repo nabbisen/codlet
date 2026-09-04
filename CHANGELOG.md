@@ -6,6 +6,58 @@ semantic versioning once it reaches a stable release.
 
 ## [Unreleased]
 
+### Added
+
+- **Session idle timeout (RFC-044).** `SessionManager::with_idle_timeout`
+  (opt-in, `None` by default) rejects a session once it has gone unused for
+  the configured duration, independently of its absolute expiry — the
+  realistic exposure on a shared or borrowed device is an abandoned session
+  staying valid for its full lifetime, not a cryptographic weakness. This is
+  the first mutation `SessionStore` has ever needed: a new `touch_session`
+  method records last-use time, called at most once per
+  `max(idle_timeout / 20, 30s)` of continuous activity rather than once per
+  request (proven by a write-count test, not asserted). A `touch_session`
+  failure never invalidates an otherwise-valid session — the request stays
+  authenticated and a new `CodeAuthEvent::SessionTouchFailed` audit event
+  fires instead, since a bookkeeping-write failure is a different kind of
+  problem than an invalid credential. With `idle_timeout` unset, there is no
+  new column read, no write, and no behavioural difference from before this
+  existed (proven directly, not assumed). Schema: `last_seen_at`, additive
+  with no backfill, added to all three adapters (SQLite, PostgreSQL, D1);
+  SQLite and D1 have no `ADD COLUMN IF NOT EXISTS`, so their migration
+  runners check column presence via `PRAGMA table_info` before altering a
+  pre-existing table — verified against a simulated pre-RFC-044 database on
+  both (a real SQLite pool, and live D1 via Miniflare).
+
+### Changed
+
+- **`SessionValidationOutcome::Unauthenticated` now carries a reason
+  (RFC-046).** It was a unit variant; it is now
+  `Unauthenticated { reason: SessionFailure }` with six variants — `NoCookie`,
+  `Malformed`, `NotFound`, `Expired`, `IdleTimeout`, `Revoked`. **This is a
+  breaking change: every exhaustive `match` on `SessionValidationOutcome`
+  must be updated.** Migration is mechanical —
+  `SessionValidationOutcome::Unauthenticated => { .. }` becomes
+  `SessionValidationOutcome::Unauthenticated { reason: _ } => { .. }` (or
+  match on `reason` to branch by cause). `SessionManager::validate` also now
+  takes `Option<&str>` instead of `&str`: pass the cookie's presence or
+  absence through rather than pre-filtering it host-side, so codlet — not
+  the host — can tell "no cookie" apart from "cookie present but invalid."
+  **The end-user-visible response is unchanged**: RFC-006 §13.5's collapse
+  still holds, and `SessionFailure` has no conversion to
+  `PublicSessionError` (enforced by a compile-fail test) — the new
+  information is for the host only, and its rustdoc says so explicitly:
+  `NotFound` and `Revoked` must never be echoed to an unauthenticated
+  visitor. **Known gap, disclosed rather than silently narrowed:** under the
+  current `SessionStore` contract, `find_active_session`'s single
+  active-row filter cannot distinguish "never issued" from "expired" from
+  "revoked" — all three collapse to one `None`, so `classify_session`
+  reports `NotFound` for every one of them today. `Expired` and `Revoked`
+  are defined and part of the public enum (criterion 1) but are not yet
+  reachable through a real condition (criterion 3's standard for the other
+  four variants); see the RFC-046 review request for the escalation this
+  raises about `SessionStore`'s contract.
+
 ## [0.19.0] — 2026-09-04
 
 ### Removed

@@ -42,6 +42,28 @@ describe("migration", () => {
     const res = await post("/migrate", {}) as { ok: boolean };
     expect(res.ok).toBe(true);
   });
+
+  it("RFC-044: adds last_seen_at to a pre-existing codlet_sessions table", async () => {
+    // Simulate a database created before RFC-044 (no last_seen_at column),
+    // then run the real /migrate path -- proving PRAGMA table_info and the
+    // idempotent ALTER TABLE both work against a real D1 binding, not just
+    // documented SQLite behaviour.
+    await post("/sessions/simulate-pre-rfc-044", {});
+    const res = await post("/migrate", {}) as { ok: boolean };
+    expect(res.ok).toBe(true);
+
+    // The column must now exist and be usable: insert a row (leaving
+    // last_seen_at unset, as insert_session always does) and read it back.
+    const id = `sess-migrated-${Date.now()}`;
+    const lk = id.padEnd(64, "x");
+    await post("/sessions/insert", { id, lookup_key: lk, key_version: "v1", subject: "carol", created_at: NOW, expires_at: LATER });
+    const row = await post("/sessions/find", { lookup_key: lk, now: NOW }) as { last_seen_at: number | null } | null;
+    expect(row?.last_seen_at ?? null).toBeNull();
+
+    // Migrating again (the ALTER path already applied) must still not throw.
+    const res2 = await post("/migrate", {}) as { ok: boolean };
+    expect(res2.ok).toBe(true);
+  });
 });
 
 // ── D1CodeStore ───────────────────────────────────────────────────────────────
@@ -112,6 +134,18 @@ describe("D1SessionStore", () => {
     await post("/sessions/insert", { id: `exp-${Date.now()}`, lookup_key: lk, key_version: "v1", subject: "bob", created_at: NOW - 7200, expires_at: NOW - 1 });
     const row = await post("/sessions/find", { lookup_key: lk, now: NOW });
     expect(row).toBeNull();
+  });
+
+  it("RFC-044: newly inserted session has no last_seen_at until touched", async () => {
+    const id = `sess-touch-${Date.now()}`;
+    const lk = id.padEnd(64, "x");
+    await post("/sessions/insert", { id, lookup_key: lk, key_version: "v1", subject: "dave", created_at: NOW, expires_at: LATER });
+    const before = await post("/sessions/find", { lookup_key: lk, now: NOW }) as { last_seen_at: number | null };
+    expect(before.last_seen_at ?? null).toBeNull();
+
+    await post("/sessions/touch", { id, now: NOW + 10 });
+    const after = await post("/sessions/find", { lookup_key: lk, now: NOW }) as { last_seen_at: number | null };
+    expect(after.last_seen_at).toBe(NOW + 10);
   });
 });
 
