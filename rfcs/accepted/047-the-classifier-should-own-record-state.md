@@ -1,6 +1,6 @@
 # RFC-047: The Classifier Should Own Record State, Not the Adapter's WHERE Clause
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Target milestone:** M6
 - **Primary crate(s):** `codlet`, all four adapters, `codlet-conformance`
 - **Source basis:** RFC-046 review finding §5; RFC-044 §4.3's stated principle
@@ -154,17 +154,20 @@ to one response.
    project has now written down twice why centralising this rule is correct.
 4. **Sessions first.** Rejected — §3.
 
-## 8. Open questions
+## 8. Open questions — resolved
 
-1. Should the classifier's decision order be fixed (revoked before expired
-   before idle) since a record can be several at once? Recommend yes, and
-   recommend **revoked first** — it is the only one an operator caused
-   deliberately, and it is the most useful thing to see in a log.
-2. Should adapters keep their WHERE-clause filters as defence in depth?
-   Recommend **no**: a filter that still excludes rows makes the classifier
-   untestable against real data, and two enforcement points that disagree is
-   worse than one that is wrong. This deserves the owner's attention as the
-   least obvious call in the RFC.
+**Both resolved by owner acceptance, 2026-09-05**, taking the RFC with its
+recommendations.
+
+1. **Decision order is fixed: revoked, then expired, then used, then idle.** A
+   record can be several at once. Revoked comes first because it is the only
+   state an operator caused deliberately, and it is the most useful thing to see
+   in a log during an incident.
+2. **Adapters do not keep their filters as defence in depth.** A filter that
+   still excludes rows makes the classifier untestable against real data, and
+   two enforcement points that can disagree is worse than one that is wrong.
+   Flagged at acceptance as the least obvious call in this RFC; recorded here so
+   a later reader finds the reasoning rather than re-deriving it.
 
 ## 9. Acceptance criteria
 

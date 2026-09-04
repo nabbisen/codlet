@@ -11,19 +11,18 @@ inside each file mirrors it.
 
 Counts below are derived from the filesystem, not hand-maintained.
 
-## Proposed (1)
+## Proposed (0)
 
-| ID | Title | Milestone |
-|----|-------|-----------|
-| [047](./proposed/047-the-classifier-should-own-record-state.md) | The Classifier Should Own Record State, Not the Adapter's WHERE Clause | M6 |
+No open RFCs.
 
-## Accepted (3)
+## Accepted (4)
 
 | ID | Title | Milestone |
 |----|-------|-----------|
 | [044](./accepted/044-session-inactivity-timeout.md) | Session Inactivity Timeout | M6 |
 | [045](./accepted/045-session-rotation.md) | Session Rotation on Privilege Change | M6 |
 | [046](./accepted/046-host-visible-session-failure-reasons.md) | Host-Visible Session Failure Reasons | M6 |
+| [047](./accepted/047-the-classifier-should-own-record-state.md) | The Classifier Should Own Record State, Not the Adapter's WHERE Clause | M6 |
 
 ## Implemented (43)
 
