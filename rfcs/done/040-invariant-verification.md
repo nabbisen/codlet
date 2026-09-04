@@ -1,6 +1,6 @@
 # RFC-040: Invariant Verification — Every Guard Observed Failing
 
-- **Status:** Accepted
+- **Status:** Implemented (Unreleased)
 - **Target milestone:** M5
 - **Primary crate(s):** `xtask`, `codlet`, workspace CI
 - **Source basis:** RFC-036 §3.4; M4 post-release evaluation; `ROADMAP.md` M5-5 (revised)

@@ -1,6 +1,6 @@
 # RFC-042: Retire `cookie-attrs-present` — a Text Grep Cannot Assert Emitted Behaviour
 
-- **Status:** Accepted
+- **Status:** Implemented (Unreleased)
 - **Target milestone:** M5
 - **Primary crate(s):** `xtask`, `docs`
 - **Source basis:** RFC-040 review finding C-1, 2026-09-03

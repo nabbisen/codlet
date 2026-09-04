@@ -1,6 +1,6 @@
 # RFC-041: Property and Distribution Testing — and Guarding INV-4
 
-- **Status:** Accepted
+- **Status:** Implemented (Unreleased)
 - **Target milestone:** M5
 - **Primary crate(s):** `codlet`
 - **Source basis:** `ROADMAP.md` M5-2/M5-3/M5-4; RFC-015 (partial); RFC-040 §3.3 (INV-4 left open)

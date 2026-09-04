@@ -15,17 +15,11 @@ Counts below are derived from the filesystem, not hand-maintained.
 
 No open RFCs.
 
-## Accepted (5)
+## Accepted (0)
 
-| ID | Title | Milestone |
-|----|-------|-----------|
-| [039](./accepted/039-supply-chain-scanning.md) | Supply-Chain Scanning | M5 |
-| [040](./accepted/040-invariant-verification.md) | Invariant Verification — Every Guard Observed Failing | M5 |
-| [041](./accepted/041-property-and-distribution-testing.md) | Property and Distribution Testing — and Guarding INV-4 | M5 |
-| [043](./accepted/043-alphabet-symbols-must-be-normalization-fixed-points.md) | `Alphabet::new` Must Reject Symbols That Normalization Would Alter | M5 |
-| [042](./accepted/042-retire-the-cookie-attrs-gate.md) | Retire `cookie-attrs-present` — a Text Grep Cannot Assert Emitted Behaviour | M5 |
+No RFCs awaiting implementation.
 
-## Implemented (38)
+## Implemented (43)
 
 | ID | Title | Version |
 |----|-------|---------|
@@ -67,6 +61,11 @@ No open RFCs.
 | [036](./done/036-gate-integrity-ci-conformance-and-msrv.md) | Gate Integrity — CI Conformance, MSRV Enforcement, and Release-Discipline Accuracy | v0.18.0 |
 | [037](./done/037-withdraw-codlet-axum-framework-adapter.md) | Withdraw the `codlet-axum` Framework Adapter from Planned Scope | v0.18.0 |
 | [038](./done/038-migration-runner-must-not-parse-sql.md) | The Migration Runner Must Not Parse SQL | v0.18.0 |
+| [039](./done/039-supply-chain-scanning.md) | Supply-Chain Scanning | *(Unreleased)* |
+| [040](./done/040-invariant-verification.md) | Invariant Verification — Every Guard Observed Failing | *(Unreleased)* |
+| [041](./done/041-property-and-distribution-testing.md) | Property and Distribution Testing — and Guarding INV-4 | *(Unreleased)* |
+| [042](./done/042-retire-the-cookie-attrs-gate.md) | Retire `cookie-attrs-present` — a Text Grep Cannot Assert Emitted Behaviour | *(Unreleased)* |
+| [043](./done/043-alphabet-symbols-must-be-normalization-fixed-points.md) | `Alphabet::new` Must Reject Symbols That Normalization Would Alter | *(Unreleased)* |
 
 RFC-002 describes `crates/codlet-axum` and `crates/codlet-test` in its
 workspace layout; neither was built. `codlet-test`'s role was filled by

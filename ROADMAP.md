@@ -107,7 +107,26 @@ the Version column in `rfcs/README.md` as part of the release commit.
 
 ---
 
-## M5 — Security hardening
+## M5 — Security hardening · **COMPLETE 2026-09-04**
+
+**Evidence:** CI run
+[33835821327](https://github.com/nabbisen/codlet/actions/runs/33835821327) on
+`03d0924` — 22 jobs, 22 green. Five RFCs delivered: 039 (supply-chain
+scanning), 040 (invariant verification), 041 (property and distribution
+testing), 042 (retire `cookie-attrs-present`), 043 (`Alphabet::new`
+fixed-point validation). All in `done/` at `Implemented (Unreleased)` pending
+the 0.19.0 release.
+
+**What M5 found beyond its scope.** A release gate that could not detect the
+regression it existed to prevent, retired rather than repaired. A supply-chain
+policy enforcing a narrower graph than it audited — which, once corrected,
+surfaced RUSTSEC-2026-0258 in the dependency tree. And a public constructor
+that accepted alphabets guaranteeing every issued code would be unredeemable,
+found by a property test written to look for exactly that.
+
+**Every invariant INV-1…INV-8 now has a guard and a negative test that has been
+observed failing.** No row in the threat model's table is open.
+
 
 **Theme:** close the gaps the threat model and `ops-security.md` already name.
 
