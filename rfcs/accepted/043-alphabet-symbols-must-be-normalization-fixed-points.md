@@ -1,6 +1,6 @@
 # RFC-043: `Alphabet::new` Must Reject Symbols That Normalization Would Alter
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Target milestone:** M5 (scope addition — owner decision required)
 - **Primary crate(s):** `codlet`
 - **Source basis:** RFC-041 property P-3, which fired against real `Alphabet::new`
@@ -105,13 +105,11 @@ affected.
    constructor that accepts a configuration guaranteeing total failure is a
    defect regardless of whether anyone has hit it yet.
 
-## 8. Open question for the owner
+## 8. Scope — resolved
 
-**Scope.** This is an addition to M5, which was otherwise complete after
-RFC-041. It is small and is the direct product of M5's own work — the property
-test found it. Recommended: fold into M5 and ship with the rest, rather than
-carrying an open INV-4 gap into M6. Surfaced rather than absorbed, as RFC-038
-was in M4.
+~~Open question: fold into M5, or defer?~~ **Resolved: accepted into M5 by the
+owner, 2026-09-04.** M5 does not close carrying an open INV-4 gap. Recorded in
+`ROADMAP.md` as M5-6.
 
 ## 9. Acceptance criteria
 

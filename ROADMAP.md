@@ -125,6 +125,7 @@ an open operational risk.
 | M5-3 | Distribution tests for code generation (rejection sampling / modulo-bias evidence) | RFC-015 completion |
 | ~~M5-4~~ | ~~Fuzz targets, CI smoke mode~~ — **withdrawn from M5 scope**, owner decision 2026-09-03 (RFC-041 §4, §8.1). Deferred, not dropped: revisit when codlet acquires a component that parses untrusted structured input. | RFC-041 |
 | M5-5 | Threat-model re-audit against as-built code; INV-1…8 each mapped to a named test or gate | RFC-015 completion |
+| M5-6 | `Alphabet::new` rejects symbols that normalization would alter — **added mid-milestone**, owner decision 2026-09-04. Found by RFC-041's property P-3 firing against real code; M5 does not close with an open INV-4 gap. | RFC-043 |
 
 **Exit criteria**
 

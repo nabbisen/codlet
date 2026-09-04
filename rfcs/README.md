@@ -11,19 +11,18 @@ inside each file mirrors it.
 
 Counts below are derived from the filesystem, not hand-maintained.
 
-## Proposed (1)
+## Proposed (0)
 
-| ID | Title | Milestone |
-|----|-------|-----------|
-| [043](./proposed/043-alphabet-symbols-must-be-normalization-fixed-points.md) | `Alphabet::new` Must Reject Symbols That Normalization Would Alter | M5 |
+No open RFCs.
 
-## Accepted (4)
+## Accepted (5)
 
 | ID | Title | Milestone |
 |----|-------|-----------|
 | [039](./accepted/039-supply-chain-scanning.md) | Supply-Chain Scanning | M5 |
 | [040](./accepted/040-invariant-verification.md) | Invariant Verification — Every Guard Observed Failing | M5 |
 | [041](./accepted/041-property-and-distribution-testing.md) | Property and Distribution Testing — and Guarding INV-4 | M5 |
+| [043](./accepted/043-alphabet-symbols-must-be-normalization-fixed-points.md) | `Alphabet::new` Must Reject Symbols That Normalization Would Alter | M5 |
 | [042](./accepted/042-retire-the-cookie-attrs-gate.md) | Retire `cookie-attrs-present` — a Text Grep Cannot Assert Emitted Behaviour | M5 |
 
 ## Implemented (38)
