@@ -11,9 +11,13 @@ inside each file mirrors it.
 
 Counts below are derived from the filesystem, not hand-maintained.
 
-## Proposed (0)
+## Proposed (3)
 
-No open RFCs.
+| ID | Title | Milestone |
+|----|-------|-----------|
+| [044](./proposed/044-session-inactivity-timeout.md) | Session Inactivity Timeout | M6 |
+| [045](./proposed/045-session-rotation.md) | Session Rotation on Privilege Change | M6 |
+| [046](./proposed/046-host-visible-session-failure-reasons.md) | Host-Visible Session Failure Reasons | M6 |
 
 ## Accepted (0)
 

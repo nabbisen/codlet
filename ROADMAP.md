@@ -208,7 +208,22 @@ counted as verified on the strength of a test's existence alone.
 **Theme:** the work the handoff bundle calls "RFC-F". It has never existed as an
 RFC; M6 is where it becomes one.
 
-**Scope candidates** (each needs its own RFC before any implementation):
+**RFCs drafted 2026-09-04** — RFC-044 (inactivity timeout), RFC-045 (rotation
+on privilege change), RFC-046 (host-visible failure reasons). Sequenced: 044
+first, since it introduces the first `SessionStore` mutation that 045 builds on;
+046 is independent and may run in parallel.
+
+**Assurance levels: recommended for withdrawal.** The original scope listed
+"authenticator assurance levels" as a fourth item. codlet has exactly one
+authenticator — a one-time code delivered out of band. NIST AAL is a vocabulary
+for comparing authenticators of differing strength, and with one mechanism an
+assurance-level field records a constant. It would be a placeholder for an IdP
+codlet has declined to become (RFC-001), and an unused enum in a security API
+invites hosts to infer guarantees that nothing enforces. **Owner decision
+required**: withdraw formally, as `codlet-axum` was under RFC-037, or keep it in
+scope with a stated use case.
+
+**Original scope candidates** (retained for the record):
 
 - inactivity timeout distinct from absolute expiry;
 - session rotation — re-issue the session secret on privilege change, and
