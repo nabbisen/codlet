@@ -11,9 +11,11 @@ inside each file mirrors it.
 
 Counts below are derived from the filesystem, not hand-maintained.
 
-## Proposed (0)
+## Proposed (1)
 
-No open RFCs.
+| ID | Title | Milestone |
+|----|-------|-----------|
+| [043](./proposed/043-alphabet-symbols-must-be-normalization-fixed-points.md) | `Alphabet::new` Must Reject Symbols That Normalization Would Alter | M5 |
 
 ## Accepted (4)
 
