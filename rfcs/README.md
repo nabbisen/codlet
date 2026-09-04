@@ -11,9 +11,11 @@ inside each file mirrors it.
 
 Counts below are derived from the filesystem, not hand-maintained.
 
-## Proposed (0)
+## Proposed (1)
 
-No open RFCs.
+| ID | Title | Milestone |
+|----|-------|-----------|
+| [047](./proposed/047-the-classifier-should-own-record-state.md) | The Classifier Should Own Record State, Not the Adapter's WHERE Clause | M6 |
 
 ## Accepted (3)
 
