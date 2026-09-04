@@ -107,7 +107,7 @@ the Version column in `rfcs/README.md` as part of the release commit.
 
 ---
 
-## M5 — Security hardening · **COMPLETE 2026-09-04**
+## M5 — Security hardening · **COMPLETE — RELEASED 0.19.0, 2026-09-04**
 
 **Evidence:** CI run
 [33835821327](https://github.com/nabbisen/codlet/actions/runs/33835821327) on
