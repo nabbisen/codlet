@@ -112,24 +112,23 @@ fn p5_exact_uniformity_for_default_alphabet() {
 
 /// P-3: for any `Alphabet` -- not just the safe default -- every accepted
 /// symbol must be a normalization fixed-point, or the issue and redeem paths
-/// diverge (INV-4, RFC-041 §2.1). `Alphabet::new` currently validates only
-/// length, ASCII-ness, and uniqueness; it does not check this. Generates
-/// arbitrary valid-per-current-validation alphabets (unique ASCII bytes,
-/// length 2..=20) and checks every symbol against `normalize`.
+/// diverge (INV-4, RFC-041 §2.1). `Alphabet::new` now enforces this at
+/// construction (RFC-043), so this generator can no longer assume every
+/// unique-ASCII-byte set it draws is accepted -- it filters to the sets that
+/// actually construct, via `Alphabet::new` itself, rather than assuming a
+/// shape. Length 2..=20 unique ASCII bytes drawn, as before RFC-043.
 fn arbitrary_ascii_alphabet() -> impl Strategy<Value = Alphabet> {
-    proptest::collection::hash_set(0u8..128, 2..=20).prop_map(|set| {
-        let symbols: Vec<u8> = set.into_iter().collect();
-        Alphabet::new(&symbols)
-            .expect("hash_set guarantees >=2 unique ASCII bytes, which Alphabet::new accepts")
-    })
+    proptest::collection::hash_set(0u8..128, 2..=20).prop_filter_map(
+        "Alphabet::new rejects non-fixed-point symbols (RFC-043)",
+        |set| {
+            let symbols: Vec<u8> = set.into_iter().collect();
+            Alphabet::new(&symbols).ok()
+        },
+    )
 }
 
 proptest! {
     #[test]
-    #[ignore = "RFC-041 P-3: fires against real Alphabet::new -- see RFC-041 §8.2 \
-                and the RFC-041 review request for the reported finding and \
-                symbol set. Left ignored (not narrowed, not fixed) pending an \
-                architect decision on Alphabet::new vs. issue_code (handoff §6)."]
     fn p3_every_accepted_symbol_is_a_normalization_fixed_point(a in arbitrary_ascii_alphabet()) {
         for &sym in a.symbols() {
             let s = (sym as char).to_string();
@@ -142,4 +141,41 @@ proptest! {
             );
         }
     }
+}
+
+// ── RFC-043: Alphabet::new rejects non-fixed-point symbols ─────────────────
+
+#[test]
+fn rejects_lowercase_symbol() {
+    assert_eq!(
+        Alphabet::new(b"Aa"),
+        Err(PolicyError::AlphabetNotFixedPoint { byte: b'a' })
+    );
+}
+
+#[test]
+fn rejects_hyphen_symbol() {
+    assert_eq!(
+        Alphabet::new(b"A-"),
+        Err(PolicyError::AlphabetNotFixedPoint { byte: b'-' })
+    );
+}
+
+#[test]
+fn rejects_ascii_whitespace_symbol() {
+    // Tab: the byte RFC-041's P-3 found in an earlier run.
+    assert_eq!(
+        Alphabet::new(b"A\t"),
+        Err(PolicyError::AlphabetNotFixedPoint { byte: b'\t' })
+    );
+}
+
+#[test]
+fn unambiguous_still_constructs() {
+    // The regression that would matter most if the check were too strict.
+    assert!(Alphabet::new(DEFAULT_ALPHABET).is_ok());
+    assert_eq!(
+        Alphabet::new(DEFAULT_ALPHABET).unwrap(),
+        Alphabet::unambiguous()
+    );
 }

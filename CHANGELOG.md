@@ -97,6 +97,25 @@ semantic versioning once it reaches a stable release.
   row, not omitted. `docs/src/threat-model.md`'s invariant table gains Guard
   and Negative-test columns for all eight invariants.
 
+### Fixed
+
+- **`Alphabet::new` now rejects symbols normalization would alter (RFC-043).**
+  RFC-041's property P-3 fired against real production code: `Alphabet::new`
+  validated length, ASCII-ness, and byte uniqueness, but not that every
+  symbol survives `normalize` unchanged. A lowercase letter, `-`, or ASCII
+  whitespace byte passed construction while being unable to round-trip —
+  code generated from such an alphabet would be stored under one lookup key
+  and looked up under another, permanently unredeemable (INV-4). A new error
+  variant, `PolicyError::AlphabetNotFixedPoint { byte }`, names the
+  offending byte. **Breaking in the sense that previously-accepted
+  `Alphabet::new` input is now refused** — acceptable pre-v1, and every
+  rejected input was already broken: no working deployment can be affected.
+  `Alphabet::unambiguous()` and `DEFAULT_ALPHABET` are unaffected and
+  unchanged. RFC-041's P-3 property (previously `#[ignore]`d pending this
+  decision) now passes unconditionally, since the invariant is enforced
+  structurally at construction rather than holding only by convention.
+  `docs/src/threat-model.md`'s INV-4 row no longer carries an open gap.
+
 ## [0.18.0] — 2026-09-03
 
 ### Fixed

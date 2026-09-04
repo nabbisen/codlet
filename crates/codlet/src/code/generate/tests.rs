@@ -71,11 +71,10 @@ fn validate_accepts_normalizes_and_rejects() {
 // ── RFC-041: INV-4 properties P-2 (issue/redeem agreement) and P-6 (rejection) ─
 
 /// A subsequence of uppercase ASCII letters and digits: normalization
-/// fixed-points, so `Alphabet::new` accepts them and (unlike P-3's arbitrary
-/// ASCII alphabets) using them for generation cannot itself violate INV-4.
-/// P-2 checks "for any [safe] policy"; P-3 is the general form that checks
-/// `Alphabet::new`'s own acceptance boundary, which is broader and fires
-/// (see `code::alphabet::tests::p3_*`, ignored, reported separately).
+/// fixed-points, so `Alphabet::new` accepts them. P-2 checks "for any
+/// [safe] policy"; P-3 (`code::alphabet::tests::p3_*`) is the general form,
+/// checking every symbol `Alphabet::new` can accept at all -- which, since
+/// RFC-043, is guaranteed to be a normalization fixed-point by construction.
 fn safe_alphabet_symbols() -> impl Strategy<Value = Vec<u8>> {
     let pool: Vec<u8> = (b'A'..=b'Z').chain(b'0'..=b'9').collect();
     proptest::sample::subsequence(pool, 2..=36)

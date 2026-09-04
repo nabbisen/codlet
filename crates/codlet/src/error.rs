@@ -45,6 +45,14 @@ pub enum PolicyError {
     /// Alphabet contains a non-ASCII or otherwise unsupported byte.
     #[error("alphabet contains an unsupported (non-ASCII) symbol")]
     AlphabetNotAscii,
+    /// Alphabet contains a symbol that normalization would alter (e.g. a
+    /// lowercase letter, `-`, or ASCII whitespace). A code generated with such
+    /// a symbol could never match itself on the redeem path (INV-4, RFC-043).
+    #[error("alphabet symbol {byte:#04x} is not stable under normalization")]
+    AlphabetNotFixedPoint {
+        /// The offending byte.
+        byte: u8,
+    },
     /// Requested code length is below the secure minimum and no explicit
     /// short-code opt-in was used.
     #[error("code length {got} is below the secure minimum of {min}")]

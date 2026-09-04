@@ -36,6 +36,14 @@ impl Alphabet {
         if !symbols.iter().all(u8::is_ascii) {
             return Err(PolicyError::AlphabetNotAscii);
         }
+        // Reject symbols normalization would alter: a code containing one
+        // could never match itself on the redeem path (INV-4, RFC-043).
+        for &byte in symbols {
+            let s = (byte as char).to_string();
+            if super::normalize::normalize(&s) != s {
+                return Err(PolicyError::AlphabetNotFixedPoint { byte });
+            }
+        }
         // Reject duplicates: a repeated symbol would be over-weighted.
         for (i, &b) in symbols.iter().enumerate() {
             if symbols[i + 1..].contains(&b) {
