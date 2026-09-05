@@ -26,6 +26,7 @@ where
     test_exactly_one_claim_winner(&factory).await;
     test_scope_revoke_returned_and_classifier_rejects(&factory).await;
     test_wrong_scope_does_not_revoke(&factory).await;
+    test_claim_code_scope_metacharacters_are_opaque(&factory).await;
 }
 
 async fn test_insert_and_find_redeemable<F, Fut, S>(factory: &F)
@@ -310,4 +311,111 @@ where
         found.is_some(),
         "wrong scope revoke: record must still be redeemable"
     );
+}
+
+/// Moved into the shared suite from RFC-048's adapter-local SQL-injection
+/// regression tests (RFC-048 follow-up handoff). A source-pattern gate
+/// (`no-interpolated-sql-values`) proves nobody wrote a *known-bad* shape; it
+/// says nothing about an adapter that builds SQL a different way, or a store
+/// that isn't scanned at all. Only a behavioural test like this one is a
+/// claim about adapters in general -- which is what RFC-023 conformance is
+/// supposed to certify. Not a duplicate of the adapter-local tests: those
+/// also cover backend-specific SQL shape (bind ordering, `$N` vs. `?`), which
+/// this store-agnostic test cannot see.
+async fn test_claim_code_scope_metacharacters_are_opaque<F, Fut, S>(factory: &F)
+where
+    F: Fn() -> Fut,
+    Fut: Future<Output = S>,
+    S: CodeStore + Send + Sync + 'static,
+{
+    let store = factory().await;
+    // "victim": the code an attacker's claim targets. "other": an unrelated
+    // code in a different scope, which must never be touched by any of the
+    // payloads below.
+    store
+        .insert_code(code_record("victim", "victimsec", LATER, Some("tenant-A")))
+        .await
+        .unwrap();
+    store
+        .insert_code(code_record("other", "othersec", LATER, Some("tenant-B")))
+        .await
+        .unwrap();
+
+    async fn assert_unused<S: CodeStore>(store: &S, secret: &str, label: &str) {
+        let r = store
+            .find_redeemable(&[code_lk(secret)], NOW, None)
+            .await
+            .unwrap()
+            .unwrap_or_else(|| panic!("{label} code must still exist"));
+        assert!(r.used_at.is_none(), "{label} code must not have been used");
+    }
+
+    // Mass-update payload: matches every row if treated as SQL rather than an
+    // opaque string.
+    let mass_payload = "x\" OR 1=1 --";
+    let outcome = store
+        .claim_code(&ClaimRequest {
+            code_id: &CodeId::new("victim".into()),
+            subject: &SubjectId::new("attacker".into()),
+            now: NOW,
+            purpose: None,
+            scope: Some(mass_payload),
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        outcome,
+        ClaimOutcome::Lost,
+        "mass-update metacharacter payload must not win"
+    );
+    assert_unused(&store, "victimsec", "victim").await;
+    assert_unused(&store, "othersec", "other").await;
+
+    // Single-row payload targeting "other" by id: the one that returned a
+    // silent Won (no InvariantViolation, no error at all) before RFC-048's
+    // fix, because exactly one row matched.
+    let single_row_payload = "x\" OR id='other' --";
+    let outcome = store
+        .claim_code(&ClaimRequest {
+            code_id: &CodeId::new("victim".into()),
+            subject: &SubjectId::new("attacker".into()),
+            now: NOW,
+            purpose: None,
+            scope: Some(single_row_payload),
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        outcome,
+        ClaimOutcome::Lost,
+        "single-row metacharacter payload must not win -- this is the \
+         dangerous variant: it returned Won silently before the fix"
+    );
+    assert_unused(&store, "victimsec", "victim").await;
+    assert_unused(&store, "othersec", "other").await;
+
+    // A suite that only proves rejection would pass against an adapter that
+    // rejects everything -- confirm a legitimate scope still claims.
+    let outcome = store
+        .claim_code(&ClaimRequest {
+            code_id: &CodeId::new("victim".into()),
+            subject: &SubjectId::new("legit-user".into()),
+            now: NOW,
+            purpose: None,
+            scope: Some("tenant-A"),
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        outcome,
+        ClaimOutcome::Won,
+        "a legitimate scope value must still claim successfully"
+    );
+    let victim = store
+        .find_redeemable(&[code_lk("victimsec")], NOW, None)
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(victim.used_at.is_some());
+    assert_unused(&store, "othersec", "other").await;
 }

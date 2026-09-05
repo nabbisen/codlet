@@ -29,6 +29,26 @@ semantic versioning once it reaches a stable release.
   pre-existing table — verified against a simulated pre-RFC-044 database on
   both (a real SQLite pool, and live D1 via Miniflare).
 
+- **`claim_code`'s SQL-metacharacter regression moved into the shared
+  conformance suite (RFC-048 follow-up).** RFC-048's fix was proven on the
+  adapters that existed when it landed; a source-scanning release gate
+  (`no-interpolated-sql-values`) proves nobody wrote the known-bad pattern,
+  but says nothing about an adapter that builds SQL a different way. A new
+  `codlet-conformance` test asserts a `scope` containing SQL metacharacters
+  (both the mass-update payload `x" OR 1=1 --` and the single-row payload
+  `x" OR id='<other>' --` — the one that returned a silent `Won` with no
+  error before the fix) can neither win the claim nor touch any row other
+  than a legitimately matching one, and that a legitimate scope value still
+  claims correctly. Runs for in-memory, SQLite, PostgreSQL, and D1
+  (Miniflare); confirmed to actually fail by temporarily reintroducing the
+  pre-fix interpolation and observing both payloads reproduce their original
+  failure signatures (a multi-row `InvariantViolation` and a silent `Won`,
+  respectively) against SQLite and D1 before reverting. The in-memory store
+  was checked, not assumed safe: it passes, since its `claim_code` compares
+  `scope` as an opaque string with no SQL involved at all. The adapter-local
+  regression tests from RFC-048 are unchanged and still pass — this is
+  additional coverage, not a replacement.
+
 ### Changed
 
 - **`SessionValidationOutcome::Unauthenticated` now carries a reason
