@@ -134,9 +134,13 @@ The gate set CI actually runs:
     --all-targets` built on Rust 1.85 (`msrv` job); `cargo check -p codlet-sqlx
     --all-targets` built on Rust 1.94 (`msrv-sqlx` job) — see the MSRV table
     above for why the floor differs
-16. `cargo run -p xtask -- release-check` (4 static security gates, documented
-    in `xtask/src/main.rs`)
-17. `cargo run -p xtask -- self-test` — proves each of those 4 gates actually
+16. `cargo run -p xtask -- release-check` (5 static security gates, documented
+    in `xtask/src/main.rs`), including `no-interpolated-sql-values`
+    (RFC-048): rejects a value interpolated into a SQL clause via `format!`
+    — every `purpose`/`scope` comparison in `claim_code` must bind a
+    parameter instead, the exact shape of a critical SQL injection this gate
+    exists to keep from recurring
+17. `cargo run -p xtask -- self-test` — proves each of those 5 gates actually
     fails against a fixture that deliberately violates the pattern it exists
     to catch (`xtask/fixtures/`); blocking (RFC-040 §3.2)
 18. `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps`

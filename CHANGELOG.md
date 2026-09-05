@@ -87,6 +87,42 @@ semantic versioning once it reaches a stable release.
   `claim_code`, and ships only once this step has run green in CI against
   all four adapters (RFC-047 §4.2).
 
+### Security
+
+- **Critical: SQL injection in `claim_code` via `purpose`/`scope` (RFC-048).**
+  All three SQL adapters (`codlet-sqlx` SQLite, `codlet-sqlx` PostgreSQL,
+  `codlet-worker` D1) built part of `claim_code`'s `UPDATE` statement with
+  `format!("{:?}", ...)` on the host-supplied `purpose`/`scope` strings
+  instead of binding them as parameters. `{:?}` on a `&str` is Rust escaping,
+  not SQL escaping: a `scope` value containing a double quote could close
+  the intended string literal and inject arbitrary SQL into the `WHERE`
+  clause, bypassing the scope isolation DEC-009 documents as a guarantee.
+  **Confirmed exploitable** against SQLite with the literal payload
+  `x" OR 1=1 --`: a claim targeting one code additionally marked an unrelated
+  code — in a different scope — as used, attributed to the attacker's
+  subject. **Confirmed exploitable against D1 the same way**, verified with
+  the identical payload against a real D1 binding via Miniflare (previously
+  presumed but unverified). **PostgreSQL is fixed but its exploitability
+  before the fix was not independently tested in this round** — no local
+  Docker; CI's `postgres-test` job is the evidence for both the fix and
+  whatever the pre-fix behavior would have been.
+  Fixed in all three adapters: `claim_code` now selects from a fixed set of
+  complete, constant SQL strings and always binds `purpose`/`scope` as
+  parameters — no fragment of the query is ever assembled from host data.
+  `claim_code`'s guard conditions (`used_at IS NULL AND revoked_at IS NULL
+  AND expires_at > ?`) and INV-5's conditional-UPDATE semantics are
+  otherwise unchanged. No input validation was added to `purpose`/`scope` —
+  they remain opaque host-owned strings (RFC-001); the fix is correct
+  parameterization, not a character allowlist. A new `xtask` release gate,
+  `no-interpolated-sql-values`, bans this shape of interpolation going
+  forward — confirmed (before the fix was applied) to fire on every real
+  site in the vulnerable tree, and confirmed not to false-positive on the
+  four legitimate SQL interpolations this project actually uses (a
+  configured table name, PostgreSQL's numbered placeholders, a typed
+  `LIMIT`, and a pre-built `WHERE` fragment). A GitHub Security Advisory
+  will be published alongside the patch release; see the release notes for
+  the affected version range.
+
 ## [0.19.0] — 2026-09-04
 
 ### Removed

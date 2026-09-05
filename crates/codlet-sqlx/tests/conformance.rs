@@ -33,6 +33,61 @@ mod sqlite_tests {
         codlet_conformance::run_code_store_conformance(fresh_store).await;
     }
 
+    /// RFC-048 regression: `claim_code`'s `scope` parameter must be bound,
+    /// not interpolated. The literal payload from the finding -- not a
+    /// sanitised approximation -- must neither claim the targeted code nor
+    /// touch any other row.
+    #[tokio::test]
+    async fn claim_code_scope_is_bound_not_interpolated() {
+        const PAYLOAD: &str = "x\" OR 1=1 --";
+
+        let store = fresh_store().await;
+        store
+            .insert_code(code_record("victim", "victimsec", LATER, Some("tenant-A")))
+            .await
+            .unwrap();
+        store
+            .insert_code(code_record("other", "othersec", LATER, Some("tenant-B")))
+            .await
+            .unwrap();
+
+        let outcome = store
+            .claim_code(&ClaimRequest {
+                code_id: &CodeId::new("victim".into()),
+                subject: &codlet::secret::SubjectId::new("attacker".into()),
+                now: NOW,
+                purpose: None,
+                scope: Some(PAYLOAD),
+            })
+            .await
+            .unwrap();
+        assert_eq!(
+            outcome,
+            codlet::state::ClaimOutcome::Lost,
+            "a scope that matches no real row must not win the claim"
+        );
+
+        // Neither code was touched: both must still be redeemable.
+        let victim = store
+            .find_redeemable(&[code_lk("victimsec")], NOW, None)
+            .await
+            .unwrap()
+            .expect("victim code must still exist");
+        assert!(
+            victim.used_at.is_none(),
+            "victim code must not have been marked used"
+        );
+        let other = store
+            .find_redeemable(&[code_lk("othersec")], NOW, None)
+            .await
+            .unwrap()
+            .expect("other code must still exist");
+        assert!(
+            other.used_at.is_none(),
+            "an unrelated row in a different scope must not have been touched"
+        );
+    }
+
     // ── Session store ─────────────────────────────────────────────────────────────
 
     #[tokio::test]
@@ -329,6 +384,62 @@ mod postgres_tests {
     #[tokio::test]
     async fn postgres_code_store_conformance() {
         codlet_conformance::run_code_store_conformance(fresh_pg_store).await;
+    }
+
+    /// RFC-048 regression: `claim_code`'s `scope` parameter must be bound,
+    /// not interpolated. The literal payload from the finding -- not a
+    /// sanitised approximation -- must neither claim the targeted code nor
+    /// touch any other row. PostgreSQL's `"…"` quoting semantics differ from
+    /// SQLite's, but binding removes that distinction entirely: the payload
+    /// is compared as an opaque string value regardless of its content.
+    #[tokio::test]
+    async fn claim_code_scope_is_bound_not_interpolated() {
+        const PAYLOAD: &str = "x\" OR 1=1 --";
+
+        let store = fresh_pg_store().await;
+        store
+            .insert_code(code_record("victim", "victimsec", LATER, Some("tenant-A")))
+            .await
+            .unwrap();
+        store
+            .insert_code(code_record("other", "othersec", LATER, Some("tenant-B")))
+            .await
+            .unwrap();
+
+        let outcome = store
+            .claim_code(&ClaimRequest {
+                code_id: &CodeId::new("victim".into()),
+                subject: &codlet::secret::SubjectId::new("attacker".into()),
+                now: NOW,
+                purpose: None,
+                scope: Some(PAYLOAD),
+            })
+            .await
+            .unwrap();
+        assert_eq!(
+            outcome,
+            codlet::state::ClaimOutcome::Lost,
+            "a scope that matches no real row must not win the claim"
+        );
+
+        let victim = store
+            .find_redeemable(&[code_lk("victimsec")], NOW, None)
+            .await
+            .unwrap()
+            .expect("victim code must still exist");
+        assert!(
+            victim.used_at.is_none(),
+            "victim code must not have been marked used"
+        );
+        let other = store
+            .find_redeemable(&[code_lk("othersec")], NOW, None)
+            .await
+            .unwrap()
+            .expect("other code must still exist");
+        assert!(
+            other.used_at.is_none(),
+            "an unrelated row in a different scope must not have been touched"
+        );
     }
 
     #[tokio::test]

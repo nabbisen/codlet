@@ -117,22 +117,73 @@ impl CodeStore for PostgresStore {
         // Conditional UPDATE — READ COMMITTED row-level lock (RFC-034 §7, INV-5).
         // RETURNING is not used; RFC-034 §7 documents the decision.
         // purpose/scope are enforced in the WHERE clause to prevent cross-flow
-        // redemption (RFC-C).
-        let mut sql = "UPDATE codlet_codes SET used_at = $1, used_by_subject = $2              WHERE id = $3 AND used_at IS NULL AND revoked_at IS NULL              AND expires_at > $4".to_string();
-        if let Some(p) = req.purpose {
-            sql.push_str(&format!(" AND purpose = {p:?}"));
+        // redemption (RFC-C). A fixed set of complete, constant SQL strings —
+        // `purpose`/`scope` are always bound as `$N` parameters, never
+        // interpolated (RFC-048). `AssertSqlSafe` is not needed: each literal
+        // is `&'static str`, with no dynamically-assembled fragment to assert
+        // about.
+        let now = req.now as i64;
+        let id = req.code_id.as_str();
+        let subject = req.subject.as_str();
+        let result = match (req.purpose, req.scope) {
+            (Some(p), Some(s)) => {
+                sqlx::query(
+                    "UPDATE codlet_codes SET used_at = $1, used_by_subject = $2
+                     WHERE id = $3 AND used_at IS NULL AND revoked_at IS NULL
+                       AND expires_at > $4 AND purpose = $5 AND scope = $6",
+                )
+                .bind(now)
+                .bind(subject)
+                .bind(id)
+                .bind(now)
+                .bind(p)
+                .bind(s)
+                .execute(&self.pool)
+                .await
+            }
+            (Some(p), None) => {
+                sqlx::query(
+                    "UPDATE codlet_codes SET used_at = $1, used_by_subject = $2
+                     WHERE id = $3 AND used_at IS NULL AND revoked_at IS NULL
+                       AND expires_at > $4 AND purpose = $5",
+                )
+                .bind(now)
+                .bind(subject)
+                .bind(id)
+                .bind(now)
+                .bind(p)
+                .execute(&self.pool)
+                .await
+            }
+            (None, Some(s)) => {
+                sqlx::query(
+                    "UPDATE codlet_codes SET used_at = $1, used_by_subject = $2
+                     WHERE id = $3 AND used_at IS NULL AND revoked_at IS NULL
+                       AND expires_at > $4 AND scope = $5",
+                )
+                .bind(now)
+                .bind(subject)
+                .bind(id)
+                .bind(now)
+                .bind(s)
+                .execute(&self.pool)
+                .await
+            }
+            (None, None) => {
+                sqlx::query(
+                    "UPDATE codlet_codes SET used_at = $1, used_by_subject = $2
+                     WHERE id = $3 AND used_at IS NULL AND revoked_at IS NULL
+                       AND expires_at > $4",
+                )
+                .bind(now)
+                .bind(subject)
+                .bind(id)
+                .bind(now)
+                .execute(&self.pool)
+                .await
+            }
         }
-        if let Some(s) = req.scope {
-            sql.push_str(&format!(" AND scope = {s:?}"));
-        }
-        let result = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
-            .bind(req.now as i64)
-            .bind(req.subject.as_str())
-            .bind(req.code_id.as_str())
-            .bind(req.now as i64)
-            .execute(&self.pool)
-            .await
-            .map_err(to_err)?;
+        .map_err(to_err)?;
 
         let changed = result.rows_affected() as usize;
         if changed > 1 {

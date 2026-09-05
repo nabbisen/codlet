@@ -135,6 +135,29 @@ describe("D1CodeStore", () => {
     expect(results.filter(r => r.changes === 0).length).toBe(3);
   });
 
+  it("RFC-048: claim_code's scope is bound, not interpolated -- real D1 run of the literal payload", async () => {
+    // The exact payload from the finding, not a sanitised approximation.
+    // D1 is SQLite-based and was "presumed exploitable, unverified" per the
+    // RFC -- this is that verification, against a real D1 binding via
+    // Miniflare, not inferred from the SQLite result.
+    const PAYLOAD = 'x" OR 1=1 --';
+    const victimId = `victim-${Date.now()}`;
+    const victimLk = victimId.padEnd(64, "x");
+    const otherId = `other-${Date.now()}`;
+    const otherLk = otherId.padEnd(64, "y");
+
+    await post("/codes/insert", { id: victimId, lookup_key: victimLk, key_version: "v1", created_at: NOW, expires_at: LATER, scope: "tenant-A" });
+    await post("/codes/insert", { id: otherId, lookup_key: otherLk, key_version: "v1", created_at: NOW, expires_at: LATER, scope: "tenant-B" });
+
+    const claim = await post("/codes/claim", { id: victimId, subject: "attacker", now: NOW, scope: PAYLOAD }) as { changes: number };
+    expect(claim.changes).toBe(0);
+
+    const victim = await post("/codes/find", { lookup_key: victimLk, now: NOW }) as { used_at: number | null };
+    expect(victim.used_at ?? null).toBeNull();
+    const other = await post("/codes/find", { lookup_key: otherLk, now: NOW }) as { used_at: number | null };
+    expect(other.used_at ?? null).toBeNull();
+  });
+
   it("RFC-047: claimed code is still findable afterward, with used_at set", async () => {
     // Inverted per RFC-047 §4.3 -- this duplicated the intent of the
     // "used code" test above under the old (exclusion) contract; kept as its

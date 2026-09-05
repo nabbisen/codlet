@@ -55,6 +55,10 @@ fn release_check() -> ExitCode {
         ("rng-no-silent-fallback", gate_rng_no_silent_fallback),
         ("no-debug-prints", gate_no_debug_prints),
         ("no-plaintext-in-store-ops", gate_no_plaintext_store),
+        (
+            "no-interpolated-sql-values",
+            gate_no_interpolated_sql_values,
+        ),
     ];
 
     let mut failed = 0usize;
@@ -109,6 +113,11 @@ fn self_test() -> ExitCode {
             gate_name: "no-plaintext-in-store-ops",
             check: check_no_plaintext_store,
             fixture_file: "no_plaintext_in_store_ops.rs",
+        },
+        SelfTestCase {
+            gate_name: "no-interpolated-sql-values",
+            check: check_no_interpolated_sql_values,
+            fixture_file: "no_interpolated_sql_values.rs",
         },
     ];
 
@@ -379,6 +388,128 @@ fn check_no_plaintext_store(sources: &[(String, String)]) -> Result<(), String> 
     } else {
         Err(hits.join("; "))
     }
+}
+
+// ── RFC-048 / no-interpolated-sql-values ─────────────────────────────────────
+
+/// RFC-048: a value must never be interpolated into a SQL string via
+/// `format!` — it must be bound as a parameter. `format!("{:?}")` on a `&str`
+/// performs Rust escaping, not SQL escaping, which is exactly how a critical
+/// SQL injection reached `claim_code`'s `purpose`/`scope` handling.
+///
+/// Heuristic: flags a line matching `<KEYWORD> <column> = {value}`, where
+/// `KEYWORD` is one of SQL's `WHERE`/`AND`/`OR`/`SET` and `{value}` is a
+/// `format!` placeholder sitting directly after the `=` — the shape of an
+/// interpolated comparison value, which is where a bound parameter belongs
+/// instead. The keyword requirement is what keeps this scoped to SQL clauses
+/// rather than firing on any string containing `word = {value}`: an earlier
+/// draft without it also matched `Set-Cookie` header assembly
+/// (`"{}={}; Max-Age={}"`, `cookie.rs`) and `format!` diagnostic messages
+/// (`"changed={changed} rows for id={id}"`, several `StoreError` messages) —
+/// neither is SQL, and both were caught by running this gate against the
+/// real tree before trusting the design (RFC-048 §2).
+///
+/// Checked against the four legitimate interpolations this project actually
+/// uses (RFC-048 §4.2) rather than assumed safe by construction:
+///
+/// - `{t}` (a configured table name) never follows `= `, so it never matches;
+/// - `LIMIT {n}` and `WHERE {}`/`{where_clause}` never follow `= ` either;
+/// - PostgreSQL's `${param_idx}` numbered placeholder *does* follow `= `, but
+///   the `$` sits between `=` and `{`, so the whitespace-skipping scan below
+///   lands on `$`, not `{`, and does not match — not a special-cased
+///   exclusion, a consequence of the literal shape of the two patterns.
+fn gate_no_interpolated_sql_values() -> Result<(), String> {
+    let sources = library_sources()?;
+    assert_covers(&sources, "crates/codlet-sqlx/src/")?;
+    assert_covers(&sources, "crates/codlet-worker/src/")?;
+    check_no_interpolated_sql_values(&sources)
+}
+
+fn check_no_interpolated_sql_values(sources: &[(String, String)]) -> Result<(), String> {
+    let mut hits = Vec::new();
+    for (path, src) in sources {
+        if path.contains("/tests/") {
+            continue;
+        }
+        for (i, line) in src.lines().enumerate() {
+            if is_comment(line) {
+                continue;
+            }
+            if has_interpolated_sql_clause_value(line) {
+                hits.push(format!(
+                    "{path}:{}: value interpolated into a SQL clause after `=` \
+                     — bind it as a parameter instead",
+                    i + 1
+                ));
+            }
+        }
+    }
+    if hits.is_empty() {
+        Ok(())
+    } else {
+        Err(hits.join("; "))
+    }
+}
+
+fn is_ident_byte(b: u8) -> bool {
+    b.is_ascii_alphanumeric() || b == b'_'
+}
+
+fn is_sql_clause_keyword(word: &str) -> bool {
+    matches!(
+        word.to_ascii_uppercase().as_str(),
+        "AND" | "OR" | "WHERE" | "SET"
+    )
+}
+
+/// True if `line` contains `<KEYWORD> <column> = {value}`: a SQL clause
+/// keyword, then an identifier, then `=` immediately followed (skipping
+/// spaces only) by `{` — an interpolated `format!` value where a bound
+/// parameter belongs.
+fn has_interpolated_sql_clause_value(line: &str) -> bool {
+    let bytes = line.as_bytes();
+    for (i, &b) in bytes.iter().enumerate() {
+        if b != b'=' {
+            continue;
+        }
+        // The interpolated placeholder must immediately follow (skipping
+        // only spaces) the `=`.
+        let mut j = i + 1;
+        while j < bytes.len() && bytes[j] == b' ' {
+            j += 1;
+        }
+        if j >= bytes.len() || bytes[j] != b'{' {
+            continue;
+        }
+        // Walk back over the column identifier immediately before `=`.
+        let mut k = i;
+        while k > 0 && bytes[k - 1] == b' ' {
+            k -= 1;
+        }
+        let ident_end = k;
+        while k > 0 && is_ident_byte(bytes[k - 1]) {
+            k -= 1;
+        }
+        if k == ident_end {
+            // No identifier immediately before `=` — not a `column = value`
+            // shape (e.g. cookie.rs's `"{}={}…"`).
+            continue;
+        }
+        // Walk back over whitespace before the identifier, then read the
+        // preceding word and check it is a SQL clause keyword.
+        let mut m = k;
+        while m > 0 && bytes[m - 1] == b' ' {
+            m -= 1;
+        }
+        let word_end = m;
+        while m > 0 && is_ident_byte(bytes[m - 1]) {
+            m -= 1;
+        }
+        if is_sql_clause_keyword(&line[m..word_end]) {
+            return true;
+        }
+    }
+    false
 }
 
 #[cfg(test)]

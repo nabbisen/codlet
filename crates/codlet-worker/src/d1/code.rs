@@ -139,28 +139,71 @@ impl CodeStore for D1CodeStore {
         use worker::d1::D1Type;
 
         // Atomic conditional UPDATE (INV-5, RFC-022).
-        // purpose/scope enforced in WHERE to prevent cross-flow redemption (RFC-C).
-        let mut sql = format!(
-            "UPDATE {t} SET used_at = ?, used_by_subject = ?
-             WHERE id = ? AND used_at IS NULL AND revoked_at IS NULL
-               AND expires_at > ?",
-            t = self.table
-        );
-        if let Some(p) = req.purpose {
-            sql.push_str(&format!(" AND purpose = {p:?}"));
-        }
-        if let Some(s) = req.scope {
-            sql.push_str(&format!(" AND scope = {s:?}"));
-        }
-        let stmt = bind(
-            self.db.prepare(&sql),
-            &[
-                ts(req.now),
-                D1Type::Text(req.subject.as_str()),
-                D1Type::Text(req.code_id.as_str()),
-                ts(req.now),
-            ],
-        )?;
+        // purpose/scope enforced in WHERE to prevent cross-flow redemption
+        // (RFC-C). A fixed set of complete SQL templates, parameterised only
+        // by `{t}` (the configured table name, never host-supplied data) —
+        // `purpose`/`scope` are always bound as `?` parameters, never
+        // interpolated (RFC-048).
+        let t = self.table;
+        let (sql, args): (String, Vec<D1Type<'_>>) = match (req.purpose, req.scope) {
+            (Some(p), Some(s)) => (
+                format!(
+                    "UPDATE {t} SET used_at = ?, used_by_subject = ?
+                     WHERE id = ? AND used_at IS NULL AND revoked_at IS NULL
+                       AND expires_at > ? AND purpose = ? AND scope = ?"
+                ),
+                vec![
+                    ts(req.now),
+                    D1Type::Text(req.subject.as_str()),
+                    D1Type::Text(req.code_id.as_str()),
+                    ts(req.now),
+                    D1Type::Text(p),
+                    D1Type::Text(s),
+                ],
+            ),
+            (Some(p), None) => (
+                format!(
+                    "UPDATE {t} SET used_at = ?, used_by_subject = ?
+                     WHERE id = ? AND used_at IS NULL AND revoked_at IS NULL
+                       AND expires_at > ? AND purpose = ?"
+                ),
+                vec![
+                    ts(req.now),
+                    D1Type::Text(req.subject.as_str()),
+                    D1Type::Text(req.code_id.as_str()),
+                    ts(req.now),
+                    D1Type::Text(p),
+                ],
+            ),
+            (None, Some(s)) => (
+                format!(
+                    "UPDATE {t} SET used_at = ?, used_by_subject = ?
+                     WHERE id = ? AND used_at IS NULL AND revoked_at IS NULL
+                       AND expires_at > ? AND scope = ?"
+                ),
+                vec![
+                    ts(req.now),
+                    D1Type::Text(req.subject.as_str()),
+                    D1Type::Text(req.code_id.as_str()),
+                    ts(req.now),
+                    D1Type::Text(s),
+                ],
+            ),
+            (None, None) => (
+                format!(
+                    "UPDATE {t} SET used_at = ?, used_by_subject = ?
+                     WHERE id = ? AND used_at IS NULL AND revoked_at IS NULL
+                       AND expires_at > ?"
+                ),
+                vec![
+                    ts(req.now),
+                    D1Type::Text(req.subject.as_str()),
+                    D1Type::Text(req.code_id.as_str()),
+                    ts(req.now),
+                ],
+            ),
+        };
+        let stmt = bind(self.db.prepare(&sql), &args)?;
         let result = stmt.run().await.map_err(to_store_err)?;
         let changed = changes(&result)?;
         if changed > 1 {

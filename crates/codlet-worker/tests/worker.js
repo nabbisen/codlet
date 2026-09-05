@@ -83,13 +83,13 @@ export default {
       return Response.json({ ok: true });
     }
 
-    // POST /codes/insert  body: {id, lookup_key, key_version, created_at, expires_at}
+    // POST /codes/insert  body: {id, lookup_key, key_version, created_at, expires_at, scope?}
     if (url.pathname === '/codes/insert' && req.method === 'POST') {
       const b = await req.json();
       // Timestamps stored as REAL (f64) — same as D1Type::Real(t as f64) in Rust
       await db.prepare(
-        'INSERT INTO codlet_codes (id, lookup_key, key_version, created_at, expires_at) VALUES (?,?,?,?,?)'
-      ).bind(b.id, b.lookup_key, b.key_version, b.created_at, b.expires_at).run();
+        'INSERT INTO codlet_codes (id, lookup_key, key_version, created_at, expires_at, scope) VALUES (?,?,?,?,?,?)'
+      ).bind(b.id, b.lookup_key, b.key_version, b.created_at, b.expires_at, b.scope ?? null).run();
       return Response.json({ ok: true });
     }
 
@@ -107,16 +107,25 @@ export default {
       return Response.json(row ?? null);
     }
 
-    // POST /codes/claim  body: {id, subject, now}
+    // POST /codes/claim  body: {id, subject, now, scope?}
     // Mirrors D1CodeStore::claim_code — conditional UPDATE + meta.changes.
     // RFC-047 explicitly does not touch this: it remains the sole
     // enforcement point for expiry/revocation/use at claim time (INV-5).
+    // RFC-048: when `scope` is supplied it is always bound as a parameter,
+    // never interpolated -- a fixed pair of complete SQL templates, exactly
+    // mirroring D1CodeStore::claim_code's fix.
     if (url.pathname === '/codes/claim' && req.method === 'POST') {
       const b = await req.json();
-      const result = await db.prepare(
-        `UPDATE codlet_codes SET used_at = ?, used_by_subject = ?
-         WHERE id = ? AND used_at IS NULL AND revoked_at IS NULL AND expires_at > ?`
-      ).bind(b.now, b.subject, b.id, b.now).run();
+      const result = b.scope !== undefined
+        ? await db.prepare(
+            `UPDATE codlet_codes SET used_at = ?, used_by_subject = ?
+             WHERE id = ? AND used_at IS NULL AND revoked_at IS NULL
+               AND expires_at > ? AND scope = ?`
+          ).bind(b.now, b.subject, b.id, b.now, b.scope).run()
+        : await db.prepare(
+            `UPDATE codlet_codes SET used_at = ?, used_by_subject = ?
+             WHERE id = ? AND used_at IS NULL AND revoked_at IS NULL AND expires_at > ?`
+          ).bind(b.now, b.subject, b.id, b.now).run();
       return Response.json({ changes: result.meta.changes });
     }
 

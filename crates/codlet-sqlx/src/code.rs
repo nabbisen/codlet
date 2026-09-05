@@ -47,35 +47,69 @@ impl CodeStore for SqliteStore {
         let subject = req.subject.as_str();
 
         // Enforce purpose and scope to prevent cross-flow redemption (RFC-C).
-        let sql = match (req.purpose, req.scope) {
-            (Some(p), Some(s)) => format!(
-                "UPDATE codlet_codes SET used_at = ?, used_by_subject = ?
-                 WHERE id = ? AND used_at IS NULL AND revoked_at IS NULL
-                   AND expires_at > ? AND purpose = {p:?} AND scope = {s:?}"
-            ),
-            (Some(p), None) => format!(
-                "UPDATE codlet_codes SET used_at = ?, used_by_subject = ?
-                 WHERE id = ? AND used_at IS NULL AND revoked_at IS NULL
-                   AND expires_at > ? AND purpose = {p:?}"
-            ),
-            (None, Some(s)) => format!(
-                "UPDATE codlet_codes SET used_at = ?, used_by_subject = ?
-                 WHERE id = ? AND used_at IS NULL AND revoked_at IS NULL
-                   AND expires_at > ? AND scope = {s:?}"
-            ),
-            (None, None) => "UPDATE codlet_codes SET used_at = ?, used_by_subject = ?
-                 WHERE id = ? AND used_at IS NULL AND revoked_at IS NULL
-                   AND expires_at > ?"
-                .to_string(),
-        };
-        let result = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()))
-            .bind(now)
-            .bind(subject)
-            .bind(id)
-            .bind(now)
-            .execute(&self.pool)
-            .await
-            .map_err(|e| StoreError::Backend(e.to_string()))?;
+        // A fixed set of complete, constant SQL strings — `purpose`/`scope`
+        // are always bound as parameters, never interpolated (RFC-048). Each
+        // literal is `&'static str`, so `AssertSqlSafe` is not needed here:
+        // there is no dynamically-assembled fragment for it to assert about.
+        let result = match (req.purpose, req.scope) {
+            (Some(p), Some(s)) => {
+                sqlx::query(
+                    "UPDATE codlet_codes SET used_at = ?, used_by_subject = ?
+                     WHERE id = ? AND used_at IS NULL AND revoked_at IS NULL
+                       AND expires_at > ? AND purpose = ? AND scope = ?",
+                )
+                .bind(now)
+                .bind(subject)
+                .bind(id)
+                .bind(now)
+                .bind(p)
+                .bind(s)
+                .execute(&self.pool)
+                .await
+            }
+            (Some(p), None) => {
+                sqlx::query(
+                    "UPDATE codlet_codes SET used_at = ?, used_by_subject = ?
+                     WHERE id = ? AND used_at IS NULL AND revoked_at IS NULL
+                       AND expires_at > ? AND purpose = ?",
+                )
+                .bind(now)
+                .bind(subject)
+                .bind(id)
+                .bind(now)
+                .bind(p)
+                .execute(&self.pool)
+                .await
+            }
+            (None, Some(s)) => {
+                sqlx::query(
+                    "UPDATE codlet_codes SET used_at = ?, used_by_subject = ?
+                     WHERE id = ? AND used_at IS NULL AND revoked_at IS NULL
+                       AND expires_at > ? AND scope = ?",
+                )
+                .bind(now)
+                .bind(subject)
+                .bind(id)
+                .bind(now)
+                .bind(s)
+                .execute(&self.pool)
+                .await
+            }
+            (None, None) => {
+                sqlx::query(
+                    "UPDATE codlet_codes SET used_at = ?, used_by_subject = ?
+                     WHERE id = ? AND used_at IS NULL AND revoked_at IS NULL
+                       AND expires_at > ?",
+                )
+                .bind(now)
+                .bind(subject)
+                .bind(id)
+                .bind(now)
+                .execute(&self.pool)
+                .await
+            }
+        }
+        .map_err(|e| StoreError::Backend(e.to_string()))?;
 
         let changed = result.rows_affected() as usize;
         if changed > 1 {
