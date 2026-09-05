@@ -212,8 +212,15 @@ counted as verified on the strength of a test's existence alone.
 > release carrying `codlet-sqlx` or `codlet-worker`. See
 > `.git-exclude/reviewed/SECURITY-FINDING-claim-code-sql-injection.md`.
 >
-> Outstanding owner decisions: whether to yank affected versions, and advisory
-> timing.
+> **Resolved 2026-09-05:** no yank; advisory wording conservative (all three
+> backends affected, SQLite and D1 confirmed exploitable, PostgreSQL
+> unconfirmed); ships as 0.19.1 with the advisory published on release.
+>
+> **Sequenced:** 0.19.1 minimal first, then the shared-conformance follow-up
+> (`rfcs/handoffs/048-…/follow-up-conformance-handoff.md`) — the RFC-048
+> regression test is adapter-local, so `codlet-conformance` would currently
+> certify a new adapter carrying the same vulnerability. Then M6 resumes:
+> RFC-047 step 2, then RFC-045.
 
 
 **Theme:** the work the handoff bundle calls "RFC-F". It has never existed as an
