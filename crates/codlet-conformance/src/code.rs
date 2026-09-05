@@ -4,7 +4,7 @@ use std::future::Future;
 use std::sync::Arc;
 
 use crate::fixtures::*;
-use codlet::state::ClaimOutcome;
+use codlet::state::{ClaimOutcome, CodeLookupOutcome, classify_code_lookup};
 
 // ── CodeStore conformance ────────────────────────────────────────────────────
 
@@ -19,11 +19,12 @@ where
 {
     test_insert_and_find_redeemable(&factory).await;
     test_nonexistent_returns_none(&factory).await;
-    test_expired_not_redeemable(&factory).await;
-    test_used_not_redeemable(&factory).await;
-    test_revoked_not_redeemable(&factory).await;
+    test_expired_returned_and_classifier_rejects(&factory).await;
+    test_used_returned_and_classifier_rejects(&factory).await;
+    test_revoked_returned_and_classifier_rejects(&factory).await;
+    test_revoked_and_expired_classifies_revoked(&factory).await;
     test_exactly_one_claim_winner(&factory).await;
-    test_scope_revoke_works(&factory).await;
+    test_scope_revoke_returned_and_classifier_rejects(&factory).await;
     test_wrong_scope_does_not_revoke(&factory).await;
 }
 
@@ -65,7 +66,14 @@ where
     assert!(found.is_none(), "nonexistent: must return None");
 }
 
-async fn test_expired_not_redeemable<F, Fut, S>(factory: &F)
+/// RFC-047 §4.3: this must fail against an adapter that kept its old
+/// exclusion filter, not merely pass against a migrated one. An adapter that
+/// still filters expired rows out of `find_redeemable` returns `None` here,
+/// which trips the `.expect(...)` below -- the inverted assertion carries the
+/// security property this suite exists to prove (verified by temporarily
+/// reintroducing the filter in `MemCodeStore` and confirming this test fails;
+/// see the RFC-047 review request).
+async fn test_expired_returned_and_classifier_rejects<F, Fut, S>(factory: &F)
 where
     F: Fn() -> Fut,
     Fut: Future<Output = S>,
@@ -79,11 +87,19 @@ where
     let found = store
         .find_redeemable(&[code_lk("expiredsec")], NOW, None)
         .await
-        .unwrap();
-    assert!(found.is_none(), "expired: must not be redeemable");
+        .unwrap()
+        .expect("RFC-047: the store must return an expired record, not filter it out");
+    assert_eq!(found.expires_at, EXPIRED);
+    assert_eq!(
+        classify_code_lookup(found.revoked_at, found.used_at, found.expires_at, NOW),
+        CodeLookupOutcome::Expired,
+        "the classifier must reject the returned record"
+    );
 }
 
-async fn test_used_not_redeemable<F, Fut, S>(factory: &F)
+/// See `test_expired_returned_and_classifier_rejects` for why this asserts
+/// return-and-reject rather than exclusion.
+async fn test_used_returned_and_classifier_rejects<F, Fut, S>(factory: &F)
 where
     F: Fn() -> Fut,
     Fut: Future<Output = S>,
@@ -113,11 +129,18 @@ where
     let again = store
         .find_redeemable(&[code_lk("usedsec")], NOW, None)
         .await
-        .unwrap();
-    assert!(again.is_none(), "used: must not be redeemable after claim");
+        .unwrap()
+        .expect("RFC-047: the store must return a used record, not filter it out");
+    assert!(again.used_at.is_some());
+    assert_eq!(
+        classify_code_lookup(again.revoked_at, again.used_at, again.expires_at, NOW),
+        CodeLookupOutcome::Used
+    );
 }
 
-async fn test_revoked_not_redeemable<F, Fut, S>(factory: &F)
+/// See `test_expired_returned_and_classifier_rejects` for why this asserts
+/// return-and-reject rather than exclusion.
+async fn test_revoked_returned_and_classifier_rejects<F, Fut, S>(factory: &F)
 where
     F: Fn() -> Fut,
     Fut: Future<Output = S>,
@@ -135,8 +158,42 @@ where
     let found = store
         .find_redeemable(&[code_lk("revokedsec")], NOW, None)
         .await
+        .unwrap()
+        .expect("RFC-047: the store must return a revoked record, not filter it out");
+    assert!(found.revoked_at.is_some());
+    assert_eq!(
+        classify_code_lookup(found.revoked_at, found.used_at, found.expires_at, NOW),
+        CodeLookupOutcome::Revoked
+    );
+}
+
+/// RFC-047 §8.1: fixed decision order. A record that is both revoked and
+/// expired must classify as `Revoked`, not `Expired`.
+async fn test_revoked_and_expired_classifies_revoked<F, Fut, S>(factory: &F)
+where
+    F: Fn() -> Fut,
+    Fut: Future<Output = S>,
+    S: CodeStore + Send + Sync + 'static,
+{
+    let store = factory().await;
+    store
+        .insert_code(code_record("cre", "bothsec", EXPIRED, None))
+        .await
         .unwrap();
-    assert!(found.is_none(), "revoked: must not be redeemable");
+    store
+        .revoke_code(&CodeId::new("cre".into()), None, NOW)
+        .await
+        .unwrap();
+    let found = store
+        .find_redeemable(&[code_lk("bothsec")], NOW, None)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        classify_code_lookup(found.revoked_at, found.used_at, found.expires_at, NOW),
+        CodeLookupOutcome::Revoked,
+        "revoked must win over expired"
+    );
 }
 
 /// RFC-022: exactly one concurrent claim winner (RFC-023 requirement).
@@ -201,7 +258,7 @@ where
     assert_eq!(wins, 1, "exactly one winner expected, got {wins}");
 }
 
-async fn test_scope_revoke_works<F, Fut, S>(factory: &F)
+async fn test_scope_revoke_returned_and_classifier_rejects<F, Fut, S>(factory: &F)
 where
     F: Fn() -> Fut,
     Fut: Future<Output = S>,
@@ -214,13 +271,18 @@ where
         .revoke_code(&CodeId::new("cs1".into()), Some("scope-A"), NOW)
         .await
         .unwrap();
+    // RFC-047: scope is still a real lookup criterion (unlike state) -- the
+    // record within the matching scope is still found by lookup key + scope;
+    // the classifier is what rejects it now that it has been revoked.
     let found = store
         .find_redeemable(&[code_lk("scopedsec")], NOW, Some("scope-A"))
         .await
-        .unwrap();
-    assert!(
-        found.is_none(),
-        "scope revoke: record within scope must be revoked"
+        .unwrap()
+        .expect("scope revoke: the record must still be found by lookup key + scope");
+    assert!(found.revoked_at.is_some());
+    assert_eq!(
+        classify_code_lookup(found.revoked_at, found.used_at, found.expires_at, NOW),
+        CodeLookupOutcome::Revoked
     );
 }
 

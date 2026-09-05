@@ -94,19 +94,23 @@ export default {
     }
 
     // POST /codes/find  body: {lookup_key, now}
+    // RFC-047: matches on lookup_key only -- no expiry/revocation/use
+    // predicate. Returns used_at/revoked_at so the caller (classify_code_lookup
+    // in Rust; this test file just asserts the raw fields) can classify it.
     if (url.pathname === '/codes/find' && req.method === 'POST') {
       const b = await req.json();
       const row = await db.prepare(
-        `SELECT id, key_version, grant_payload, scope, expires_at
+        `SELECT id, key_version, grant_payload, scope, expires_at, used_at, revoked_at
          FROM codlet_codes
-         WHERE lookup_key = ? AND used_at IS NULL AND revoked_at IS NULL
-           AND expires_at > ? LIMIT 1`
-      ).bind(b.lookup_key, b.now).first();
+         WHERE lookup_key = ? LIMIT 1`
+      ).bind(b.lookup_key).first();
       return Response.json(row ?? null);
     }
 
     // POST /codes/claim  body: {id, subject, now}
-    // Mirrors D1CodeStore::claim_code — conditional UPDATE + meta.changes
+    // Mirrors D1CodeStore::claim_code — conditional UPDATE + meta.changes.
+    // RFC-047 explicitly does not touch this: it remains the sole
+    // enforcement point for expiry/revocation/use at claim time (INV-5).
     if (url.pathname === '/codes/claim' && req.method === 'POST') {
       const b = await req.json();
       const result = await db.prepare(
@@ -114,6 +118,17 @@ export default {
          WHERE id = ? AND used_at IS NULL AND revoked_at IS NULL AND expires_at > ?`
       ).bind(b.now, b.subject, b.id, b.now).run();
       return Response.json({ changes: result.meta.changes });
+    }
+
+    // POST /codes/revoke  body: {id, now}
+    // Mirrors D1CodeStore::revoke_code.
+    if (url.pathname === '/codes/revoke' && req.method === 'POST') {
+      const b = await req.json();
+      await db.prepare(
+        `UPDATE codlet_codes SET revoked_at = ?
+         WHERE id = ? AND used_at IS NULL AND revoked_at IS NULL`
+      ).bind(b.now, b.id).run();
+      return Response.json({ ok: true });
     }
 
     // POST /sessions/insert  body: {id, lookup_key, key_version, subject, created_at, expires_at}

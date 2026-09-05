@@ -9,7 +9,14 @@ use crate::state::ClaimOutcome;
 
 use super::error::StoreError;
 
-/// Record returned by a successful `find_redeemable` call.
+/// Record returned by a `find_redeemable` call.
+///
+/// Despite the name, this may **not** be redeemable: `find_redeemable`
+/// returns any record matching the lookup key regardless of state (RFC-047),
+/// and `used_at`/`revoked_at`/`expires_at` are what
+/// [`crate::state::classify_code_lookup`] uses to decide. `claim_code`'s
+/// conditional UPDATE is the actual enforcement point (INV-5) — this
+/// classifier is a pre-filter, not a second guard.
 #[derive(Debug, Clone)]
 pub struct RedeemableCode {
     /// Opaque record identifier (not a secret, safe for logs and audit).
@@ -26,6 +33,10 @@ pub struct RedeemableCode {
     pub scope: Option<String>,
     /// Expiry as Unix seconds (UTC).
     pub expires_at: u64,
+    /// When this code was claimed, if it has been (RFC-047).
+    pub used_at: Option<u64>,
+    /// When this code was revoked, if it has been (RFC-047).
+    pub revoked_at: Option<u64>,
 }
 
 /// Parameters for inserting a new code record.
@@ -67,17 +78,27 @@ pub struct ClaimRequest<'a> {
 ///
 /// Implementors must guarantee:
 ///
-/// - `find_redeemable` never returns expired, used, or revoked records;
+/// - `find_redeemable` matches purely on lookup key and `scope`, carrying no
+///   expiry/revocation/use predicate — [`crate::state::classify_code_lookup`]
+///   is what decides whether the returned record is actually redeemable
+///   (RFC-047). A filter kept "for defence in depth" makes the classifier
+///   untestable against real data and gives two enforcement points that can
+///   disagree — RFC-047 §8.2 explicitly rejects that trade-off;
 /// - `claim_code` uses a conditional UPDATE (not read-then-write); the
-///   affected-row count is exactly 1 for a winner and 0 for all others;
+///   affected-row count is exactly 1 for a winner and 0 for all others. This
+///   remains the sole enforcement point for expiry/revocation/use at claim
+///   time (INV-5) — `find_redeemable`'s state fields are a pre-filter, not a
+///   substitute for it;
 /// - `changed > 1` is surfaced as [`StoreError::InvariantViolation`], not
 ///   silently mapped to `Lost`.
 pub trait CodeStore {
-    /// Look up a redeemable code by its HMAC lookup key candidates.
+    /// Look up a code record by its HMAC lookup key candidates.
     ///
-    /// Returns the first record that matches any candidate key and is currently
-    /// redeemable (not used, revoked, or expired at `now`). Returns `Ok(None)`
-    /// if no such record exists.
+    /// Returns the first record matching any candidate key (and `scope`, if
+    /// given) **regardless of its use, expiry, or revocation state** — pass
+    /// the result to [`crate::state::classify_code_lookup`] to decide whether
+    /// it is actually redeemable (RFC-047). Returns `Ok(None)` only if no
+    /// record matches the lookup criteria at all.
     fn find_redeemable(
         &self,
         candidates: &[LookupKey],

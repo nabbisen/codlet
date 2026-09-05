@@ -33,8 +33,9 @@ use crate::store::session::ActiveSessionRecord;
 /// caller already presented — it does not weaken DEC-006 or INV-8, which
 /// govern what an *attacker guessing a value they do not hold* can learn
 /// (RFC-046 §3.1). [`SessionFailure`] must never be reachable from
-/// [`crate::error::PublicSessionError`] — a test in this module's `tests`
-/// asserts no conversion exists between the two types.
+/// [`crate::error::PublicSessionError`] — a compile-fail test at
+/// `crates/codlet/tests/rfc_046_no_public_conversion_compile_fail.rs` asserts
+/// no conversion exists between the two types.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SessionFailure {
     /// No session cookie was presented.

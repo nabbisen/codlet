@@ -9,7 +9,8 @@ use codlet::store::error::StoreError;
 use crate::SqliteStore;
 
 /// Columns returned by the `find_one` SELECT:
-/// (id, lookup_key, key_version, grant_payload, scope, expires_at)
+/// (id, lookup_key, key_version, purpose, grant_payload, scope, expires_at,
+///  used_at, revoked_at)
 type CodeRow = (
     String,
     String,
@@ -18,19 +19,21 @@ type CodeRow = (
     Option<String>,
     Option<String>,
     i64,
+    Option<i64>,
+    Option<i64>,
 );
 
 impl CodeStore for SqliteStore {
     async fn find_redeemable(
         &self,
         candidates: &[LookupKey],
-        now: u64,
+        _now: u64,
         scope: Option<&str>,
     ) -> Result<Option<RedeemableCode>, StoreError> {
         // Build a parameterised `IN (?, ?, ...)` clause for the candidate keys.
         // SQLx doesn't support dynamic IN lists directly, so we iterate.
         for candidate in candidates {
-            let row = find_one(&self.pool, candidate.as_str(), now, scope).await?;
+            let row = find_one(&self.pool, candidate.as_str(), scope).await?;
             if row.is_some() {
                 return Ok(row);
             }
@@ -151,54 +154,50 @@ impl CodeStore for SqliteStore {
 async fn find_one(
     pool: &sqlx::SqlitePool,
     lookup_key: &str,
-    now: u64,
     scope: Option<&str>,
 ) -> Result<Option<RedeemableCode>, StoreError> {
-    let now_i = now as i64;
-
-    // Build scope clause: when scope is provided, filter by it; when None, accept any scope.
+    // RFC-047: matches on lookup key and scope only. No expiry/revocation/use
+    // predicate here -- `classify_code_lookup` decides that from the returned
+    // state fields; `claim_code`'s conditional UPDATE remains the actual
+    // enforcement point (INV-5).
     let row: Option<CodeRow> = if let Some(s) = scope {
         sqlx::query_as(
-            "SELECT id, lookup_key, key_version, purpose, grant_payload, scope, expires_at
+            "SELECT id, lookup_key, key_version, purpose, grant_payload, scope, expires_at,
+                    used_at, revoked_at
              FROM codlet_codes
              WHERE lookup_key = ?
-               AND scope       = ?
-               AND used_at     IS NULL
-               AND revoked_at  IS NULL
-               AND expires_at  > ?
+               AND scope      = ?
              LIMIT 1",
         )
         .bind(lookup_key)
         .bind(s)
-        .bind(now_i)
         .fetch_optional(pool)
         .await
         .map_err(|e| StoreError::Backend(e.to_string()))?
     } else {
         sqlx::query_as(
-            "SELECT id, lookup_key, key_version, purpose, grant_payload, scope, expires_at
+            "SELECT id, lookup_key, key_version, purpose, grant_payload, scope, expires_at,
+                    used_at, revoked_at
              FROM codlet_codes
              WHERE lookup_key = ?
-               AND used_at    IS NULL
-               AND revoked_at IS NULL
-               AND expires_at > ?
              LIMIT 1",
         )
         .bind(lookup_key)
-        .bind(now_i)
         .fetch_optional(pool)
         .await
         .map_err(|e| StoreError::Backend(e.to_string()))?
     };
 
     Ok(row.map(
-        |(id, _lk, kv, purpose_val, grant, scope_val, exp)| RedeemableCode {
+        |(id, _lk, kv, purpose_val, grant, scope_val, exp, used_at, revoked_at)| RedeemableCode {
             id: CodeId::new(id),
             key_version: KeyVersion::new(kv),
             grant,
             purpose: purpose_val,
             scope: scope_val,
             expires_at: exp as u64,
+            used_at: used_at.map(|t| t as u64),
+            revoked_at: revoked_at.map(|t| t as u64),
         },
     ))
 }

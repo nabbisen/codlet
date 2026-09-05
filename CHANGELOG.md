@@ -58,6 +58,35 @@ semantic versioning once it reaches a stable release.
   four variants); see the RFC-046 review request for the escalation this
   raises about `SessionStore`'s contract.
 
+- **`find_redeemable` no longer excludes expired, used, or revoked codes —
+  the classifier decides, not the adapter's `WHERE` clause (RFC-047, step 1
+  of 2: the code path).** `RedeemableCode` gains `used_at: Option<u64>` and
+  `revoked_at: Option<u64>`; a new `classify_code_lookup` function (fixed
+  decision order — revoked, then expired, then used, then redeemable — a
+  record can be several at once, and revoked wins because it is the only
+  state an operator caused deliberately) decides redeemability from those
+  fields plus `expires_at`. `RedemptionFailReason::Expired` and `::Revoked`
+  are now reachable from `CodeAuth::find` — previously only `NotFound` was,
+  collapsing three distinct causes into one signal, the same latent gap
+  RFC-046 documented for sessions. **`claim_code` is completely unchanged**:
+  its conditional `UPDATE ... WHERE used_at IS NULL AND revoked_at IS NULL
+  AND expires_at > ?` remains the sole enforcement point for INV-5, which is
+  exactly why the code path could go first — a classifier defect here
+  produces a wrong diagnostic, never an unredeemable code becoming
+  claimable. **The public error surface is unchanged**:
+  `PublicRedemptionError::from_reason` already collapsed every one of these
+  to `InvalidOrExpired`, and still does. The conformance suite's
+  expired/used/revoked tests are inverted to match: they now assert the
+  store *returns* the record and the classifier *rejects* it, rather than
+  asserting the store excludes it — the old assertion would have passed
+  against an adapter that never migrated off its filter, silently leaving
+  that backend enforcing in SQL while codlet believed it enforced centrally.
+  **The session path (`find_active_session`, `classify_session`,
+  `SessionFailure`) is a separate, sequenced step and is untouched here** —
+  it removes a sole enforcement point rather than a pre-filter guarded by
+  `claim_code`, and ships only once this step has run green in CI against
+  all four adapters (RFC-047 §4.2).
+
 ## [0.19.0] — 2026-09-04
 
 ### Removed

@@ -1,7 +1,7 @@
 //! Acceptance tests for RFC-005: code lifecycle (store find, claim, revoke).
 use codlet::hashing::{KeyVersion, SecretDomain, SecretHasher, StaticKeyProvider};
 use codlet::mem::MemCodeStore;
-use codlet::state::ClaimOutcome;
+use codlet::state::{ClaimOutcome, CodeLookupOutcome, classify_code_lookup};
 use codlet::store::code::{ClaimRequest, CodeRecord, CodeStore};
 
 const NOW: u64 = 1_700_000_000;
@@ -61,19 +61,33 @@ async fn find_redeemable_returns_valid_code() {
 }
 
 #[tokio::test]
-async fn find_redeemable_rejects_expired_record() {
+async fn find_redeemable_returns_expired_record_and_classifier_rejects_it() {
+    // RFC-047: the store no longer excludes expired rows -- it returns the
+    // record with its state fields, and `classify_code_lookup` is what
+    // rejects it. Asserting `is_none()` here would pass against an adapter
+    // that never migrated off its old filter, which is exactly the failure
+    // mode RFC-047 §4.3 warns about; asserting `is_some()` with a `Redeemable`
+    // filter would too. Only the return-and-reject pair together catches it.
     let store = MemCodeStore::new();
     let lk = code_lookup("EXP00001");
     store
         .insert_code(basic_code_record(code_id(1), lk.clone(), EXPIRED))
         .await
         .unwrap();
-    let found = store.find_redeemable(&[lk], NOW, None).await.unwrap();
-    assert!(found.is_none(), "expired code must not be found");
+    let found = store
+        .find_redeemable(&[lk], NOW, None)
+        .await
+        .unwrap()
+        .expect("RFC-047: the store must return the expired record, not filter it out");
+    assert_eq!(found.expires_at, EXPIRED);
+    assert_eq!(
+        classify_code_lookup(found.revoked_at, found.used_at, found.expires_at, NOW),
+        CodeLookupOutcome::Expired
+    );
 }
 
 #[tokio::test]
-async fn find_redeemable_rejects_used_code() {
+async fn find_redeemable_returns_used_code_and_classifier_rejects_it() {
     let store = MemCodeStore::new();
     let lk = code_lookup("USED0001");
     store
@@ -96,9 +110,19 @@ async fn find_redeemable_rejects_used_code() {
         .await
         .unwrap();
     assert_eq!(claim, ClaimOutcome::Won);
-    // Now find again — must return None.
-    let again = store.find_redeemable(&[lk], NOW, None).await.unwrap();
-    assert!(again.is_none(), "used code must not be redeemable");
+
+    // RFC-047: find again -- the store must still return it (now with
+    // used_at set); the classifier is what rejects it.
+    let again = store
+        .find_redeemable(&[lk], NOW, None)
+        .await
+        .unwrap()
+        .expect("RFC-047: the store must return the used record, not filter it out");
+    assert!(again.used_at.is_some());
+    assert_eq!(
+        classify_code_lookup(again.revoked_at, again.used_at, again.expires_at, NOW),
+        CodeLookupOutcome::Used
+    );
 }
 
 #[tokio::test]
@@ -168,15 +192,25 @@ async fn claim_after_revoke_returns_lost() {
         .unwrap();
     store.revoke_code(&found.id, None, NOW).await.unwrap();
 
-    // After revocation, find_redeemable must return None.
-    assert!(
-        store
-            .find_redeemable(&[lk], NOW, None)
-            .await
-            .unwrap()
-            .is_none()
+    // RFC-047: after revocation, find_redeemable must still return the
+    // record (now with revoked_at set) -- the classifier rejects it, not
+    // the store's WHERE clause.
+    let after_revoke = store
+        .find_redeemable(&[lk], NOW, None)
+        .await
+        .unwrap()
+        .expect("RFC-047: the store must return the revoked record, not filter it out");
+    assert!(after_revoke.revoked_at.is_some());
+    assert_eq!(
+        classify_code_lookup(
+            after_revoke.revoked_at,
+            after_revoke.used_at,
+            after_revoke.expires_at,
+            NOW
+        ),
+        CodeLookupOutcome::Revoked
     );
-    // And a direct claim must return Lost.
+    // And a direct claim must still return Lost -- INV-5's guard, untouched.
     let claim = store
         .claim_code(&ClaimRequest {
             code_id: &found.id,

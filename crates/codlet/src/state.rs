@@ -4,9 +4,11 @@
 //! no `async`. Adapters supply the inputs; these functions produce the outcome.
 
 pub mod claim;
+pub mod code;
 pub mod session;
 pub mod token;
 
 pub use claim::{ClaimOutcome, classify_claim};
+pub use code::{CodeLookupOutcome, classify_code_lookup};
 pub use session::{SessionFailure, SessionValidationOutcome, classify_session};
 pub use token::{TokenConsumeOutcome, classify_token_consume};

@@ -25,6 +25,7 @@ use crate::error::PublicRedemptionError;
 use crate::error::RedemptionFailReason;
 use crate::hashing::{KeyProvider, SecretDomain, SecretHasher};
 use crate::secret::{CodeId, SubjectId};
+use crate::state::{CodeLookupOutcome, classify_code_lookup};
 use crate::store::code::{
     ClaimRequest, CodeRecord, CodeStore, RedeemableCode, expires_at_from_ttl,
 };
@@ -216,28 +217,47 @@ where
             .collect();
 
         let now = self.clock.unix_now();
-        let record = self
+        let looked_up = self
             .store
             .find_redeemable(&candidates, now, None)
             .await
-            .map_err(RedeemError::from_store)?
-            .ok_or_else(|| {
-                self.audit.record(CodeAuthEvent::RedemptionFailed {
-                    reason: RedemptionFailReason::NotFound,
-                });
-                RedeemError::NotRedeemable {
-                    reason: RedemptionFailReason::NotFound,
-                    public: PublicRedemptionError::InvalidOrExpired,
-                }
-            });
+            .map_err(RedeemError::from_store)?;
 
-        // Not-found guesses count toward the rate limit (RFC-B).
-        if record.is_err() {
-            if let (Some(key), Some(rl_policy)) = (rate_key, &self.rate_limit_policy) {
-                let _ = self.rate_limit_store.record_failure(key, rl_policy).await;
+        // RFC-047: the store returns any record matching the lookup key
+        // regardless of state; the classifier decides redeemability. A
+        // `None` record and a classified non-`Redeemable` record are both
+        // failures, with the true reason for the latter now reaching the
+        // audit event and rate limiter, not a collapsed `NotFound`.
+        let record = match looked_up {
+            None => Err(RedemptionFailReason::NotFound),
+            Some(rec) => {
+                match classify_code_lookup(rec.revoked_at, rec.used_at, rec.expires_at, now) {
+                    CodeLookupOutcome::Redeemable => Ok(rec),
+                    CodeLookupOutcome::Revoked => Err(RedemptionFailReason::Revoked),
+                    CodeLookupOutcome::Expired => Err(RedemptionFailReason::Expired),
+                    CodeLookupOutcome::Used => Err(RedemptionFailReason::AlreadyUsed),
+                }
             }
-        }
-        let record = record?;
+        };
+
+        let record = match record {
+            Ok(rec) => rec,
+            Err(reason) => {
+                self.audit.record(CodeAuthEvent::RedemptionFailed {
+                    reason: reason.clone(),
+                });
+                // Every non-redeemable lookup counts toward the rate limit
+                // (RFC-B) -- not only NotFound, since Revoked/Expired/Used are
+                // equally guesses an attacker's traffic controls the volume of.
+                if let (Some(key), Some(rl_policy)) = (rate_key, &self.rate_limit_policy) {
+                    let _ = self.rate_limit_store.record_failure(key, rl_policy).await;
+                }
+                return Err(RedeemError::NotRedeemable {
+                    public: PublicRedemptionError::from_reason(&reason),
+                    reason,
+                });
+            }
+        };
 
         Ok(record)
     }

@@ -47,6 +47,8 @@ struct RedeemableRow {
     purpose: Option<String>,
     scope: Option<String>,
     expires_at: f64,
+    used_at: Option<f64>,
+    revoked_at: Option<f64>,
 }
 
 #[derive(Deserialize)]
@@ -82,39 +84,38 @@ impl CodeStore for D1CodeStore {
     async fn find_redeemable(
         &self,
         candidates: &[LookupKey],
-        now: u64,
+        _now: u64,
         scope: Option<&str>,
     ) -> Result<Option<RedeemableCode>, StoreError> {
         use worker::d1::D1Type;
 
+        // RFC-047: matches on lookup key and scope only. No expiry/
+        // revocation/use predicate here -- `classify_code_lookup` decides
+        // that from the returned state fields; `claim_code`'s conditional
+        // UPDATE remains the actual enforcement point (INV-5).
         for candidate in candidates {
             let row: Option<RedeemableRow> = if let Some(s) = scope {
                 let sql = format!(
-                    "SELECT id, key_version, grant_payload, scope, expires_at
+                    "SELECT id, key_version, grant_payload, scope, expires_at,
+                            used_at, revoked_at
                      FROM {t}
-                     WHERE lookup_key = ? AND scope = ?
-                       AND used_at IS NULL AND revoked_at IS NULL
-                       AND expires_at > ? LIMIT 1",
+                     WHERE lookup_key = ? AND scope = ? LIMIT 1",
                     t = self.table
                 );
                 let stmt = bind(
                     self.db.prepare(&sql),
-                    &[D1Type::Text(candidate.as_str()), D1Type::Text(s), ts(now)],
+                    &[D1Type::Text(candidate.as_str()), D1Type::Text(s)],
                 )?;
                 stmt.first(None).await.map_err(to_store_err)?
             } else {
                 let sql = format!(
-                    "SELECT id, key_version, grant_payload, scope, expires_at
+                    "SELECT id, key_version, grant_payload, scope, expires_at,
+                            used_at, revoked_at
                      FROM {t}
-                     WHERE lookup_key = ?
-                       AND used_at IS NULL AND revoked_at IS NULL
-                       AND expires_at > ? LIMIT 1",
+                     WHERE lookup_key = ? LIMIT 1",
                     t = self.table
                 );
-                let stmt = bind(
-                    self.db.prepare(&sql),
-                    &[D1Type::Text(candidate.as_str()), ts(now)],
-                )?;
+                let stmt = bind(self.db.prepare(&sql), &[D1Type::Text(candidate.as_str())])?;
                 stmt.first(None).await.map_err(to_store_err)?
             };
 
@@ -126,6 +127,8 @@ impl CodeStore for D1CodeStore {
                     purpose: r.purpose,
                     scope: r.scope,
                     expires_at: r.expires_at as u64,
+                    used_at: r.used_at.map(|t| t as u64),
+                    revoked_at: r.revoked_at.map(|t| t as u64),
                 }));
             }
         }

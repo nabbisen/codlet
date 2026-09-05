@@ -29,14 +29,13 @@ struct MemCodeRow {
 }
 
 impl MemCodeRow {
-    fn is_redeemable_at(&self, now: u64, scope: Option<&str>) -> bool {
-        self.used_at.is_none()
-            && self.revoked_at.is_none()
-            && self.expires_at > now
-            && match scope {
-                Some(s) => self.scope.as_deref() == Some(s),
-                None => true,
-            }
+    /// Matches on lookup key and scope only (RFC-047) — use/expiry/revocation
+    /// state is not a lookup criterion; `classify_code_lookup` decides that.
+    fn matches_scope(&self, scope: Option<&str>) -> bool {
+        match scope {
+            Some(s) => self.scope.as_deref() == Some(s),
+            None => true,
+        }
     }
 
     fn matches_any(&self, candidates: &[LookupKey]) -> bool {
@@ -69,7 +68,7 @@ impl CodeStore for MemCodeStore {
     async fn find_redeemable(
         &self,
         candidates: &[LookupKey],
-        now: u64,
+        _now: u64,
         scope: Option<&str>,
     ) -> Result<Option<RedeemableCode>, StoreError> {
         let rows = self
@@ -78,7 +77,7 @@ impl CodeStore for MemCodeStore {
             .map_err(|e| StoreError::Backend(e.to_string()))?;
         let found = rows
             .iter()
-            .find(|r| r.is_redeemable_at(now, scope) && r.matches_any(candidates))
+            .find(|r| r.matches_scope(scope) && r.matches_any(candidates))
             .map(|r| RedeemableCode {
                 id: r.id.clone(),
                 key_version: r.key_version.clone(),
@@ -86,6 +85,8 @@ impl CodeStore for MemCodeStore {
                 purpose: r.purpose.clone(),
                 scope: r.scope.clone(),
                 expires_at: r.expires_at,
+                used_at: r.used_at,
+                revoked_at: r.revoked_at,
             });
         Ok(found)
     }

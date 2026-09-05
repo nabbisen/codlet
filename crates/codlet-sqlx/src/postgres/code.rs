@@ -14,7 +14,7 @@ fn to_err(e: sqlx::Error) -> StoreError {
 }
 
 // Tuple type for the redeemable SELECT.
-// (id, key_version, grant_payload, scope, expires_at)
+// (id, key_version, purpose, grant_payload, scope, expires_at, used_at, revoked_at)
 type RedeemableRow = (
     String,
     String,
@@ -22,6 +22,8 @@ type RedeemableRow = (
     Option<String>,
     Option<String>,
     i64,
+    Option<i64>,
+    Option<i64>,
 );
 
 // Tuple type for admin SELECT.
@@ -60,43 +62,42 @@ impl CodeStore for PostgresStore {
     async fn find_redeemable(
         &self,
         candidates: &[LookupKey],
-        now: u64,
+        _now: u64,
         scope: Option<&str>,
     ) -> Result<Option<RedeemableCode>, StoreError> {
-        let now_i = now as i64;
+        // RFC-047: matches on lookup key and scope only. No expiry/revocation/
+        // use predicate here -- `classify_code_lookup` decides that from the
+        // returned state fields; `claim_code`'s conditional UPDATE remains
+        // the actual enforcement point (INV-5).
         for candidate in candidates {
             let row: Option<RedeemableRow> = if let Some(s) = scope {
                 sqlx::query_as(
-                    "SELECT id, key_version, purpose, grant_payload, scope, expires_at
+                    "SELECT id, key_version, purpose, grant_payload, scope, expires_at,
+                            used_at, revoked_at
                      FROM codlet_codes
                      WHERE lookup_key = $1 AND scope = $2
-                       AND used_at IS NULL AND revoked_at IS NULL
-                       AND expires_at > $3
                      LIMIT 1",
                 )
                 .bind(candidate.as_str())
                 .bind(s)
-                .bind(now_i)
                 .fetch_optional(&self.pool)
                 .await
                 .map_err(to_err)?
             } else {
                 sqlx::query_as(
-                    "SELECT id, key_version, purpose, grant_payload, scope, expires_at
+                    "SELECT id, key_version, purpose, grant_payload, scope, expires_at,
+                            used_at, revoked_at
                      FROM codlet_codes
                      WHERE lookup_key = $1
-                       AND used_at IS NULL AND revoked_at IS NULL
-                       AND expires_at > $2
                      LIMIT 1",
                 )
                 .bind(candidate.as_str())
-                .bind(now_i)
                 .fetch_optional(&self.pool)
                 .await
                 .map_err(to_err)?
             };
 
-            if let Some((id, kv, purpose_val, grant, scope_val, exp)) = row {
+            if let Some((id, kv, purpose_val, grant, scope_val, exp, used_at, revoked_at)) = row {
                 return Ok(Some(RedeemableCode {
                     id: CodeId::new(id),
                     key_version: KeyVersion::new(kv),
@@ -104,6 +105,8 @@ impl CodeStore for PostgresStore {
                     purpose: purpose_val,
                     scope: scope_val,
                     expires_at: exp as u64,
+                    used_at: used_at.map(|t| t as u64),
+                    revoked_at: revoked_at.map(|t| t as u64),
                 }));
             }
         }

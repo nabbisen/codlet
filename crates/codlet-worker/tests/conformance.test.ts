@@ -79,15 +79,45 @@ describe("D1CodeStore", () => {
     expect(row?.id).toBe(id);
   });
 
-  it("expired code not returned — REAL timestamp comparison (D1Type::Real)", async () => {
+  it("RFC-047: expired code is returned (not excluded), with expires_at intact — REAL timestamp (D1Type::Real)", async () => {
+    // Inverted per RFC-047 §4.3: the store must return the row, not exclude
+    // it — codlet's classify_code_lookup is what rejects it. A backend that
+    // kept its old exclusion filter would return null here.
     const lk = `exp-${Date.now()}`.padEnd(64, "x");
+    const expiresAt = NOW - 1; // stored as REAL (f64) per RFC-033 §6
     await post("/codes/insert", {
       id: `exp-${Date.now()}`, lookup_key: lk, key_version: "v1",
       created_at: NOW - 7200,
-      expires_at: NOW - 1,   // stored as REAL (f64) per RFC-033 §6
+      expires_at: expiresAt,
     });
-    const row = await post("/codes/find", { lookup_key: lk, now: NOW });
-    expect(row).toBeNull();
+    const row = await post("/codes/find", { lookup_key: lk, now: NOW }) as { expires_at: number; used_at: number | null; revoked_at: number | null } | null;
+    expect(row).not.toBeNull();
+    expect(row?.expires_at).toBe(expiresAt);
+    expect(row?.used_at ?? null).toBeNull();
+    expect(row?.revoked_at ?? null).toBeNull();
+  });
+
+  it("RFC-047: used code is returned with used_at set, not excluded", async () => {
+    const id = `code-used-${Date.now()}`;
+    const lk = id.padEnd(64, "x");
+    await post("/codes/insert", { id, lookup_key: lk, key_version: "v1", created_at: NOW, expires_at: LATER });
+    const claim = await post("/codes/claim", { id, subject: "user-1", now: NOW }) as { changes: number };
+    expect(claim.changes).toBe(1);
+
+    const row = await post("/codes/find", { lookup_key: lk, now: NOW }) as { used_at: number | null } | null;
+    expect(row).not.toBeNull();
+    expect(row?.used_at).toBe(NOW);
+  });
+
+  it("RFC-047: revoked code is returned with revoked_at set, not excluded", async () => {
+    const id = `code-revoked-${Date.now()}`;
+    const lk = id.padEnd(64, "x");
+    await post("/codes/insert", { id, lookup_key: lk, key_version: "v1", created_at: NOW, expires_at: LATER });
+    await post("/codes/revoke", { id, now: NOW });
+
+    const row = await post("/codes/find", { lookup_key: lk, now: NOW }) as { revoked_at: number | null } | null;
+    expect(row).not.toBeNull();
+    expect(row?.revoked_at).toBe(NOW);
   });
 
   it("claim_code: exactly one winner under concurrency (INV-5)", async () => {
@@ -105,13 +135,18 @@ describe("D1CodeStore", () => {
     expect(results.filter(r => r.changes === 0).length).toBe(3);
   });
 
-  it("claimed code is not findable afterward", async () => {
+  it("RFC-047: claimed code is still findable afterward, with used_at set", async () => {
+    // Inverted per RFC-047 §4.3 -- this duplicated the intent of the
+    // "used code" test above under the old (exclusion) contract; kept as its
+    // own test since it exercises claim_code's real UPDATE rather than
+    // inserting used_at by hand.
     const id = `code-after-claim-${Date.now()}`;
     const lk = id.padEnd(64, "x");
     await post("/codes/insert", { id, lookup_key: lk, key_version: "v1", created_at: NOW, expires_at: LATER });
     await post("/codes/claim", { id, subject: "u1", now: NOW });
-    const row = await post("/codes/find", { lookup_key: lk, now: NOW });
-    expect(row).toBeNull();
+    const row = await post("/codes/find", { lookup_key: lk, now: NOW }) as { used_at: number | null } | null;
+    expect(row).not.toBeNull();
+    expect(row?.used_at).toBe(NOW);
   });
 });
 
