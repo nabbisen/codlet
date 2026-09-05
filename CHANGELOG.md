@@ -87,6 +87,8 @@ semantic versioning once it reaches a stable release.
   `claim_code`, and ships only once this step has run green in CI against
   all four adapters (RFC-047 §4.2).
 
+## [0.19.1] — 2026-09-06
+
 ### Security
 
 - **Critical: SQL injection in `claim_code` via `purpose`/`scope` (RFC-048).**
@@ -102,10 +104,12 @@ semantic versioning once it reaches a stable release.
   code — in a different scope — as used, attributed to the attacker's
   subject. **Confirmed exploitable against D1 the same way**, verified with
   the identical payload against a real D1 binding via Miniflare (previously
-  presumed but unverified). **PostgreSQL is fixed but its exploitability
-  before the fix was not independently tested in this round** — no local
-  Docker; CI's `postgres-test` job is the evidence for both the fix and
-  whatever the pre-fix behavior would have been.
+  presumed but unverified). **PostgreSQL was affected by the same defect;
+  its exploitability before the fix was not confirmed** — no local Docker;
+  CI's `postgres-test` job is the evidence for the fix, not for what the
+  pre-fix behavior would have done. PostgreSQL is not stated as unaffected:
+  that would rest on analysis, not a test. **All users of all three
+  adapters should upgrade regardless of backend.**
   Fixed in all three adapters: `claim_code` now selects from a fixed set of
   complete, constant SQL strings and always binds `purpose`/`scope` as
   parameters — no fragment of the query is ever assembled from host data.
