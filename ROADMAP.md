@@ -216,6 +216,9 @@ counted as verified on the strength of a test's existence alone.
 > backends affected, SQLite and D1 confirmed exploitable, PostgreSQL
 > unconfirmed); ships as 0.19.1 with the advisory published on release.
 >
+> **0.19.1 released 2026-09-06** (`dc8e0c3`, tag `0.19.1`). No versions yanked.
+> Advisory drafted and awaiting the owner.
+>
 > **Sequenced:** 0.19.1 minimal first, then the shared-conformance follow-up
 > (`rfcs/handoffs/048-…/follow-up-conformance-handoff.md`) — the RFC-048
 > regression test is adapter-local, so `codlet-conformance` would currently
