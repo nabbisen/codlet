@@ -11,9 +11,11 @@ inside each file mirrors it.
 
 Counts below are derived from the filesystem, not hand-maintained.
 
-## Proposed (0)
+## Proposed (1)
 
-No open RFCs.
+| ID | Title | Milestone |
+|----|-------|-----------|
+| [048](./proposed/048-bind-purpose-and-scope-in-claim-code.md) | **Security:** Bind `purpose` and `scope` — SQL Injection in `claim_code` | M6 |
 
 ## Accepted (4)
 
