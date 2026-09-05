@@ -1,6 +1,6 @@
 # RFC-048: Bind `purpose` and `scope` — SQL Injection in `claim_code`
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Target milestone:** M6, ahead of all remaining M6 work
 - **Primary crate(s):** `codlet-sqlx`, `codlet-worker`, `xtask`
 - **Severity:** Critical — confirmed exploitable in published releases

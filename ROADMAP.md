@@ -205,6 +205,17 @@ counted as verified on the strength of a test's existence alone.
 
 ## M6 — Session lifecycle hardening
 
+> **Interrupted by a critical security fix.** RFC-048 (SQL injection in
+> `claim_code` via `purpose`/`scope`) takes priority over all remaining M6 work,
+> including RFC-047 step 2 and RFC-045. Found during RFC-047 step 1, confirmed
+> exploitable against the shipped SQLite adapter, present in every published
+> release carrying `codlet-sqlx` or `codlet-worker`. See
+> `.git-exclude/reviewed/SECURITY-FINDING-claim-code-sql-injection.md`.
+>
+> Outstanding owner decisions: whether to yank affected versions, and advisory
+> timing.
+
+
 **Theme:** the work the handoff bundle calls "RFC-F". It has never existed as an
 RFC; M6 is where it becomes one.
 

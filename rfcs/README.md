@@ -11,13 +11,11 @@ inside each file mirrors it.
 
 Counts below are derived from the filesystem, not hand-maintained.
 
-## Proposed (1)
+## Proposed (0)
 
-| ID | Title | Milestone |
-|----|-------|-----------|
-| [048](./proposed/048-bind-purpose-and-scope-in-claim-code.md) | **Security:** Bind `purpose` and `scope` — SQL Injection in `claim_code` | M6 |
+No open RFCs.
 
-## Accepted (4)
+## Accepted (5)
 
 | ID | Title | Milestone |
 |----|-------|-----------|
@@ -25,6 +23,7 @@ Counts below are derived from the filesystem, not hand-maintained.
 | [045](./accepted/045-session-rotation.md) | Session Rotation on Privilege Change | M6 |
 | [046](./accepted/046-host-visible-session-failure-reasons.md) | Host-Visible Session Failure Reasons | M6 |
 | [047](./accepted/047-the-classifier-should-own-record-state.md) | The Classifier Should Own Record State, Not the Adapter's WHERE Clause | M6 |
+| [048](./accepted/048-bind-purpose-and-scope-in-claim-code.md) | **Security:** Bind `purpose` and `scope` — SQL Injection in `claim_code` | M6 |
 
 ## Implemented (43)
 
