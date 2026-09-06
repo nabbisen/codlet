@@ -203,7 +203,7 @@ same shape of check as the one that did fail open.
 **M5 exit criteria (revised).** As previously approved, plus: no invariant is
 counted as verified on the strength of a test's existence alone.
 
-## M6 — Session lifecycle hardening · **COMPLETE 2026-09-06**
+## M6 — Session lifecycle hardening · **COMPLETE — RELEASED 0.20.0, 2026-09-06**
 
 **Evidence:** CI run
 [34023978016](https://github.com/nabbisen/codlet/actions/runs/34023978016) on
