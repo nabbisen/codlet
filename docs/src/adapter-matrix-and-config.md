@@ -37,6 +37,31 @@ requirement are not production-safe for codlet's core use case.
 > claim test. The atomic-claim and atomic-consume guarantees above reflect
 > that run.
 
+> **`codlet-sqlx` builds two generations of the crypto stack (RFC-049).**
+> `codlet-sqlx`'s published dependency tree carries duplicate copies of
+> `sha2`, `digest`, `crypto-common`, and `block-buffer`: `sqlx` 0.9 depends on
+> the `0.10` generation of these crates, while codlet's own hashing
+> (`crates/codlet`) uses the `0.11` generation. A consumer of `codlet-sqlx`
+> therefore compiles both.
+>
+> **This is compile-time weight, not a vulnerability.** Both generations are
+> current and maintained, and codlet's own HMAC path uses only the newer one
+> — the older generation is pulled in solely by `sqlx`'s own internals, never
+> exercised by codlet's code. It is stated here rather than left to be
+> discovered, because a security library building two copies of its
+> cryptographic primitives is worth being plain about even when it is
+> harmless.
+>
+> **Not fixable in codlet.** Pinning codlet's own `sha2`/`digest` back to the
+> `0.10` generation to match would be the wrong direction. It resolves when
+> `sqlx` moves to the `0.11` generation of these crates — that is the
+> condition to watch for; nothing on codlet's side needs to change before or
+> after it happens. `codlet` itself (the runtime-neutral core) has no
+> duplicate versions in its own published tree — verified by the
+> `core-deps` CI gate, which asserts this on every change (RFC-049 §5). That
+> gate is intentionally scoped to `codlet` only and does not cover
+> `codlet-sqlx`, for the reason stated here.
+
 ## Rate-limit adapters
 
 | Adapter | Consistency | Notes |

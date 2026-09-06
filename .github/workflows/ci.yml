@@ -171,6 +171,21 @@ jobs:
             echo "::error::forbidden runtime/db/framework crate found in codlet"
             exit 1
           fi
+          # RFC-049 §5: codlet is the runtime-neutral core (RFC-002) and
+          # targets wasm with opt-level = "s" -- its minimality is a
+          # principle, not an accident. Assert its tree carries no duplicate
+          # versions of any crate. Scoped to codlet only, deliberately:
+          # codlet-sqlx carries known upstream duplicates (sha2/digest/
+          # crypto-common/block-buffer, RFC-049 §4) that this gate must not
+          # be extended to cover -- a check that fails on introduction for a
+          # reason nobody can fix is the ignore-list trap RFC-039 §3.2 warns
+          # against.
+          dupes="$(echo "$tree" | sed 's/ (\*)$//' | grep -E '^[a-zA-Z0-9_-]+ v' \
+            | sort -u | awk '{print $1}' | uniq -d)"
+          if [ -n "$dupes" ]; then
+            echo "::error::duplicate versions in codlet's dependency tree: $dupes"
+            exit 1
+          fi
 
   # RFC-036 §3.2 / review R-1: rust-version is a per-package field, not a
   # single workspace-wide floor. codlet, codlet-conformance, codlet-worker,

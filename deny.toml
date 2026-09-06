@@ -75,6 +75,17 @@ ignore = false
 # the graph has not been audited for duplicates, and a first-day `deny` would
 # violate the "must pass on the day it lands" rule (RFC-039 §3.2). Revisit
 # after one release cycle of warnings (RFC-039 §8.1).
+#
+# Revisited and settled at `warn` (RFC-049, after two release cycles: 0.19.0,
+# 0.20.0). The graph was audited: 12 duplicate crates workspace-wide (see
+# RFC-049 §3 for the list). Moving to `deny` would require twelve `skip`
+# entries on day one -- RFC-039 §3.2 names that pattern a gate that is
+# switched off while appearing to run, and an allow-list padded to force a
+# pass is the same thing more slowly. The duplicates are a property of the
+# dependency ecosystem, not a decision codlet has made. This question is
+# **settled at `warn`**, not deferred again -- do not re-open it without new
+# information (e.g. a specific duplicate becoming a real bloat or supply-chain
+# concern), and do not add `skip` entries to force `deny` to pass.
 multiple-versions = "warn"
 wildcards = "allow"
 highlight = "all"

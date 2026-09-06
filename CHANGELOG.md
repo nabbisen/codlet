@@ -6,6 +6,32 @@ semantic versioning once it reaches a stable release.
 
 ## [Unreleased]
 
+### Changed
+
+- **Resolved RFC-039's two deferred supply-chain questions (RFC-049).** The
+  yanked dev-tree dependencies `chacha20 0.10.0` and `spin 0.9.8` are updated
+  to their non-yanked successors (`0.10.2`, `0.9.9`); `cargo deny check
+  advisories` reports no yanked warnings. `bans.multiple-versions` **stays
+  `warn`**, not `deny`: the dependency graph was audited (12 duplicate
+  crates workspace-wide), and moving to `deny` would require twelve `skip`
+  entries on day one — exactly the "gate switched off while appearing to
+  run" pattern RFC-039 §3.2 warns against. `deny.toml` now records this
+  audit and its conclusion directly, so the question is settled rather than
+  re-deferred. The audit also surfaced a fact worth stating plainly:
+  **`codlet-sqlx` builds two generations of the crypto stack** (`sha2`,
+  `digest`, `crypto-common`, `block-buffer`) because `sqlx` 0.9 depends on
+  the `0.10` generation while codlet's own hashing uses `0.11` — compile-time
+  weight, not a vulnerability, and not fixable on codlet's side; documented
+  in `docs/src/adapter-matrix-and-config.md` along with the condition that
+  resolves it (`sqlx` moving to the `0.11` generation). The `core-deps` CI
+  gate is extended (not a new gate) to assert `codlet`'s own published
+  dependency tree carries no duplicate versions at all — it passes today,
+  scoped to `codlet` only since `codlet-sqlx`'s duplicates are upstream and
+  extending the check there would fail on day one for a reason nobody
+  controls. Verified by deliberately introducing a duplicate into `codlet`'s
+  tree and observing the gate fail before reverting. No published crate's
+  behavior changes.
+
 ## [0.20.0] — 2026-09-06
 
 ### Added
