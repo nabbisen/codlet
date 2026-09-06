@@ -423,29 +423,32 @@ async fn form_token_wrong_subject_is_invalid() {
 #[tokio::test]
 async fn audit_events_emitted_through_complete_flow() {
     // Verify the audit sink receives CodeIssued, CodeRedeemed, SessionIssued.
-    // Use two separate sinks because CodeAuth and SessionManager are separate.
-    let _code_sink = CollectingAuditSink::new();
-    let _sess_sink = CollectingAuditSink::new();
+    // Two separate sinks because CodeAuth and SessionManager are separate
+    // managers, each taking its own `AuditSink` by value.
+    // `CollectingAuditSink` is `Clone` (backed by `Arc<Mutex<..>>`), so a
+    // clone kept here stays readable after the other clone is moved into
+    // the manager -- this is what makes the assertions below possible at
+    // all (RFC-044 follow-up #2).
+    let code_sink = CollectingAuditSink::new();
+    let ca = CodeAuth::without_rate_limit(
+        MemCodeStore::new(),
+        hasher(),
+        FixedClock::at(NOW),
+        code_sink.clone(),
+        policy(),
+    );
 
-    let _ca = CodeAuth::without_rate_limit(
-        MemCodeStore::new(),
+    let sess_sink = CollectingAuditSink::new();
+    let sm = SessionManager::new(
+        MemSessionStore::new(),
         hasher(),
         FixedClock::at(NOW),
-        CollectingAuditSink::new(), // fresh inner sink (audit not inspected here)
-        policy(),
+        sess_sink.clone(),
+        cookie(),
     );
-    // We can't share the sink easily without Arc; test the types separately.
-    // Verify issue emits CodeIssued:
-    let sink = CollectingAuditSink::new();
-    let ca2 = CodeAuth::without_rate_limit(
-        MemCodeStore::new(),
-        hasher(),
-        FixedClock::at(NOW),
-        sink,
-        policy(),
-    );
+
     let mut rng = SystemRandom::new();
-    let _ = ca2
+    let (_code_id, plain) = ca
         .issue_code(
             &mut rng,
             CodeId::new("cx".into()),
@@ -455,8 +458,39 @@ async fn audit_events_emitted_through_complete_flow() {
         )
         .await
         .unwrap();
-    // The sink is moved into ca2; we test via compile/run success that
-    // events are recorded — direct drain would require refactoring the API
-    // to accept &A instead of A. That's a future ergonomics improvement.
-    // For now, verify the flow completes without panicking.
+
+    let found = ca.find(plain.expose(), None).await.unwrap();
+    let subject = SubjectId::new("audit-flow-user".into());
+    let success = ca.claim(&found, subject, None).await.unwrap();
+
+    let mut sess_rng = SystemRandom::new();
+    sm.issue(
+        &success,
+        SessionId::new("audit-flow-sess".into()),
+        &mut sess_rng,
+    )
+    .await
+    .unwrap();
+
+    let code_events = code_sink.drain();
+    assert!(
+        code_events
+            .iter()
+            .any(|e| matches!(e, codlet::audit::CodeAuthEvent::CodeIssued { .. })),
+        "issue_code must emit CodeIssued; got {code_events:?}"
+    );
+    assert!(
+        code_events
+            .iter()
+            .any(|e| matches!(e, codlet::audit::CodeAuthEvent::CodeRedeemed { .. })),
+        "claim must emit CodeRedeemed; got {code_events:?}"
+    );
+
+    let sess_events = sess_sink.drain();
+    assert!(
+        sess_events
+            .iter()
+            .any(|e| matches!(e, codlet::audit::CodeAuthEvent::SessionIssued { .. })),
+        "issue must emit SessionIssued; got {sess_events:?}"
+    );
 }

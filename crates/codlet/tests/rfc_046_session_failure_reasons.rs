@@ -16,10 +16,9 @@
 //! disclosed gap where revocation collapsed to `NotFound` -- see
 //! `revoked_session_is_reported_as_revoked` below).
 
-use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use codlet::audit::{AuditSink, CodeAuthEvent, CollectingAuditSink};
+use codlet::audit::{CodeAuthEvent, CollectingAuditSink};
 use codlet::auth::SessionManager;
 use codlet::clock::FixedClock;
 use codlet::cookie::CookiePolicy;
@@ -56,25 +55,6 @@ fn mgr(
 const WELL_FORMED_UNKNOWN: &str =
     "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 
-/// A shared audit sink whose events remain inspectable after being moved into
-/// a `SessionManager` by value -- `CollectingAuditSink` itself has no
-/// externally-orphan-rule-friendly way to do this from outside the crate, so
-/// this test file defines its own thin `Arc`-backed one.
-#[derive(Clone, Default)]
-struct SharedAuditSink(Arc<Mutex<Vec<CodeAuthEvent>>>);
-
-impl SharedAuditSink {
-    fn events(&self) -> Vec<CodeAuthEvent> {
-        self.0.lock().unwrap().clone()
-    }
-}
-
-impl AuditSink for SharedAuditSink {
-    fn record(&self, event: CodeAuthEvent) {
-        self.0.lock().unwrap().push(event);
-    }
-}
-
 #[tokio::test]
 async fn no_cookie_reports_no_cookie() {
     let m = mgr(CollectingAuditSink::new());
@@ -93,7 +73,7 @@ async fn no_cookie_does_not_emit_a_validate_failed_audit_event() {
     // "SessionValidateFailed is opt-in signal, not every anonymous page view"
     // contract (audit.rs) from silently changing meaning now that `validate`
     // is called for every request, cookie or not.
-    let audit = SharedAuditSink::default();
+    let audit = CollectingAuditSink::new();
     let m = SessionManager::new(
         MemSessionStore::new(),
         hasher(),
@@ -103,7 +83,7 @@ async fn no_cookie_does_not_emit_a_validate_failed_audit_event() {
     );
     let _ = m.validate(None).await.unwrap();
     assert!(
-        audit.events().is_empty(),
+        audit.drain().is_empty(),
         "an anonymous request (no cookie) must not emit session.validate.failed"
     );
 }
@@ -195,7 +175,7 @@ async fn revoked_session_is_reported_as_revoked() {
 
 #[tokio::test]
 async fn a_failed_validation_with_a_real_cookie_does_emit_the_audit_event() {
-    let audit = SharedAuditSink::default();
+    let audit = CollectingAuditSink::new();
     let m = SessionManager::new(
         MemSessionStore::new(),
         hasher(),
@@ -206,7 +186,7 @@ async fn a_failed_validation_with_a_real_cookie_does_emit_the_audit_event() {
     let outcome = m.validate(Some(WELL_FORMED_UNKNOWN)).await.unwrap();
     assert!(!outcome.is_authenticated());
     assert_eq!(
-        audit.events(),
+        audit.drain(),
         vec![CodeAuthEvent::SessionValidateFailed],
         "a genuine failed validation attempt (real cookie, wrong/unknown) \
          must still emit session.validate.failed -- only NoCookie is exempt"

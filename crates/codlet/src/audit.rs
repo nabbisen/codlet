@@ -218,10 +218,19 @@ impl AuditSink for NoopAuditSink {
 }
 
 /// An audit sink that accumulates events in a `Vec` for inspection in tests.
+///
+/// Backed by `Arc<Mutex<..>>` and `Clone`, so a handle can be cloned before
+/// being moved into a manager (every manager constructor takes its `AuditSink`
+/// by value) and still read afterward — clone it once, keep one clone for
+/// assertions, and move the other in. A `CollectingAuditSink` that is moved in
+/// whole and never cloned is, by construction, unreadable afterward; that
+/// pattern produced four private near-identical re-implementations of this
+/// same sink across the test suite before this type became shareable itself
+/// (RFC-044 follow-up #2) — prefer cloning this one over writing another.
 #[cfg(any(test, feature = "test-utils"))]
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct CollectingAuditSink {
-    events: std::sync::Mutex<Vec<CodeAuthEvent>>,
+    events: std::sync::Arc<std::sync::Mutex<Vec<CodeAuthEvent>>>,
 }
 
 #[cfg(any(test, feature = "test-utils"))]

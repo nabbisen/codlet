@@ -16,10 +16,9 @@
 //! `rfc_045_rotate_requires_authenticated_compile_fail.rs`, not here.
 
 use std::future::Future;
-use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use codlet::audit::{AuditSink, CodeAuthEvent, CollectingAuditSink};
+use codlet::audit::{CodeAuthEvent, CollectingAuditSink};
 use codlet::auth::SessionManager;
 use codlet::clock::FixedClock;
 use codlet::cookie::CookiePolicy;
@@ -41,32 +40,6 @@ fn hasher() -> SecretHasher<StaticKeyProvider> {
 
 fn cookie() -> CookiePolicy {
     CookiePolicy::production_strict("sid", Duration::from_secs(30 * 86_400))
-}
-
-/// A shared audit sink whose events remain inspectable after being moved into
-/// a `SessionManager` by value -- `CollectingAuditSink` itself has no
-/// externally-accessible way to do this once moved, so this test file
-/// defines its own thin `Arc`-backed one (same pattern as
-/// `rfc_046_session_failure_reasons.rs`'s `SharedAuditSink`). Needed because
-/// `rfc_044_idle_timeout.rs`'s otherwise-similar
-/// `failed_touch_leaves_session_authenticated_and_emits_audit_event` never
-/// actually inspects its audit sink -- it moves a bare `CollectingAuditSink`
-/// into the manager and never reads it back, so its "and_emits_audit_event"
-/// claim is untested. Flagged in this handoff's review request rather than
-/// fixed there, since that file is explicitly out of RFC-045's change scope.
-#[derive(Clone, Default)]
-struct SharedAuditSink(Arc<Mutex<Vec<CodeAuthEvent>>>);
-
-impl SharedAuditSink {
-    fn events(&self) -> Vec<CodeAuthEvent> {
-        self.0.lock().unwrap().clone()
-    }
-}
-
-impl AuditSink for SharedAuditSink {
-    fn record(&self, event: CodeAuthEvent) {
-        self.0.lock().unwrap().push(event);
-    }
 }
 
 async fn insert_old_session(store: &impl SessionStore) {
@@ -234,7 +207,13 @@ async fn failed_revoke_returns_ok_old_session_still_valid_and_audit_event_fires(
     insert_old_session(&store).await;
 
     let audit = CollectingAuditSink::new();
-    let mgr = SessionManager::new(store, hasher(), FixedClock::at(NOW), audit, cookie());
+    let mgr = SessionManager::new(
+        store,
+        hasher(),
+        FixedClock::at(NOW),
+        audit.clone(),
+        cookie(),
+    );
 
     let current = mgr.validate(Some(OLD_SECRET)).await.unwrap();
     let mut rng = SystemRandom::new();
@@ -261,6 +240,25 @@ async fn failed_revoke_returns_ok_old_session_still_valid_and_audit_event_fires(
         old_outcome.is_authenticated(),
         "insert must precede revoke: a failed revoke leaves the old session valid"
     );
+
+    // The "and_audit_event_fires" half of this test's own name: the failure
+    // must be surfaced, not merely swallowed -- assert the specific event,
+    // naming both session ids, not just that rotation returned Ok (RFC-044
+    // follow-up #2, Finding 2: this used to be asserted only by a
+    // differently-named sibling test, never by the test whose name promised
+    // it).
+    let events = audit.drain();
+    let found = events.iter().any(|e| {
+        matches!(
+            e,
+            CodeAuthEvent::SessionRotationRevokeFailed { old_session_id, new_session_id }
+                if old_session_id.as_str() == "sess-old" && new_session_id.as_str() == "sess-new"
+        )
+    });
+    assert!(
+        found,
+        "a failed revoke must fire SessionRotationRevokeFailed naming both session ids; got {events:?}"
+    );
 }
 
 // ── §8: the host-supplied reason reaches the audit event ────────────────────
@@ -270,7 +268,7 @@ async fn reason_is_recorded_in_the_audit_event() {
     let store = MemSessionStore::new();
     insert_old_session(&store).await;
 
-    let audit = SharedAuditSink::default();
+    let audit = CollectingAuditSink::new();
     let mgr = SessionManager::new(
         store,
         hasher(),
@@ -290,7 +288,7 @@ async fn reason_is_recorded_in_the_audit_event() {
     .await
     .unwrap();
 
-    let events = audit.events();
+    let events = audit.drain();
     let found = events.iter().any(|e| {
         matches!(
             e,
@@ -300,48 +298,5 @@ async fn reason_is_recorded_in_the_audit_event() {
     assert!(
         found,
         "SessionRotated must carry the host-supplied reason verbatim; got {events:?}"
-    );
-}
-
-// ── The failed-revoke path also fires its own, distinct audit event ────────
-
-#[tokio::test]
-async fn failed_revoke_fires_a_distinct_audit_event_naming_the_old_session() {
-    let store = FailingRevokeStore {
-        inner: MemSessionStore::new(),
-    };
-    insert_old_session(&store).await;
-
-    let audit = SharedAuditSink::default();
-    let mgr = SessionManager::new(
-        store,
-        hasher(),
-        FixedClock::at(NOW),
-        audit.clone(),
-        cookie(),
-    );
-
-    let current = mgr.validate(Some(OLD_SECRET)).await.unwrap();
-    let mut rng = SystemRandom::new();
-    mgr.rotate(
-        &current,
-        SessionId::new("sess-new".into()),
-        "privilege_change",
-        &mut rng,
-    )
-    .await
-    .unwrap();
-
-    let events = audit.events();
-    let found = events.iter().any(|e| {
-        matches!(
-            e,
-            CodeAuthEvent::SessionRotationRevokeFailed { old_session_id, new_session_id }
-                if old_session_id.as_str() == "sess-old" && new_session_id.as_str() == "sess-new"
-        )
-    });
-    assert!(
-        found,
-        "a failed revoke must fire SessionRotationRevokeFailed naming both session ids; got {events:?}"
     );
 }

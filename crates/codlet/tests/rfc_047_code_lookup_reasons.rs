@@ -7,10 +7,9 @@
 //! confirms the public error surface is unchanged (handoff §5.3 / acceptance
 //! criterion 6): every one of these still collapses to `InvalidOrExpired`.
 
-use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use codlet::audit::{AuditSink, CodeAuthEvent};
+use codlet::audit::{CodeAuthEvent, CollectingAuditSink};
 use codlet::auth::{CodeAuth, NoRateLimit};
 use codlet::clock::FixedClock;
 use codlet::error::{PublicRedemptionError, RedemptionFailReason};
@@ -31,23 +30,6 @@ fn hasher() -> SecretHasher<StaticKeyProvider> {
 
 fn code_lk(val: &str) -> LookupKey {
     hasher().lookup_key(SecretDomain::Code, val).unwrap().0
-}
-
-/// A shared audit sink whose events remain inspectable after being moved into
-/// a `CodeAuth` by value.
-#[derive(Clone, Default)]
-struct SharedAuditSink(Arc<Mutex<Vec<CodeAuthEvent>>>);
-
-impl SharedAuditSink {
-    fn events(&self) -> Vec<CodeAuthEvent> {
-        self.0.lock().unwrap().clone()
-    }
-}
-
-impl AuditSink for SharedAuditSink {
-    fn record(&self, event: CodeAuthEvent) {
-        self.0.lock().unwrap().push(event);
-    }
 }
 
 /// Insert a code record directly into `store`, in the given state.
@@ -71,8 +53,8 @@ async fn insert(store: &MemCodeStore, code: &str, expires_at: u64) -> CodeId {
 
 fn code_auth(
     store: MemCodeStore,
-    audit: SharedAuditSink,
-) -> CodeAuth<MemCodeStore, NoRateLimit, StaticKeyProvider, FixedClock, SharedAuditSink> {
+    audit: CollectingAuditSink,
+) -> CodeAuth<MemCodeStore, NoRateLimit, StaticKeyProvider, FixedClock, CollectingAuditSink> {
     CodeAuth::without_rate_limit(
         store,
         hasher(),
@@ -86,13 +68,13 @@ fn code_auth(
 async fn expired_code_reports_expired_internally_and_invalid_or_expired_publicly() {
     let store = MemCodeStore::new();
     insert(&store, "EXPCARD2", EXPIRED).await;
-    let audit = SharedAuditSink::default();
+    let audit = CollectingAuditSink::new();
     let ca = code_auth(store, audit.clone());
 
     let err = ca.find("EXPCARD2", None).await.unwrap_err();
     assert_eq!(*err.public(), PublicRedemptionError::InvalidOrExpired);
     assert_eq!(
-        audit.events(),
+        audit.drain(),
         vec![CodeAuthEvent::RedemptionFailed {
             reason: RedemptionFailReason::Expired
         }],
@@ -105,13 +87,13 @@ async fn revoked_code_reports_revoked_internally_and_invalid_or_expired_publicly
     let store = MemCodeStore::new();
     let id = insert(&store, "REVCARD3", LATER).await;
     store.revoke_code(&id, None, NOW).await.unwrap();
-    let audit = SharedAuditSink::default();
+    let audit = CollectingAuditSink::new();
     let ca = code_auth(store, audit.clone());
 
     let err = ca.find("REVCARD3", None).await.unwrap_err();
     assert_eq!(*err.public(), PublicRedemptionError::InvalidOrExpired);
     assert_eq!(
-        audit.events(),
+        audit.drain(),
         vec![CodeAuthEvent::RedemptionFailed {
             reason: RedemptionFailReason::Revoked
         }],
@@ -136,13 +118,13 @@ async fn used_code_found_before_claim_reports_already_used_internally() {
         .unwrap();
     assert_eq!(outcome, ClaimOutcome::Won);
 
-    let audit = SharedAuditSink::default();
+    let audit = CollectingAuditSink::new();
     let ca = code_auth(store, audit.clone());
 
     let err = ca.find("USEDCRD4", None).await.unwrap_err();
     assert_eq!(*err.public(), PublicRedemptionError::InvalidOrExpired);
     assert_eq!(
-        audit.events(),
+        audit.drain(),
         vec![CodeAuthEvent::RedemptionFailed {
             reason: RedemptionFailReason::AlreadyUsed
         }],
@@ -158,13 +140,13 @@ async fn revoked_and_expired_code_reports_revoked_per_the_fixed_decision_order()
     let store = MemCodeStore::new();
     let id = insert(&store, "BTHCARD5", EXPIRED).await;
     store.revoke_code(&id, None, NOW).await.unwrap();
-    let audit = SharedAuditSink::default();
+    let audit = CollectingAuditSink::new();
     let ca = code_auth(store, audit.clone());
 
     let err = ca.find("BTHCARD5", None).await.unwrap_err();
     assert_eq!(*err.public(), PublicRedemptionError::InvalidOrExpired);
     assert_eq!(
-        audit.events(),
+        audit.drain(),
         vec![CodeAuthEvent::RedemptionFailed {
             reason: RedemptionFailReason::Revoked
         }],
