@@ -10,9 +10,10 @@
 
 use std::future::Future;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use codlet::audit::CollectingAuditSink;
+use codlet::audit::{AuditSink, CodeAuthEvent, CollectingAuditSink};
 use codlet::auth::SessionManager;
 use codlet::clock::MutableClock;
 use codlet::cookie::CookiePolicy;
@@ -106,6 +107,28 @@ impl SessionStore for FailingTouchStore {
 
     async fn touch_session(&self, _session_id: &SessionId, _now: u64) -> Result<(), StoreError> {
         Err(StoreError::Backend("simulated touch failure".into()))
+    }
+}
+
+/// A shared audit sink whose events remain inspectable after being moved into
+/// a `SessionManager` by value -- `CollectingAuditSink` itself has no
+/// externally-accessible way to do this once moved (this is exactly what let
+/// `failed_touch_leaves_session_authenticated_and_emits_audit_event` pass
+/// while only ever proving half its name -- see the RFC-044 audit-assertion
+/// follow-up handoff). Same pattern as `rfc_046_session_failure_reasons.rs`'s
+/// and `rfc_045_session_rotation.rs`'s `SharedAuditSink`.
+#[derive(Clone, Default)]
+struct SharedAuditSink(Arc<Mutex<Vec<CodeAuthEvent>>>);
+
+impl SharedAuditSink {
+    fn events(&self) -> Vec<CodeAuthEvent> {
+        self.0.lock().unwrap().clone()
+    }
+}
+
+impl AuditSink for SharedAuditSink {
+    fn record(&self, event: CodeAuthEvent) {
+        self.0.lock().unwrap().push(event);
     }
 }
 
@@ -249,8 +272,8 @@ async fn failed_touch_leaves_session_authenticated_and_emits_audit_event() {
 
     let idle_timeout = Duration::from_secs(60); // granularity = max(3, 30) = 30s
     let clock = MutableClock::at(NOW);
-    let audit = CollectingAuditSink::new();
-    let mgr = SessionManager::new(store, hasher(), clock.clone(), audit, cookie())
+    let audit = SharedAuditSink::default();
+    let mgr = SessionManager::new(store, hasher(), clock.clone(), audit.clone(), cookie())
         .with_idle_timeout(idle_timeout);
 
     // Advance past the granularity so a touch is attempted (and fails).
@@ -260,6 +283,19 @@ async fn failed_touch_leaves_session_authenticated_and_emits_audit_event() {
     assert!(
         outcome.is_authenticated(),
         "a touch_session failure must not invalidate an otherwise-valid session"
+    );
+
+    // RFC-044 §4.5's other half: the failure must actually be surfaced, not
+    // merely swallowed. Assert the specific variant and that it names the
+    // session the touch was attempted for, not merely that some event fired.
+    let events = audit.events();
+    assert_eq!(
+        events,
+        vec![CodeAuthEvent::SessionTouchFailed {
+            session_id: SessionId::new("sess-1".into())
+        }],
+        "a failed touch_session must emit exactly one SessionTouchFailed \
+         event naming the session it was attempted for; got {events:?}"
     );
 }
 
