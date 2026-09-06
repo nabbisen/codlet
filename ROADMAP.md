@@ -289,6 +289,23 @@ construction — acceptable pre-v1 under the standing owner decision.
 
 ## M7 — v1.0 readiness
 
+> **Recorded 2026-09-06: codlet has never been in production use.** The v0.17.1
+> handoff bundle describes zinnias-ciao as "the primary downstream consumer",
+> which reads as existing production use; it is planned, not actual.
+>
+> Two consequences for this milestone:
+>
+> - Its own exit criterion — "at least one real service has migrated" — is
+>   **unmet and not near**. v1.0 is further off than the RFC count suggests.
+> - **Freezing the public API is premature while nothing exercises it.** An API
+>   validated only by its own test suite has not been validated. The architect's
+>   earlier recommendation to freeze while the surface is freshly understood is
+>   **withdrawn** on this information — see the revised sequencing note below.
+>
+> Breaking changes are accepted freely meanwhile (owner, 2026-09-06), and no
+> yank is warranted for any published defect.
+
+
 **Theme:** stabilization. **Owner-gated: DEC-014 — v1.0 is not cut without
 explicit owner confirmation.**
 
@@ -299,7 +316,8 @@ explicit owner confirmation.**
 - `codlet-worker` publish decision (revisits DEC-013), decided together with
   the crates.io namespace question from RFC-037 §7.
 - Confirmation that zinnias-ciao has migrated — the original Phase 9 exit
-  criterion, "at least one real service has migrated".
+  criterion, "at least one real service has migrated". **Currently unmet; see
+  the note above. This is the binding constraint on v1.0, not the RFC count.**
 - Security review checklist; supported-version table in SECURITY.md switched to
   its post-v1 form.
 - Complete migration guide.
