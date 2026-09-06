@@ -107,6 +107,29 @@ semantic versioning once it reaches a stable release.
   `claim_code`, and ships only once this step has run green in CI against
   all four adapters (RFC-047 §4.2).
 
+- **`find_active_session` no longer excludes expired or revoked sessions —
+  `classify_session` decides, closing the gap RFC-046 disclosed (RFC-047,
+  step 2 of 2: the session path).** `ActiveSessionRecord` gains
+  `revoked_at: Option<u64>`; `classify_session` now enforces the fixed
+  decision order for sessions too — revoked, then expired, then idle
+  timeout, then authenticated — folding in the absolute-expiry check that
+  used to live only in the store. `SessionFailure::Expired` and `::Revoked`
+  are now reachable through `SessionManager::validate`; the "not currently
+  produced" rustdoc notes RFC-046 added for them are removed since they are
+  no longer true. **This is the more dangerous half of RFC-047's split**:
+  unlike codes' `claim_code`, `find_active_session` has no downstream
+  conditional-UPDATE guard — it is the sole enforcement point for sessions,
+  so a classifier defect here is a direct authentication bypass, not a wrong
+  diagnostic. All four adapters (in-memory, SQLite, PostgreSQL, D1) drop
+  their `revoked_at IS NULL AND expires_at > ?` predicate and return
+  `revoked_at` alongside the existing fields. The shared conformance suite's
+  expired/revoked tests are inverted to match (return-and-reject, not
+  exclusion), plus a new decision-order test proving a session that is both
+  revoked and expired classifies as `Revoked`. **The public error surface is
+  unchanged**: RFC-006 §13.5's collapse still holds, and `SessionFailure` has
+  no conversion to `PublicSessionError`. RFC-044's idle-timeout tests pass
+  unmodified.
+
 ## [0.19.1] — 2026-09-06
 
 ### Security

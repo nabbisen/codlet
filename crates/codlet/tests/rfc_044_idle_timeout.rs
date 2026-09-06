@@ -315,8 +315,9 @@ async fn absolute_expiry_still_enforced_with_idle_timeout_enabled() {
     assert_eq!(
         outcome,
         SessionValidationOutcome::Unauthenticated {
-            reason: SessionFailure::NotFound
+            reason: SessionFailure::Expired
         },
-        "absolute expiry is enforced by the store, independent of idle timeout"
+        "absolute expiry is enforced by classify_session (RFC-047 step 2), \
+         independent of idle timeout, and reports the precise reason"
     );
 }

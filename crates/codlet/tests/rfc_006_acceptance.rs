@@ -1,6 +1,7 @@
 //! Acceptance tests for RFC-006: session lifecycle and cookie policy.
 use codlet::hashing::{KeyVersion, SecretDomain, SecretHasher, StaticKeyProvider};
 use codlet::mem::MemSessionStore;
+use codlet::state::{SessionFailure, SessionValidationOutcome, classify_session};
 use codlet::store::code::expires_at_from_ttl;
 use codlet::store::session::{SessionRecord, SessionStore};
 
@@ -59,7 +60,13 @@ async fn session_issuance_and_validation() {
 }
 
 #[tokio::test]
-async fn expired_session_is_inactive() {
+async fn expired_session_is_returned_and_classifier_rejects_it() {
+    // RFC-047 step 2: find_active_session no longer excludes expired rows --
+    // it returns the record, and classify_session is what rejects it. This
+    // must fail against an adapter that kept its old filter: a still-filtered
+    // MemSessionStore would return None here, tripping the `.expect(...)`
+    // below (verified by temporarily reintroducing the filter and confirming
+    // this test fails -- see the review request).
     let store = MemSessionStore::new();
     let lk = session_lookup("exp-sess");
     store
@@ -73,18 +80,24 @@ async fn expired_session_is_inactive() {
         })
         .await
         .unwrap();
-    assert!(
-        store
-            .find_active_session(&[lk], NOW)
-            .await
-            .unwrap()
-            .is_none(),
-        "expired session must be inactive"
+    let found = store
+        .find_active_session(&[lk], NOW)
+        .await
+        .unwrap()
+        .expect("RFC-047: the store must return the expired record, not filter it out");
+    assert_eq!(found.expires_at, EXPIRED);
+    assert_eq!(
+        classify_session(Some(found), None, NOW),
+        SessionValidationOutcome::Unauthenticated {
+            reason: SessionFailure::Expired
+        }
     );
 }
 
 #[tokio::test]
-async fn revoked_session_is_inactive() {
+async fn revoked_session_is_returned_and_classifier_rejects_it() {
+    // See `expired_session_is_returned_and_classifier_rejects_it` for why
+    // this asserts return-and-reject rather than exclusion.
     let store = MemSessionStore::new();
     let lk = session_lookup("rev-sess");
     store
@@ -99,13 +112,17 @@ async fn revoked_session_is_inactive() {
         .await
         .unwrap();
     store.revoke_session(&session_id(1), NOW).await.unwrap();
-    assert!(
-        store
-            .find_active_session(&[lk], NOW)
-            .await
-            .unwrap()
-            .is_none(),
-        "revoked session must be inactive"
+    let found = store
+        .find_active_session(&[lk], NOW)
+        .await
+        .unwrap()
+        .expect("RFC-047: the store must return the revoked record, not filter it out");
+    assert!(found.revoked_at.is_some());
+    assert_eq!(
+        classify_session(Some(found), None, NOW),
+        SessionValidationOutcome::Unauthenticated {
+            reason: SessionFailure::Revoked
+        }
     );
 }
 

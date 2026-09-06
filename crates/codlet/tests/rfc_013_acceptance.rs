@@ -242,15 +242,15 @@ async fn missing_code_returns_generic_public_error() {
 // ── Returning login: validate ──────────────────────────────────────────────────
 
 #[tokio::test]
-async fn validate_expired_session_returns_unauthenticated() {
+async fn validate_expired_session_returns_unauthenticated_expired() {
     use codlet::hashing::SecretDomain;
     use codlet::store::session::{SessionRecord, SessionStore};
 
     let store = MemSessionStore::new();
     let h = hasher();
     // A well-formed (64 lowercase hex chars) secret, so this test exercises
-    // the store's expiry collapse rather than tripping the malformed-shape
-    // check (RFC-046) before ever reaching the store.
+    // expiry classification rather than tripping the malformed-shape check
+    // (RFC-046) before ever reaching the store.
     let secret = "0123456789abcdef".repeat(4);
     let (lk, kv) = h.lookup_key(SecretDomain::Session, &secret).unwrap();
 
@@ -275,11 +275,14 @@ async fn validate_expired_session_returns_unauthenticated() {
         cookie(),
     );
 
+    // RFC-047 step 2: find_active_session returns the expired record;
+    // classify_session is what rejects it with the precise reason, no
+    // longer collapsed to NotFound.
     let outcome = sm.validate(Some(&secret)).await.unwrap();
     assert_eq!(
         outcome,
         SessionValidationOutcome::Unauthenticated {
-            reason: codlet::SessionFailure::NotFound
+            reason: codlet::SessionFailure::Expired
         }
     );
 }
@@ -337,11 +340,12 @@ async fn revoke_session_and_clear_cookie() {
         "clear cookie must have correct name"
     );
 
-    // Now invalid.
+    // Now invalid -- RFC-047 step 2: the store still returns the (now
+    // revoked) record; classify_session reports the precise reason.
     assert_eq!(
         sm.validate(Some(&cookie_val)).await.unwrap(),
         SessionValidationOutcome::Unauthenticated {
-            reason: codlet::SessionFailure::NotFound
+            reason: codlet::SessionFailure::Revoked
         }
     );
 }

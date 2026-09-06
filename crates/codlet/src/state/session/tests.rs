@@ -10,12 +10,22 @@ fn sid() -> crate::secret::SessionId {
 }
 
 fn record(created_at: u64, expires_at: u64, last_seen_at: Option<u64>) -> ActiveSessionRecord {
+    record_with_revocation(created_at, expires_at, last_seen_at, None)
+}
+
+fn record_with_revocation(
+    created_at: u64,
+    expires_at: u64,
+    last_seen_at: Option<u64>,
+    revoked_at: Option<u64>,
+) -> ActiveSessionRecord {
     ActiveSessionRecord {
         id: sid(),
         subject: subject(),
         created_at,
         expires_at,
         last_seen_at,
+        revoked_at,
     }
 }
 
@@ -122,15 +132,103 @@ fn idle_timeout_falls_back_to_created_at_when_never_touched() {
 }
 
 #[test]
-fn absolute_expiry_independent_of_idle_timeout() {
-    // The store would never return this record (it's past expires_at) --
-    // but this proves classify_session doesn't second-guess idle-timeout
-    // math into overriding what "Some" already means: a record the store
-    // considers active. Absolute expiry enforcement lives in the store, not
-    // here (RFC-044 §4.3); idle timeout is the only thing this function
-    // decides. A record with an alarmingly close expires_at is still
-    // authenticated if idle timeout doesn't fire.
+fn a_record_with_an_unreached_expiry_and_recent_idle_activity_authenticates() {
+    // Positive control: neither absolute expiry nor idle timeout has fired,
+    // so the record authenticates. (Superseded RFC-044-era framing: this
+    // used to say "the store would never return this record" and "absolute
+    // expiry enforcement lives in the store, not here" -- both are false
+    // since RFC-047 step 2 moved absolute-expiry enforcement into this
+    // function too. See `absolute_expiry_wins_even_when_idle_check_would_pass`
+    // below for the case that actually exercises the boundary this test's
+    // old comment described.)
     let idle_timeout = Duration::from_secs(1_800);
     let out = classify_session(Some(record(0, 100, Some(50))), Some(idle_timeout), 60);
     assert!(out.is_authenticated());
+}
+
+// ── RFC-047 step 2: classify_session owns expiry and revocation too ────────
+
+#[test]
+fn revoked_alone_is_unauthenticated_revoked() {
+    let out = classify_session(
+        Some(record_with_revocation(0, 9_999_999, None, Some(5))),
+        None,
+        10,
+    );
+    assert_eq!(
+        out,
+        SessionValidationOutcome::Unauthenticated {
+            reason: SessionFailure::Revoked
+        }
+    );
+}
+
+#[test]
+fn expired_alone_is_unauthenticated_expired() {
+    let out = classify_session(Some(record(0, 100, None)), None, 100);
+    assert_eq!(
+        out,
+        SessionValidationOutcome::Unauthenticated {
+            reason: SessionFailure::Expired
+        }
+    );
+    // Strictly before the boundary: still authenticated.
+    let out = classify_session(Some(record(0, 100, None)), None, 99);
+    assert!(out.is_authenticated());
+}
+
+#[test]
+fn revoked_and_expired_classifies_revoked() {
+    // RFC-047 §8.1 (restated for sessions): revoked, then expired, then
+    // idle, then authenticated. A record satisfying both must classify as
+    // Revoked, not Expired.
+    let out = classify_session(
+        Some(record_with_revocation(0, 100, None, Some(50))),
+        None,
+        100, // also past expiry
+    );
+    assert_eq!(
+        out,
+        SessionValidationOutcome::Unauthenticated {
+            reason: SessionFailure::Revoked
+        },
+        "revoked must win over expired"
+    );
+}
+
+#[test]
+fn absolute_expiry_wins_even_when_idle_check_would_pass() {
+    // Expiry is checked before idle timeout: a record whose idle-activity
+    // check would pass (last_seen_at is recent) must still classify as
+    // Expired if its absolute expiry has passed. Proves the decision order
+    // is enforced, not just each condition individually.
+    let idle_timeout = Duration::from_secs(1_800);
+    let out = classify_session(
+        Some(record(0, 100, Some(99))), // last_seen_at = 99, well within idle_timeout of now = 100
+        Some(idle_timeout),
+        100, // exactly at absolute expiry
+    );
+    assert_eq!(
+        out,
+        SessionValidationOutcome::Unauthenticated {
+            reason: SessionFailure::Expired
+        },
+        "absolute expiry must win over a passing idle-timeout check"
+    );
+}
+
+#[test]
+fn revoked_wins_over_idle_timeout_too() {
+    let idle_timeout = Duration::from_secs(1_800);
+    let out = classify_session(
+        Some(record_with_revocation(0, 9_999_999, Some(99), Some(5))),
+        Some(idle_timeout),
+        100,
+    );
+    assert_eq!(
+        out,
+        SessionValidationOutcome::Unauthenticated {
+            reason: SessionFailure::Revoked
+        }
+    );
 }

@@ -219,11 +219,46 @@ describe("D1SessionStore", () => {
     expect(row?.subject).toBe("alice");
   });
 
-  it("expired session not returned", async () => {
+  it("RFC-047 step 2: expired session is returned (not excluded), with expires_at intact", async () => {
+    // Inverted per RFC-047 step 2: the store must return the row, not
+    // exclude it — codlet's classify_session is what rejects it. A backend
+    // that kept its old exclusion filter would return null here.
+    const id = `exp-${Date.now()}`;
     const lk = `exp-sess-${Date.now()}`.padEnd(64, "x");
-    await post("/sessions/insert", { id: `exp-${Date.now()}`, lookup_key: lk, key_version: "v1", subject: "bob", created_at: NOW - 7200, expires_at: NOW - 1 });
-    const row = await post("/sessions/find", { lookup_key: lk, now: NOW });
-    expect(row).toBeNull();
+    const expiresAt = NOW - 1;
+    await post("/sessions/insert", { id, lookup_key: lk, key_version: "v1", subject: "bob", created_at: NOW - 7200, expires_at: expiresAt });
+    const row = await post("/sessions/find", { lookup_key: lk, now: NOW }) as { expires_at: number; revoked_at: number | null } | null;
+    expect(row).not.toBeNull();
+    expect(row?.expires_at).toBe(expiresAt);
+    expect(row?.revoked_at ?? null).toBeNull();
+  });
+
+  it("RFC-047 step 2: revoked session is returned with revoked_at set, not excluded", async () => {
+    const id = `sess-revoked-${Date.now()}`;
+    const lk = id.padEnd(64, "x");
+    await post("/sessions/insert", { id, lookup_key: lk, key_version: "v1", subject: "carol", created_at: NOW, expires_at: LATER });
+    await post("/sessions/revoke", { id, now: NOW });
+
+    const row = await post("/sessions/find", { lookup_key: lk, now: NOW }) as { revoked_at: number | null } | null;
+    expect(row).not.toBeNull();
+    expect(row?.revoked_at).toBe(NOW);
+  });
+
+  it("RFC-047 step 2: a revoked and expired session is still returned, with both fields set", async () => {
+    // Decision order (revoked wins over expired) is enforced by
+    // classify_session in Rust, not by this store-level test — this test
+    // only proves the store hands back both state fields together rather
+    // than filtering on either.
+    const id = `sess-both-${Date.now()}`;
+    const lk = id.padEnd(64, "x");
+    const expiresAt = NOW - 1;
+    await post("/sessions/insert", { id, lookup_key: lk, key_version: "v1", subject: "erin", created_at: NOW - 7200, expires_at: expiresAt });
+    await post("/sessions/revoke", { id, now: NOW });
+
+    const row = await post("/sessions/find", { lookup_key: lk, now: NOW }) as { expires_at: number; revoked_at: number | null } | null;
+    expect(row).not.toBeNull();
+    expect(row?.expires_at).toBe(expiresAt);
+    expect(row?.revoked_at).toBe(NOW);
   });
 
   it("RFC-044: newly inserted session has no last_seen_at until touched", async () => {

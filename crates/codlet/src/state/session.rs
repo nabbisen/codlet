@@ -42,34 +42,14 @@ pub enum SessionFailure {
     NoCookie,
     /// A cookie was presented but is not a well-formed session secret.
     Malformed,
-    /// The cookie was well-formed but no matching record exists.
-    ///
-    /// **Currently also reported for `Expired` and `Revoked`** — see those
-    /// variants' docs.
+    /// No matching record exists at all — never issued, under this lookup
+    /// key.
     NotFound,
     /// A matching record exists but its absolute expiry has passed.
-    ///
-    /// **Not currently produced.** [`SessionStore::find_active_session`]
-    /// collapses "never issued", "expired", and "revoked" into a single
-    /// `None`, so `classify_session` cannot distinguish this case from
-    /// [`NotFound`](Self::NotFound) today — it reports `NotFound` for all
-    /// three. This variant is defined for the API it is intended to reach,
-    /// not one it reaches now; a follow-up RFC will decide whether
-    /// `find_active_session`'s contract changes to make it reachable (the
-    /// same decision governs [`Revoked`](Self::Revoked) and
-    /// `RedemptionFailReason::Expired`, which has the identical gap for the
-    /// same structural reason).
-    ///
-    /// [`SessionStore::find_active_session`]: crate::store::session::SessionStore::find_active_session
     Expired,
     /// A matching record exists but its idle timeout has passed (RFC-044).
     IdleTimeout,
     /// A matching record exists but was explicitly revoked.
-    ///
-    /// **Not currently produced**, for the same reason as
-    /// [`Expired`](Self::Expired): `find_active_session` cannot distinguish
-    /// a revoked record from one that was never issued or has expired.
-    /// `NotFound` is reported instead until that contract changes.
     Revoked,
 }
 
@@ -115,20 +95,21 @@ impl SessionValidationOutcome {
 
 /// Classify a session lookup from the store's query result.
 ///
-/// `record` is `None` when the store found no matching, active row for the
-/// given lookup key. **Under the current [`crate::store::session::SessionStore`]
-/// contract this collapses "never issued", "expired", and "revoked" into one
-/// signal** — the store's own active-row filter does not tell the caller which
-/// of the three excluded a row, so a `None` here classifies as
-/// [`SessionFailure::NotFound`] rather than guessing. See RFC-046's review
-/// request for the open question this raises about `Expired` and `Revoked`'s
-/// reachability.
+/// `record` is `None` only when no record matches the lookup key at all —
+/// `find_active_session` no longer filters by expiry or revocation (RFC-047
+/// step 2), so a matched-but-invalid record still arrives here as `Some`,
+/// and this function is what decides. The decision order is fixed (RFC-047
+/// §8.1, restated for sessions in the step-2 handoff): **revoked, then
+/// expired, then idle timeout, then authenticated.** A record can satisfy
+/// more than one condition at once (e.g. revoked *and* expired); revoked
+/// wins because it is the only state an operator caused deliberately.
 ///
-/// When `Some`, `idle_timeout` (if configured) is checked against the record's
-/// effective last-seen time (`last_seen_at`, or `created_at` if the session has
-/// never been touched — RFC-044 §5) to decide between
-/// [`SessionValidationOutcome::Authenticated`] and
-/// [`SessionFailure::IdleTimeout`].
+/// This is the sole enforcement point for session expiry and revocation —
+/// unlike the code path's `classify_code_lookup`, there is no independent
+/// conditional-UPDATE downstream to catch a mistake here (RFC-047 §3). Idle
+/// timeout already worked this way (RFC-044); this function now owns all
+/// three conditions in one place, per the principle RFC-044 established and
+/// RFC-047 generalised.
 #[must_use]
 pub fn classify_session(
     record: Option<ActiveSessionRecord>,
@@ -137,6 +118,16 @@ pub fn classify_session(
 ) -> SessionValidationOutcome {
     match record {
         Some(r) => {
+            if r.revoked_at.is_some() {
+                return SessionValidationOutcome::Unauthenticated {
+                    reason: SessionFailure::Revoked,
+                };
+            }
+            if r.expires_at <= now {
+                return SessionValidationOutcome::Unauthenticated {
+                    reason: SessionFailure::Expired,
+                };
+            }
             if let Some(idle_timeout) = idle_timeout {
                 let last_seen = r.last_seen_at.unwrap_or(r.created_at);
                 if now.saturating_sub(last_seen) >= idle_timeout.as_secs() {

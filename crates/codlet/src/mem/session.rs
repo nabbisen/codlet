@@ -36,7 +36,7 @@ impl SessionStore for MemSessionStore {
     async fn find_active_session(
         &self,
         candidates: &[LookupKey],
-        now: u64,
+        _now: u64,
     ) -> Result<Option<ActiveSessionRecord>, StoreError> {
         let rows = self
             .rows
@@ -44,17 +44,14 @@ impl SessionStore for MemSessionStore {
             .map_err(|e| StoreError::Backend(e.to_string()))?;
         let found = rows
             .iter()
-            .find(|r| {
-                r.revoked_at.is_none()
-                    && r.expires_at > now
-                    && candidates.iter().any(|c| r.lookup_key.ct_eq(c))
-            })
+            .find(|r| candidates.iter().any(|c| r.lookup_key.ct_eq(c)))
             .map(|r| ActiveSessionRecord {
                 id: r.id.clone(),
                 subject: r.subject.clone(),
                 created_at: r.created_at,
                 expires_at: r.expires_at,
                 last_seen_at: r.last_seen_at,
+                revoked_at: r.revoked_at,
             });
         Ok(found)
     }

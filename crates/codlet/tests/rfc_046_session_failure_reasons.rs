@@ -7,12 +7,14 @@
 //! `IdleTimeout`'s real-condition test lives in `rfc_044_idle_timeout.rs`
 //! (`idle_expired_session_is_unauthenticated_through_the_real_manager`) since
 //! it requires RFC-044's idle-timeout machinery to be reachable at all
-//! (handoff §4.3). `NotFound`'s general case (a well-formed but unknown
-//! secret) is also covered there
-//! (`absolute_expiry_still_enforced_with_idle_timeout_enabled`); this file
+//! (handoff §4.3). That same file's
+//! `absolute_expiry_still_enforced_with_idle_timeout_enabled` covers
+//! `Expired` in the presence of a configured idle timeout (RFC-047 step 2:
+//! absolute expiry wins over idle timeout in the decision order). This file
 //! adds the ones specific to RFC-046's own boundary: `NoCookie`, `Malformed`,
-//! and revocation's current collapse to `NotFound` (the disclosed gap, see
-//! the review request).
+//! `NotFound`, and `Revoked` (the last of these was, pre-RFC-047-step-2, a
+//! disclosed gap where revocation collapsed to `NotFound` -- see
+//! `revoked_session_is_reported_as_revoked` below).
 
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -148,13 +150,12 @@ async fn well_formed_but_unknown_secret_reports_not_found() {
 }
 
 #[tokio::test]
-async fn revoked_session_currently_collapses_to_not_found() {
-    // Disclosed gap (RFC-046 review request): `find_active_session`'s single
-    // active-row filter cannot tell "revoked" apart from "never issued" or
-    // "expired" -- all three return the same `None`. This test documents
-    // today's actual behaviour so a future change to that contract has a
-    // pinned regression test to update deliberately, not one that silently
-    // starts asserting something else.
+async fn revoked_session_is_reported_as_revoked() {
+    // The gap this test used to document (RFC-046 review request: Revoked
+    // collapsed to NotFound because find_active_session's active-row filter
+    // couldn't tell "revoked" apart from "never issued") is closed by
+    // RFC-047 step 2: find_active_session returns the record regardless of
+    // state, and classify_session reports the precise reason.
     let store = MemSessionStore::new();
     let h = hasher();
     let (lk, kv) = h
@@ -187,10 +188,8 @@ async fn revoked_session_currently_collapses_to_not_found() {
     assert_eq!(
         outcome,
         SessionValidationOutcome::Unauthenticated {
-            reason: SessionFailure::NotFound
-        },
-        "see RFC-046 review request: Revoked is not yet distinguishable \
-         from NotFound under the current SessionStore contract"
+            reason: SessionFailure::Revoked
+        }
     );
 }
 

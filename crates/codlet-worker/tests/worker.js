@@ -150,12 +150,18 @@ export default {
     }
 
     // POST /sessions/find  body: {lookup_key, now}
+    // RFC-047 step 2: matches on lookup_key only -- no expiry/revocation
+    // predicate. Returns revoked_at so the caller (classify_session in Rust;
+    // this test file just asserts the raw fields) can classify it. This is
+    // the sole enforcement point for sessions -- there is no downstream
+    // conditional UPDATE like codes' claim_code.
     if (url.pathname === '/sessions/find' && req.method === 'POST') {
       const b = await req.json();
       const row = await db.prepare(
-        `SELECT id, subject, created_at, expires_at, last_seen_at FROM codlet_sessions
-         WHERE lookup_key = ? AND revoked_at IS NULL AND expires_at > ? LIMIT 1`
-      ).bind(b.lookup_key, b.now).first();
+        `SELECT id, subject, created_at, expires_at, revoked_at, last_seen_at
+         FROM codlet_sessions
+         WHERE lookup_key = ? LIMIT 1`
+      ).bind(b.lookup_key).first();
       return Response.json(row ?? null);
     }
 
@@ -165,6 +171,17 @@ export default {
       const b = await req.json();
       await db.prepare(
         'UPDATE codlet_sessions SET last_seen_at = ? WHERE id = ?'
+      ).bind(b.now, b.id).run();
+      return Response.json({ ok: true });
+    }
+
+    // POST /sessions/revoke  body: {id, now}
+    // Mirrors D1SessionStore::revoke_session.
+    if (url.pathname === '/sessions/revoke' && req.method === 'POST') {
+      const b = await req.json();
+      await db.prepare(
+        `UPDATE codlet_sessions SET revoked_at = ?
+         WHERE id = ? AND revoked_at IS NULL`
       ).bind(b.now, b.id).run();
       return Response.json({ ok: true });
     }

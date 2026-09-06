@@ -4,6 +4,7 @@ use std::future::Future;
 
 use crate::fixtures::*;
 use codlet::secret::SessionId;
+use codlet::state::{SessionFailure, SessionValidationOutcome, classify_session};
 
 // ── SessionStore conformance ──────────────────────────────────────────────────
 
@@ -15,8 +16,9 @@ where
     S: SessionStore,
 {
     test_active_session_found(&factory).await;
-    test_expired_session_not_active(&factory).await;
-    test_revoked_session_not_active(&factory).await;
+    test_expired_session_returned_and_classifier_rejects(&factory).await;
+    test_revoked_session_returned_and_classifier_rejects(&factory).await;
+    test_revoked_and_expired_classifies_revoked(&factory).await;
     test_wrong_hmac_not_active(&factory).await;
     test_new_session_has_no_last_seen_at(&factory).await;
     test_touch_session_sets_last_seen_at(&factory).await;
@@ -42,7 +44,14 @@ where
     assert_eq!(found.unwrap().subject.as_str(), "user-s1");
 }
 
-async fn test_expired_session_not_active<F, Fut, S>(factory: &F)
+/// RFC-047 step 2: this must fail against an adapter that kept its old
+/// exclusion filter, not merely pass against a migrated one. An adapter that
+/// still filters expired rows out of `find_active_session` returns `None`
+/// here, which trips the `.expect(...)` below -- the inverted assertion
+/// carries the security property this suite exists to prove (verified by
+/// temporarily reintroducing the filter in `MemSessionStore` and confirming
+/// this test fails; see the RFC-047 step 2 review request).
+async fn test_expired_session_returned_and_classifier_rejects<F, Fut, S>(factory: &F)
 where
     F: Fn() -> Fut,
     Fut: Future<Output = S>,
@@ -56,11 +65,21 @@ where
     let found = store
         .find_active_session(&[session_lk("sessec2")], NOW)
         .await
-        .unwrap();
-    assert!(found.is_none(), "expired session must not be active");
+        .unwrap()
+        .expect("RFC-047: the store must return the expired record, not filter it out");
+    assert_eq!(found.expires_at, EXPIRED);
+    assert_eq!(
+        classify_session(Some(found), None, NOW),
+        SessionValidationOutcome::Unauthenticated {
+            reason: SessionFailure::Expired
+        },
+        "the classifier must reject the returned record"
+    );
 }
 
-async fn test_revoked_session_not_active<F, Fut, S>(factory: &F)
+/// See `test_expired_session_returned_and_classifier_rejects` for why this
+/// asserts return-and-reject rather than exclusion.
+async fn test_revoked_session_returned_and_classifier_rejects<F, Fut, S>(factory: &F)
 where
     F: Fn() -> Fut,
     Fut: Future<Output = S>,
@@ -78,8 +97,46 @@ where
     let found = store
         .find_active_session(&[session_lk("sessec3")], NOW)
         .await
+        .unwrap()
+        .expect("RFC-047: the store must return the revoked record, not filter it out");
+    assert!(found.revoked_at.is_some());
+    assert_eq!(
+        classify_session(Some(found), None, NOW),
+        SessionValidationOutcome::Unauthenticated {
+            reason: SessionFailure::Revoked
+        }
+    );
+}
+
+/// RFC-047 §8.1 (restated for sessions): fixed decision order. A record that
+/// is both revoked and expired must classify as `Revoked`, not `Expired`.
+async fn test_revoked_and_expired_classifies_revoked<F, Fut, S>(factory: &F)
+where
+    F: Fn() -> Fut,
+    Fut: Future<Output = S>,
+    S: SessionStore,
+{
+    let store = factory().await;
+    store
+        .insert_session(session_record("s3e", "bothsessec", EXPIRED))
+        .await
         .unwrap();
-    assert!(found.is_none(), "revoked session must not be active");
+    store
+        .revoke_session(&SessionId::new("s3e".into()), NOW)
+        .await
+        .unwrap();
+    let found = store
+        .find_active_session(&[session_lk("bothsessec")], NOW)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        classify_session(Some(found), None, NOW),
+        SessionValidationOutcome::Unauthenticated {
+            reason: SessionFailure::Revoked
+        },
+        "revoked must win over expired"
+    );
 }
 
 async fn test_wrong_hmac_not_active<F, Fut, S>(factory: &F)

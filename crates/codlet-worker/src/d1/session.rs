@@ -40,6 +40,7 @@ struct ActiveRow {
     subject: String,
     created_at: f64,
     expires_at: f64,
+    revoked_at: Option<f64>,
     last_seen_at: Option<f64>,
 }
 
@@ -47,20 +48,22 @@ impl SessionStore for D1SessionStore {
     async fn find_active_session(
         &self,
         candidates: &[LookupKey],
-        now: u64,
+        _now: u64,
     ) -> Result<Option<ActiveSessionRecord>, StoreError> {
         use worker::d1::D1Type;
+
+        // RFC-047 step 2: matches on lookup key only. No expiry/revocation
+        // predicate here -- `classify_session` decides that from the
+        // returned state fields; this is the sole enforcement point for
+        // sessions (no downstream conditional-UPDATE guard like codes have).
         for candidate in candidates {
             let sql = format!(
-                "SELECT id, subject, created_at, expires_at, last_seen_at FROM {t}
-                 WHERE lookup_key = ? AND revoked_at IS NULL AND expires_at > ?
+                "SELECT id, subject, created_at, expires_at, revoked_at, last_seen_at FROM {t}
+                 WHERE lookup_key = ?
                  LIMIT 1",
                 t = self.table
             );
-            let stmt = bind(
-                self.db.prepare(&sql),
-                &[D1Type::Text(candidate.as_str()), ts(now)],
-            )?;
+            let stmt = bind(self.db.prepare(&sql), &[D1Type::Text(candidate.as_str())])?;
             let row: Option<ActiveRow> = stmt.first(None).await.map_err(to_store_err)?;
             if let Some(r) = row {
                 return Ok(Some(ActiveSessionRecord {
@@ -68,6 +71,7 @@ impl SessionStore for D1SessionStore {
                     subject: SubjectId::new(r.subject),
                     created_at: r.created_at as u64,
                     expires_at: r.expires_at as u64,
+                    revoked_at: r.revoked_at.map(|v| v as u64),
                     last_seen_at: r.last_seen_at.map(|v| v as u64),
                 }));
             }
