@@ -218,9 +218,14 @@ RFC-047 step 1 and released as 0.19.1 with an advisory.
 outcome. The threat model now carries nine invariants, each with a guard and a
 negative test observed failing.
 
-**Outstanding:** one follow-up (`rfcs/handoffs/044-…/follow-up-audit-assertion-handoff.md`)
-restoring coverage of RFC-044 §4.5's audit-event contract, and the unreleased
-M6 work awaiting a minor release.
+**Both follow-ups complete** (CI `34034186593`): RFC-044 §4.5's audit-event
+contract is now asserted, and the audit-sink defect class is closed — one
+shareable sink, four private re-implementations collapsed, every test naming an
+event now asserting it.
+
+**Outstanding:** the RFC-048 advisory (unsent), and the M6 work awaiting a
+0.20.0 minor release — see
+`.git-exclude/reviewed/DECISION-REQUEST-m6-closeout-and-next.md`.
 
 
 > **Interrupted by a critical security fix.** RFC-048 (SQL injection in
