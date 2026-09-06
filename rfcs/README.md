@@ -15,13 +15,11 @@ Counts below are derived from the filesystem, not hand-maintained.
 
 No open RFCs.
 
-## Accepted (1)
+## Accepted (0)
 
-| ID | Title | Milestone |
-|----|-------|-----------|
-| [049](./accepted/049-supply-chain-carried-items.md) | Resolving RFC-039's Deferred Questions — Yanked Crates and Duplicate Versions | M7 preamble |
+No RFCs awaiting implementation.
 
-## Implemented (48)
+## Implemented (49)
 
 | ID | Title | Version |
 |----|-------|---------|
@@ -72,6 +70,7 @@ No open RFCs.
 | [045](./done/045-session-rotation.md) | Session Rotation on Privilege Change | v0.20.0 |
 | [046](./done/046-host-visible-session-failure-reasons.md) | Host-Visible Session Failure Reasons | v0.20.0 |
 | [048](./done/048-bind-purpose-and-scope-in-claim-code.md) | **Security:** Bind `purpose` and `scope` — SQL Injection in `claim_code` | v0.19.1 |
+| [049](./done/049-supply-chain-carried-items.md) | Resolving RFC-039's Deferred Questions — Yanked Crates and Duplicate Versions | *(Unreleased)* |
 | [047](./done/047-the-classifier-should-own-record-state.md) | The Classifier Should Own Record State, Not the Adapter's WHERE Clause | v0.20.0 |
 
 RFC-002 describes `crates/codlet-axum` and `crates/codlet-test` in its

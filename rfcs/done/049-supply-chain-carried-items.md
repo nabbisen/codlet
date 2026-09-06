@@ -1,6 +1,6 @@
 # RFC-049: Resolving RFC-039's Deferred Questions — Yanked Crates and Duplicate Versions
 
-- **Status:** Accepted
+- **Status:** Implemented (Unreleased)
 - **Target milestone:** M7 preamble (carried from M5)
 - **Primary crate(s):** workspace configuration, `xtask`
 - **Source basis:** RFC-039 §8.1, which deferred both questions to "after one release cycle of warnings". Two release cycles have now passed (0.19.0, 0.20.0).
