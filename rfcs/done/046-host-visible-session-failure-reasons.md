@@ -1,6 +1,6 @@
 # RFC-046: Host-Visible Session Failure Reasons
 
-- **Status:** Implemented (Unreleased)
+- **Status:** Implemented (v0.20.0)
 - **Target milestone:** M6
 - **Primary crate(s):** `codlet`
 - **Source basis:** `ROADMAP.md` M6; RFC-006 §13.5; DEC-006

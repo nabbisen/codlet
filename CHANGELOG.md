@@ -6,6 +6,8 @@ semantic versioning once it reaches a stable release.
 
 ## [Unreleased]
 
+## [0.20.0] — 2026-09-06
+
 ### Added
 
 - **Session idle timeout (RFC-044).** `SessionManager::with_idle_timeout`
