@@ -11,9 +11,11 @@ inside each file mirrors it.
 
 Counts below are derived from the filesystem, not hand-maintained.
 
-## Proposed (0)
+## Proposed (1)
 
-No open RFCs.
+| ID | Title | Milestone |
+|----|-------|-----------|
+| [049](./proposed/049-supply-chain-carried-items.md) | Resolving RFC-039's Deferred Questions — Yanked Crates and Duplicate Versions | M7 preamble |
 
 ## Accepted (0)
 
