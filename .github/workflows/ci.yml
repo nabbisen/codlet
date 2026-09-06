@@ -163,7 +163,7 @@ jobs:
       - name: assert no framework/db/executor crates in codlet
         run: |
           set -euo pipefail
-          tree="$(cargo tree -p codlet -e normal --prefix none | sort -u)"
+          tree="$(cargo tree -p codlet -e normal --prefix none --color never | sort -u)"
           echo "$tree"
           test -n "$tree"
           echo "$tree" | grep -q '^codlet ' || { echo "::error::unexpected cargo tree output"; exit 1; }
