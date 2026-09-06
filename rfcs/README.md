@@ -11,15 +11,15 @@ inside each file mirrors it.
 
 Counts below are derived from the filesystem, not hand-maintained.
 
-## Proposed (1)
+## Proposed (0)
+
+No open RFCs.
+
+## Accepted (1)
 
 | ID | Title | Milestone |
 |----|-------|-----------|
-| [049](./proposed/049-supply-chain-carried-items.md) | Resolving RFC-039's Deferred Questions — Yanked Crates and Duplicate Versions | M7 preamble |
-
-## Accepted (0)
-
-No RFCs awaiting implementation.
+| [049](./accepted/049-supply-chain-carried-items.md) | Resolving RFC-039's Deferred Questions — Yanked Crates and Duplicate Versions | M7 preamble |
 
 ## Implemented (48)
 
