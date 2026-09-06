@@ -203,7 +203,25 @@ same shape of check as the one that did fail open.
 **M5 exit criteria (revised).** As previously approved, plus: no invariant is
 counted as verified on the strength of a test's existence alone.
 
-## M6 — Session lifecycle hardening
+## M6 — Session lifecycle hardening · **COMPLETE 2026-09-06**
+
+**Evidence:** CI run
+[34023978016](https://github.com/nabbisen/codlet/actions/runs/34023978016) on
+`2a95985` — 22/22 green. Delivered: RFC-044 (idle timeout), RFC-045 (rotation),
+RFC-046 (host-visible failure reasons), RFC-047 (classifier owns record state,
+both steps). All in `done/` at `Implemented (Unreleased)`.
+
+**Interrupted mid-milestone by RFC-048**, a critical SQL injection found during
+RFC-047 step 1 and released as 0.19.1 with an advisory.
+
+**INV-9 added** — session rotation requires an unforgeable `Authenticated`
+outcome. The threat model now carries nine invariants, each with a guard and a
+negative test observed failing.
+
+**Outstanding:** one follow-up (`rfcs/handoffs/044-…/follow-up-audit-assertion-handoff.md`)
+restoring coverage of RFC-044 §4.5's audit-event contract, and the unreleased
+M6 work awaiting a minor release.
+
 
 > **Interrupted by a critical security fix.** RFC-048 (SQL injection in
 > `claim_code` via `purpose`/`scope`) takes priority over all remaining M6 work,

@@ -1,6 +1,6 @@
 # RFC-044: Session Inactivity Timeout
 
-- **Status:** Accepted
+- **Status:** Implemented (Unreleased)
 - **Target milestone:** M6
 - **Primary crate(s):** `codlet`, `codlet-sqlx`, `codlet-worker`, `codlet-conformance`
 - **Source basis:** `ROADMAP.md` M6; the deferred "RFC-F" scope in the v0.17.1 handoff bundle
