@@ -1,6 +1,6 @@
 # RFC-047: The Classifier Should Own Record State, Not the Adapter's WHERE Clause
 
-- **Status:** Accepted
+- **Status:** Implemented (Unreleased)
 - **Target milestone:** M6
 - **Primary crate(s):** `codlet`, all four adapters, `codlet-conformance`
 - **Source basis:** RFC-046 review finding §5; RFC-044 §4.3's stated principle

@@ -15,16 +15,15 @@ Counts below are derived from the filesystem, not hand-maintained.
 
 No open RFCs.
 
-## Accepted (4)
+## Accepted (3)
 
 | ID | Title | Milestone |
 |----|-------|-----------|
 | [044](./accepted/044-session-inactivity-timeout.md) | Session Inactivity Timeout | M6 |
 | [045](./accepted/045-session-rotation.md) | Session Rotation on Privilege Change | M6 |
 | [046](./accepted/046-host-visible-session-failure-reasons.md) | Host-Visible Session Failure Reasons | M6 |
-| [047](./accepted/047-the-classifier-should-own-record-state.md) | The Classifier Should Own Record State, Not the Adapter's WHERE Clause | M6 |
 
-## Implemented (44)
+## Implemented (45)
 
 | ID | Title | Version |
 |----|-------|---------|
@@ -72,6 +71,7 @@ No open RFCs.
 | [042](./done/042-retire-the-cookie-attrs-gate.md) | Retire `cookie-attrs-present` — a Text Grep Cannot Assert Emitted Behaviour | v0.19.0 |
 | [043](./done/043-alphabet-symbols-must-be-normalization-fixed-points.md) | `Alphabet::new` Must Reject Symbols That Normalization Would Alter | v0.19.0 |
 | [048](./done/048-bind-purpose-and-scope-in-claim-code.md) | **Security:** Bind `purpose` and `scope` — SQL Injection in `claim_code` | v0.19.1 |
+| [047](./done/047-the-classifier-should-own-record-state.md) | The Classifier Should Own Record State, Not the Adapter's WHERE Clause | *(Unreleased)* |
 
 RFC-002 describes `crates/codlet-axum` and `crates/codlet-test` in its
 workspace layout; neither was built. `codlet-test`'s role was filled by

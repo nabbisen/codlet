@@ -132,12 +132,13 @@ cookie. Rotation narrows a window; it does not close one.
    avoid.
 4. **Return an error on failed revoke.** Rejected — §3.3.
 
-## 8. Open question
+## 8. Open question — resolved
 
-Should `rotate` require the host to state a reason, recorded in the audit event?
-Recommend yes as a `&str` the host supplies — an audit trail of rotations
-without causes is hard to act on during an incident, and the host is the only
-party that knows why.
+~~Should `rotate` require the host to state a reason?~~ **Resolved: yes**, by
+owner acceptance of this RFC including its recommendation (2026-09-04). `rotate`
+takes a `&str` reason from the host and records it in the audit event. An audit
+trail of rotations without causes is hard to act on during an incident, and the
+host is the only party that knows why it rotated.
 
 ## 9. Acceptance criteria
 
