@@ -1,9 +1,10 @@
-//! Session manager (RFC-013 §3, RFC-044, RFC-046).
+//! Session manager (RFC-013 §3, RFC-044, RFC-045, RFC-046).
 //!
 //! [`SessionManager`] composes [`SessionStore`], [`SecretHasher`], [`Clock`],
-//! [`CookiePolicy`], and [`AuditSink`] into the three session operations:
-//! issue (after a won claim), validate (on every authenticated request), and
-//! revoke (on logout or incident response).
+//! [`CookiePolicy`], and [`AuditSink`] into four session operations: issue
+//! (after a won claim), validate (on every authenticated request), rotate
+//! (host-triggered, typically on privilege change — RFC-045), and revoke (on
+//! logout or incident response).
 
 use std::time::Duration;
 
@@ -234,6 +235,125 @@ where
         }
 
         Ok(outcome)
+    }
+
+    /// Rotate a live session's secret without ending it (RFC-045).
+    ///
+    /// Host-triggered, typically on privilege change: issues a fresh secret
+    /// under a new session record for the same subject, then revokes the old
+    /// one. The subject stays signed in; the bearer token changes. Not
+    /// intended for use on every request (RFC-045 §4) — no grace window is
+    /// implemented, so a concurrent in-flight request still holding the old
+    /// cookie would be logged out once it is revoked.
+    ///
+    /// `current` must be an [`SessionValidationOutcome::Authenticated`]
+    /// outcome from a real call to [`Self::validate`] in the same request —
+    /// see the module-level docs on that variant for why a caller cannot
+    /// fabricate one. `reason` is host-supplied and recorded verbatim in the
+    /// audit event (RFC-045 §8); it is not interpreted by codlet.
+    ///
+    /// # Ordering (RFC-045 §3.2)
+    /// The new record is inserted **before** the old one is revoked. Between
+    /// the two writes both are briefly valid — deliberate: the reverse order
+    /// would leave a window where *neither* is valid, logging out a
+    /// concurrent in-flight request from the same subject. Neither ordering
+    /// is atomic (D1 has no multi-statement transaction, RFC-033); see
+    /// [`CodeAuthEvent::SessionRotationRevokeFailed`] for what happens if the
+    /// revoke fails after the insert succeeds.
+    ///
+    /// The new record carries the **same absolute `expires_at`** as
+    /// `current` — rotation changes the credential, not the session's
+    /// lifetime (RFC-045 §3.1). `created_at` and `last_seen_at` are fresh.
+    ///
+    /// # Errors
+    /// Returns [`SessionError::Internal`] if the RNG, hasher, or the insert
+    /// fails. Returns [`SessionError::NotFound`] if `current` is
+    /// [`SessionValidationOutcome::Unauthenticated`] — this is a caller
+    /// misuse guard, not the mechanism that makes the precondition
+    /// unforgeable (see the compile-fail test at
+    /// `crates/codlet/tests/rfc_045_rotate_requires_authenticated_compile_fail.rs`).
+    /// A failed revoke of the old session is **not** an error — see
+    /// [`CodeAuthEvent::SessionRotationRevokeFailed`].
+    pub async fn rotate<R: RandomSource>(
+        &self,
+        current: &SessionValidationOutcome,
+        new_session_id: SessionId,
+        reason: &str,
+        rng: &mut R,
+    ) -> Result<IssuedSession, SessionError> {
+        let (subject, old_session_id, expires_at) = match current {
+            SessionValidationOutcome::Authenticated {
+                subject,
+                session_id,
+                expires_at,
+            } => (subject.clone(), session_id.clone(), *expires_at),
+            SessionValidationOutcome::Unauthenticated { .. } => {
+                return Err(SessionError::NotFound {
+                    public: crate::error::PublicSessionError::MissingOrExpired,
+                });
+            }
+        };
+
+        // Generate a new high-entropy secret, exactly as `issue` does.
+        let mut raw = [0u8; 32];
+        rng.fill_bytes(&mut raw)
+            .map_err(|e| SessionError::Internal {
+                cause: format!("rng: {e}"),
+                public: crate::error::PublicSessionError::TemporarilyUnavailable,
+            })?;
+        let secret_hex = hex_lower(&raw);
+        let secret = SessionSecret::new(secret_hex.clone());
+
+        let (lookup_key, key_version) = self
+            .hasher
+            .lookup_key(SecretDomain::Session, secret.expose())
+            .map_err(SessionError::from_key)?;
+
+        let now = self.clock.unix_now();
+
+        // §3.2: insert precedes revoke. Never reverse this order.
+        self.store
+            .insert_session(SessionRecord {
+                id: new_session_id.clone(),
+                lookup_key,
+                key_version,
+                subject: subject.clone(),
+                created_at: now,
+                expires_at, // §3.1: carried forward, never extended.
+            })
+            .await
+            .map_err(SessionError::from_store)?;
+
+        self.audit.record(CodeAuthEvent::SessionRotated {
+            old_session_id: old_session_id.clone(),
+            new_session_id: new_session_id.clone(),
+            subject_id: subject,
+            reason: reason.to_string(),
+        });
+
+        // §3.3: a failed revoke does not fail rotation. The host already
+        // holds a valid fresh cookie; returning an error here would leave it
+        // unaware that credential works. The old session may remain live
+        // until its own expiry -- surfaced by this audit event, not fixed up
+        // (accepted residual risk, RFC-045 §6).
+        if self
+            .store
+            .revoke_session(&old_session_id, now)
+            .await
+            .is_err()
+        {
+            self.audit
+                .record(CodeAuthEvent::SessionRotationRevokeFailed {
+                    old_session_id,
+                    new_session_id: new_session_id.clone(),
+                });
+        }
+
+        let set_cookie = self.cookie_policy.build_set_cookie(secret.expose());
+        Ok(IssuedSession {
+            session_id: new_session_id,
+            set_cookie,
+        })
     }
 
     /// Revoke a session (logout or incident response).

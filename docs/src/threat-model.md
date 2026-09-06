@@ -53,6 +53,29 @@ Enabling it costs one throttled write per `max(idle_timeout / 20, 30s)` of
 continuous activity, not one per request (RFC-044 §4.2) — the throttle is
 exact and proven by a write-count test, not a general appeal to caching.
 
+**Stolen-token persistence across a privilege change.** A session secret that
+never changes is valid for its whole lifetime to anyone who obtains it —
+including after the subject it belongs to becomes more privileged.
+`SessionManager::rotate` (RFC-045, host-triggered, typically invoked at the
+moment authorization changes) issues a fresh secret under a new session
+record for the same subject, then revokes the old one. The absolute expiry is
+carried forward unchanged, never extended — rotation replaces the credential,
+not the session's lifetime. codlet cannot detect *when* a privilege change
+happens (DEC-001: codlet authenticates, the host authorizes), so this is an
+operation codlet offers, not one it performs automatically; a host that never
+calls `rotate` gets none of this protection. The new record is inserted
+**before** the old one is revoked (never the reverse — revoking first would
+log out a concurrent in-flight request from the same subject), so the two
+writes are not atomic and a failed revoke can leave two live sessions for one
+subject; that residual risk is bounded by the shared original expiry and
+surfaced via a dedicated audit event
+(`CodeAuthEvent::SessionRotationRevokeFailed`), not silently absorbed.
+`rotate` cannot be handed a fabricated `Authenticated` outcome that never
+went through a real validation — `SessionValidationOutcome::Authenticated` is
+`#[non_exhaustive]`, so only `classify_session` can produce one — enforced by
+a compile-fail test, the same technique INV-7 uses for `RedeemSuccess` (INV-9,
+below).
+
 **Form-token replay and CSRF.** Form tokens are single-use. A duplicate submit
 returns `Replay`, not a second execution. Token binding (subject, purpose,
 bound resource) prevents token reuse across forms or users.
@@ -115,8 +138,9 @@ when it cannot perform its check". No row in this table is open.
 | INV-4 | Normalization is identical on issue and redeem paths, and idempotent. | `crates/codlet/src/code/normalize/tests.rs` properties `p1_idempotent_for_arbitrary_str`, `p4_never_panics_on_arbitrary_unicode`; `crates/codlet/src/code/alphabet/tests.rs` properties `p3_every_accepted_symbol_is_a_normalization_fixed_point`, `p5_exact_uniformity_for_default_alphabet`, `p7_ceiling_is_the_largest_multiple_of_len_up_to_256`; `crates/codlet/src/code/generate/tests.rs` properties `p2_generated_code_is_a_normalization_fixed_point_under_safe_policies`, `p6_every_byte_at_or_above_ceiling_is_rejected_never_mapped` (RFC-041); `Alphabet::new` itself rejects any symbol that is not a normalization fixed-point, naming the offending byte via `PolicyError::AlphabetNotFixedPoint` (RFC-043) | Each property's own `#[test]`/`proptest!` block breaking against a deliberately reverted production-code trial (RFC-041 §3.3; see the RFC-041 review request for per-property breakage output). `p3_every_accepted_symbol_is_a_normalization_fixed_point` fired against real `Alphabet::new` before RFC-043 (confirming the gap) and now passes unconditionally, since construction enforces the property structurally rather than by convention. `alphabet/tests.rs`'s `rejects_lowercase_symbol`, `rejects_hyphen_symbol`, and `rejects_ascii_whitespace_symbol` cover one rejected class each; `unambiguous_still_constructs` guards against the check being too strict. |
 | INV-5 | `claim_code` uses a conditional UPDATE; `changed == 0` never proceeds. | `codlet-conformance` concurrent-claim test, run against every adapter (in-memory, SQLite, PostgreSQL, D1) | `crates/codlet/tests/rfc_040_invariant_verification.rs`: `inv5_claim_with_changed_zero_reports_lost_not_won`, `inv5_second_claim_of_an_already_won_code_also_reports_lost`, `inv5_changed_greater_than_one_surfaces_as_invariant_violation_not_lost` |
 | INV-6 | `consume_form_token` uses a conditional UPDATE; `changed == 0` never proceeds. | `codlet-conformance` form-token consume test, run against every adapter | `crates/codlet/tests/rfc_040_invariant_verification.rs`: `inv6_consume_with_changed_zero_reports_invalid_not_proceed`, `inv6_second_consume_of_an_already_consumed_token_replays_not_proceeds`, `inv6_changed_greater_than_one_surfaces_as_invariant_violation_not_replay` |
-| INV-7 | Session issuance requires a `RedeemSuccess` proof from a won claim. | Type system: `RedeemSuccess::_claim_proof` is `pub(crate)`, constructible only via a won `claim_code` | `crates/codlet/tests/rfc_040_inv7_compile_fail.rs` — `trybuild` `compile_fail`; the only invariant proven by a compile-failure test rather than a runtime assertion |
+| INV-7 | Session issuance requires a `RedeemSuccess` proof from a won claim. | Type system: `RedeemSuccess::_claim_proof` is `pub(crate)`, constructible only via a won `claim_code` | `crates/codlet/tests/rfc_040_inv7_compile_fail.rs` — `trybuild` `compile_fail`; proven by a compile-failure test rather than a runtime assertion. INV-9 is its sibling on the session path. |
 | INV-8 | All non-success redemption states map to one generic public error. | `PublicRedemptionError::from_reason` | `crates/codlet/tests/rfc_040_invariant_verification.rs`: `inv8_every_redemption_fail_reason_is_classified_by_an_exhaustive_match` — an exhaustive `match` with no wildcard arm, so an unhandled new `RedemptionFailReason` variant fails to compile rather than silently escaping the check |
+| INV-9 | `SessionManager::rotate` requires a `SessionValidationOutcome::Authenticated` produced by a real `validate` call — not one fabricated by the caller (RFC-045). | Type system: `SessionValidationOutcome::Authenticated` is `#[non_exhaustive]`, so external code cannot construct it with struct-literal syntax; only `classify_session` (in this crate) produces one | `crates/codlet/tests/rfc_045_rotate_requires_authenticated_compile_fail.rs` — `trybuild` `compile_fail` against `crates/codlet/tests/compile-fail/session_authenticated_unconstructible.rs`, pinned to `error[E0639]: cannot create non-exhaustive variant using struct expression`; proven by a compile-failure test, the same technique as INV-7 |
 
 `cargo run -p xtask -- release-check` runs four static gates, three of which
 enforce INV-1, INV-2, and INV-3 above; the fourth, `no-debug-prints`, guards

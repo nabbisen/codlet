@@ -101,6 +101,42 @@ pub enum CodeAuthEvent {
         session_id: SessionId,
     },
 
+    /// A session's secret was rotated (RFC-045): a new record was inserted
+    /// for the same subject, carrying the same absolute expiry, and the old
+    /// record was revoked (or an attempt was made — see
+    /// [`SessionRotationRevokeFailed`](Self::SessionRotationRevokeFailed)).
+    /// Fired whenever rotation itself succeeds, independent of whether the
+    /// old session's revoke succeeded.
+    ///
+    /// Event key: `session.rotate.succeeded`
+    SessionRotated {
+        /// The session record ID being replaced.
+        old_session_id: SessionId,
+        /// The newly issued session record ID.
+        new_session_id: SessionId,
+        /// The authenticated subject the rotated session belongs to.
+        subject_id: SubjectId,
+        /// Host-supplied reason for the rotation (RFC-045 §8), e.g.
+        /// `"privilege_change"`. Not interpreted by codlet.
+        reason: String,
+    },
+
+    /// `rotate` inserted the new session successfully but revoking the old
+    /// one failed (RFC-045 §3.3). `rotate` still returns the new session —
+    /// the host already holds a valid fresh credential, and returning an
+    /// error would leave it unaware that credential works. This event is the
+    /// only signal that the old session may still be live; it is bounded by
+    /// its own original absolute expiry (RFC-045 §6, accepted residual risk).
+    ///
+    /// Event key: `session.rotate.revoke_failed`
+    SessionRotationRevokeFailed {
+        /// The session record ID that could not be revoked and may still be
+        /// live until its original `expires_at`.
+        old_session_id: SessionId,
+        /// The new session record ID issued in its place.
+        new_session_id: SessionId,
+    },
+
     /// A form-token consume returned `Replay` (idempotent second submit).
     ///
     /// Event key: `form_token.consume.replay`
@@ -145,6 +181,8 @@ impl CodeAuthEvent {
             Self::SessionValidateFailed => "session.validate.failed",
             Self::SessionRevoked { .. } => "session.revoke.succeeded",
             Self::SessionTouchFailed { .. } => "session.touch.failed",
+            Self::SessionRotated { .. } => "session.rotate.succeeded",
+            Self::SessionRotationRevokeFailed { .. } => "session.rotate.revoke_failed",
             Self::FormTokenReplay { .. } => "form_token.consume.replay",
             Self::RateLimitHit { .. } => "rate_limit.blocked",
             Self::KeyVersionMissing { .. } => "key_provider.missing_version",

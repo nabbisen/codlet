@@ -272,6 +272,34 @@ describe("D1SessionStore", () => {
     const after = await post("/sessions/find", { lookup_key: lk, now: NOW }) as { last_seen_at: number | null };
     expect(after.last_seen_at).toBe(NOW + 10);
   });
+
+  it("RFC-045: rotation's overlap-then-revoke sequence -- two live records for one subject, then the old one is revoked without disturbing the new one", async () => {
+    // SessionManager::rotate adds no new store method (RFC-045 §5) -- it
+    // composes insert then revoke, in that order, deliberately overlapping
+    // (RFC-045 §3.2). This proves D1 supports that sequence for real, via
+    // Miniflare, not just a wasm32 compile.
+    const oldId = `rot-old-${Date.now()}`;
+    const oldLk = oldId.padEnd(64, "x");
+    const newId = `rot-new-${Date.now()}`;
+    const newLk = newId.padEnd(64, "y");
+
+    await post("/sessions/insert", { id: oldId, lookup_key: oldLk, key_version: "v1", subject: "frank", created_at: NOW, expires_at: LATER });
+    await post("/sessions/insert", { id: newId, lookup_key: newLk, key_version: "v1", subject: "frank", created_at: NOW, expires_at: LATER });
+
+    // Both active during the overlap window.
+    const oldDuring = await post("/sessions/find", { lookup_key: oldLk, now: NOW }) as { revoked_at: number | null } | null;
+    expect(oldDuring).not.toBeNull();
+    expect(oldDuring?.revoked_at ?? null).toBeNull();
+    const newDuring = await post("/sessions/find", { lookup_key: newLk, now: NOW }) as { subject: string } | null;
+    expect(newDuring?.subject).toBe("frank");
+
+    await post("/sessions/revoke", { id: oldId, now: NOW });
+
+    const oldAfter = await post("/sessions/find", { lookup_key: oldLk, now: NOW }) as { revoked_at: number | null } | null;
+    expect(oldAfter?.revoked_at).toBe(NOW);
+    const newAfter = await post("/sessions/find", { lookup_key: newLk, now: NOW }) as { revoked_at: number | null } | null;
+    expect(newAfter?.revoked_at ?? null).toBeNull();
+  });
 });
 
 // ── D1FormTokenStore ──────────────────────────────────────────────────────────

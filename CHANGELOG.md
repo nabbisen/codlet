@@ -49,6 +49,40 @@ semantic versioning once it reaches a stable release.
   regression tests from RFC-048 are unchanged and still pass — this is
   additional coverage, not a replacement.
 
+- **`SessionManager::rotate` — session rotation on privilege change
+  (RFC-045).** Lets a host replace a live session's secret without ending
+  the session, at the moment the subject's authorization changes: issues a
+  fresh secret under a new session record for the same subject, then
+  revokes the old one. The subject stays signed in; the bearer token
+  changes. Host-triggered only — no automatic or scheduled rotation, and
+  rotating on every request is explicitly rejected (a grace window would be
+  needed to do that safely, and that needs its own RFC). Takes a
+  `&SessionValidationOutcome` from a real call to `validate` in the same
+  request, not a raw cookie — this can only follow a genuine validation, the
+  same way `RedeemSuccess` can only follow a won claim (INV-7). Enforced the
+  same way: `SessionValidationOutcome::Authenticated` is now
+  `#[non_exhaustive]`, so a host cannot fabricate one to hand to `rotate`;
+  a `trybuild` compile-fail test proves it. The new record carries the
+  **same absolute `expires_at`** as the old one — rotation changes the
+  credential, not the session's lifetime; a host rotating on a schedule must
+  not thereby grant an unbounded session. Ordering is insert-then-revoke,
+  never the reverse: revoking first would leave a window where neither
+  record is valid, logging out a concurrent in-flight request from the same
+  subject. Neither ordering is atomic (D1 has no multi-statement
+  transaction), so a failed revoke after a successful insert can leave two
+  live sessions for one subject — `rotate` still returns the new session
+  rather than an error the host would have no way to act on safely, and
+  fires a distinct `CodeAuthEvent::SessionRotationRevokeFailed` naming both
+  session ids so the operator can see it. The old secret reports
+  `SessionFailure::Revoked` after a successful rotation, not a bare
+  "unauthenticated" (only reachable precisely because of RFC-047 step 2).
+  `rotate` takes a host-supplied `reason: &str`, recorded verbatim in the
+  `CodeAuthEvent::SessionRotated` audit event. No new `SessionStore` trait
+  method — rotation composes the existing `insert_session` and
+  `revoke_session`; a new conformance test on the shared suite proves every
+  adapter supports the two-live-records-then-revoke sequence rotation
+  depends on, including via Miniflare for D1.
+
 ### Changed
 
 - **`SessionValidationOutcome::Unauthenticated` now carries a reason
@@ -129,6 +163,21 @@ semantic versioning once it reaches a stable release.
   unchanged**: RFC-006 §13.5's collapse still holds, and `SessionFailure` has
   no conversion to `PublicSessionError`. RFC-044's idle-timeout tests pass
   unmodified.
+
+- **`SessionValidationOutcome::Authenticated` is now `#[non_exhaustive]`
+  (RFC-045, INV-9).** **This is a breaking change: any external crate that
+  constructs this variant with struct-literal syntax, or matches it
+  exhaustively without `..`, must be updated.** Migration is mechanical —
+  add `..` to the end of the field list in any pattern match on
+  `Authenticated` (`Authenticated { subject, .. }`, not
+  `Authenticated { subject, session_id, expires_at }`); no host code
+  constructs this variant directly under normal use, since it is only ever
+  received from `SessionManager::validate`. The change closes a real gap:
+  without it, a host could fabricate
+  `Authenticated { subject: victim, session_id: victim_session, expires_at: far }`
+  and hand it to the new `SessionManager::rotate` (below), minting a fresh
+  live session for a victim it never validated. `E0639` is what a caller now
+  gets instead.
 
 ## [0.19.1] — 2026-09-06
 

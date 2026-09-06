@@ -1,0 +1,10 @@
+error[E0639]: cannot create non-exhaustive variant using struct expression
+  --> tests/compile-fail/session_authenticated_unconstructible.rs:9:13
+   |
+ 9 |       let _ = codlet::SessionValidationOutcome::Authenticated {
+   |  _____________^
+10 | |         subject: codlet::secret::SubjectId::new("user".to_string()),
+11 | |         session_id: codlet::secret::SessionId::new("sess".to_string()),
+12 | |         expires_at: 0,
+13 | |     };
+   | |_____^

@@ -23,6 +23,7 @@ where
     test_new_session_has_no_last_seen_at(&factory).await;
     test_touch_session_sets_last_seen_at(&factory).await;
     test_touch_session_overwrites_previous_value(&factory).await;
+    test_rotation_overlap_then_old_revoked(&factory).await;
 }
 
 async fn test_active_session_found<F, Fut, S>(factory: &F)
@@ -232,5 +233,93 @@ where
         found.last_seen_at,
         Some(NOW + 20),
         "a later touch must overwrite, not merely set-if-absent"
+    );
+}
+
+// ── RFC-045: what session rotation composes from existing store ops ────────
+//
+// `SessionManager::rotate` adds no new store trait method (RFC-045 §5) — it
+// composes `insert_session` and `revoke_session`, in that order, on purpose
+// (RFC-045 §3.2: revoking first would leave a window where neither record is
+// valid). This test proves every adapter actually supports the sequence
+// rotation depends on: two live records for the same subject can coexist
+// briefly, and revoking the old one afterward does not disturb the new one.
+
+async fn test_rotation_overlap_then_old_revoked<F, Fut, S>(factory: &F)
+where
+    F: Fn() -> Fut,
+    Fut: Future<Output = S>,
+    S: SessionStore,
+{
+    let store = factory().await;
+    let subject = SubjectId::new("user-rot".into());
+
+    store
+        .insert_session(SessionRecord {
+            id: SessionId::new("rot-old".into()),
+            lookup_key: session_lk("rot-old-secret"),
+            key_version: kv(),
+            subject: subject.clone(),
+            created_at: NOW,
+            expires_at: LATER,
+        })
+        .await
+        .unwrap();
+
+    // §3.2: insert the new record while the old one is still unrevoked.
+    // Both must be simultaneously active -- the overlap is deliberate, not a
+    // bug the store is expected to prevent.
+    store
+        .insert_session(SessionRecord {
+            id: SessionId::new("rot-new".into()),
+            lookup_key: session_lk("rot-new-secret"),
+            key_version: kv(),
+            subject: subject.clone(),
+            created_at: NOW,
+            expires_at: LATER,
+        })
+        .await
+        .unwrap();
+
+    let old_before = store
+        .find_active_session(&[session_lk("rot-old-secret")], NOW)
+        .await
+        .unwrap()
+        .expect("the old record must still be active during the overlap window");
+    assert!(old_before.revoked_at.is_none());
+    let new_during_overlap = store
+        .find_active_session(&[session_lk("rot-new-secret")], NOW)
+        .await
+        .unwrap()
+        .expect("the new record must already be active during the overlap window");
+    assert_eq!(new_during_overlap.subject.as_str(), "user-rot");
+
+    // Now revoke the old one, as `rotate`'s final step does.
+    store
+        .revoke_session(&SessionId::new("rot-old".into()), NOW)
+        .await
+        .unwrap();
+
+    let old_after = store
+        .find_active_session(&[session_lk("rot-old-secret")], NOW)
+        .await
+        .unwrap()
+        .expect("RFC-047: the store must return the revoked record, not filter it out");
+    assert_eq!(
+        classify_session(Some(old_after), None, NOW),
+        SessionValidationOutcome::Unauthenticated {
+            reason: SessionFailure::Revoked
+        }
+    );
+
+    // Revoking the old record must not disturb the new one.
+    let new_after = store
+        .find_active_session(&[session_lk("rot-new-secret")], NOW)
+        .await
+        .unwrap()
+        .expect("the new record must remain active after the old one is revoked");
+    assert!(
+        classify_session(Some(new_after), None, NOW).is_authenticated(),
+        "revoking the old session must not affect the new one"
     );
 }

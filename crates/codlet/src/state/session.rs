@@ -58,13 +58,28 @@ pub enum SessionFailure {
 pub enum SessionValidationOutcome {
     /// Session is valid. The host application must still check authorization
     /// (RFC-001: codlet authenticates; the host authorizes).
+    ///
+    /// `#[non_exhaustive]` (RFC-045): a struct variant's fields cannot carry
+    /// per-field visibility the way [`RedeemSuccess`](crate::auth::RedeemSuccess)'s
+    /// `_claim_proof` does (enum variant fields always share the enum's own
+    /// visibility — E0449), so this is the enum equivalent of that same
+    /// proof-carrying pattern. It blocks external crates from constructing
+    /// this variant with struct-literal syntax, so
+    /// [`crate::auth::SessionManager::rotate`] cannot be handed a fabricated
+    /// `Authenticated` outcome that never went through a real validation —
+    /// only [`classify_session`] (in this crate) can produce one. It does not
+    /// restrict matching or field access, so every existing `if let
+    /// Authenticated { .., .. } = outcome` call site — inside this crate or a
+    /// host's — is unaffected.
+    #[non_exhaustive]
     Authenticated {
         /// The host-owned subject this session is bound to.
         subject: SubjectId,
         /// The opaque session record identifier (not a bearer credential).
         session_id: crate::secret::SessionId,
-        /// Expiry as Unix seconds (UTC). For display / renewal decisions only;
-        /// the store already filtered out expired sessions.
+        /// Expiry as Unix seconds (UTC). For display / renewal decisions only
+        /// — `classify_session`, not the store, is what decided this record
+        /// had not expired (RFC-047 step 2).
         expires_at: u64,
     },
     /// No valid session. The end-user-visible response is identical for every
