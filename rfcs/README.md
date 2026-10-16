@@ -11,9 +11,11 @@ inside each file mirrors it.
 
 Counts below are derived from the filesystem, not hand-maintained.
 
-## Proposed (0)
+## Proposed (1)
 
-No open RFCs.
+| ID | Title | Milestone |
+|----|-------|-----------|
+| [050](./proposed/050-the-store-surface-must-describe-what-it-does.md) | The Store Surface Must Describe What It Does | M7 |
 
 ## Accepted (0)
 
