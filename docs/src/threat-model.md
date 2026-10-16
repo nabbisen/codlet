@@ -142,13 +142,15 @@ when it cannot perform its check". No row in this table is open.
 | INV-8 | All non-success redemption states map to one generic public error. | `PublicRedemptionError::from_reason` | `crates/codlet/tests/rfc_040_invariant_verification.rs`: `inv8_every_redemption_fail_reason_is_classified_by_an_exhaustive_match` — an exhaustive `match` with no wildcard arm, so an unhandled new `RedemptionFailReason` variant fails to compile rather than silently escaping the check |
 | INV-9 | `SessionManager::rotate` requires a `SessionValidationOutcome::Authenticated` produced by a real `validate` call — not one fabricated by the caller (RFC-045). | Type system: `SessionValidationOutcome::Authenticated` is `#[non_exhaustive]`, so external code cannot construct it with struct-literal syntax; only `classify_session` (in this crate) produces one | `crates/codlet/tests/rfc_045_rotate_requires_authenticated_compile_fail.rs` — `trybuild` `compile_fail` against `crates/codlet/tests/compile-fail/session_authenticated_unconstructible.rs`, pinned to `error[E0639]: cannot create non-exhaustive variant using struct expression`; proven by a compile-failure test, the same technique as INV-7 |
 
-`cargo run -p xtask -- release-check` runs four static gates, three of which
-enforce INV-1, INV-2, and INV-3 above; the fourth, `no-debug-prints`, guards
-against secret-bearing debug output and is not tied to a single numbered
-invariant in this table. `xtask self-test` (also run in CI) proves each of the
-four can fail against a deliberate violation, not merely that it exists
-(RFC-040 §3.2). A fifth gate, `cookie-attrs-present`, guarded the
-`HttpOnly`/`Secure`/`SameSite` cookie invariant described under "Cookie
-leakage via JS" above — also outside this numbered list — and was retired
-under this same standard once self-test proved it could not actually detect
-a violation; see RFC-042.
+`cargo run -p xtask -- release-check` runs five static gates. Three enforce
+INV-1, INV-2, and INV-3 above (`no-plaintext-in-store-ops`, `no-fallback-key`,
+`rng-no-silent-fallback`). The other two are not tied to a row in this table:
+`no-debug-prints` guards against secret-bearing debug output, and
+`no-interpolated-sql-values` (RFC-048) rejects a value interpolated into a SQL
+clause via `format!` — the shape of the SQL injection RFC-048 fixed in
+`claim_code`. `xtask self-test` (also run in CI) proves each of the five can
+fail against a deliberate violation, not merely that it exists (RFC-040 §3.2).
+A former gate, `cookie-attrs-present`, guarded the `HttpOnly`/`Secure`/`SameSite`
+cookie invariant described under "Cookie leakage via JS" above — also outside
+this numbered list — and was retired under this same standard once self-test
+proved it could not actually detect a violation; see RFC-042.

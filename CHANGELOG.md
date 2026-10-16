@@ -8,6 +8,24 @@ semantic versioning once it reaches a stable release.
 
 ### Changed
 
+- **Documentation accuracy sweep (RFC-016 follow-up).** No code changes. The
+  migration guide's session example (Option B) branched on
+  `find_active_session(...).is_none()`; since RFC-047 that function returns
+  expired and revoked records too, so a host copying the example would have
+  authenticated them. It now passes the record to `classify_session` and falls
+  back to the legacy lookup only on `NotFound`. The adapter matrix's "Expiry
+  filter" guarantee, which RFC-047 removed, is replaced by the actual contract
+  (lookups return any matching record; the classifier decides). The
+  `codlet` and `codlet-sqlx` crate READMEs — the crates.io front pages, and
+  `codlet`'s docs.rs page — no longer describe a v0.4.0/v0.5.0 pre-release or
+  call PostgreSQL planned. The threat model now says five static gates, not
+  four; the root README's dependency examples are current and show the
+  unpublished `codlet-worker` as a git dependency, and no longer list a
+  nonexistent Axum adapter; `rfc-process.md` describes the 5-folder layout;
+  `CONTRIBUTING.md` lists all nine invariants rather than seven;
+  `examples/README.md` notes `validate`'s `Option<&str>` argument and that
+  `rotate` has no example yet.
+
 - **Resolved RFC-039's two deferred supply-chain questions (RFC-049).** The
   yanked dev-tree dependencies `chacha20 0.10.0` and `spin 0.9.8` are updated
   to their non-yanked successors (`0.10.2`, `0.9.9`); `cargo deny check

@@ -21,6 +21,9 @@ model):
 - one-time claim and single-use form-token consume are atomic and
   single-winner (`changed == 0` never proceeds);
 - public redemption failures are generic and do not reveal code state;
+- a session can be issued only with proof of a won claim (`RedeemSuccess`);
+- a session can be rotated only from an `Authenticated` outcome that a real
+  `validate` call produced — never one the caller constructed;
 - session cookies are `HttpOnly; Secure; SameSite=Strict` by default;
 - `codlet` gains no web-framework, database, or async-executor dependency;
 - no authorization, user, role, permission, or community concept enters core.

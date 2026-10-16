@@ -24,6 +24,7 @@ through the full codlet authentication cycle end-to-end in a browser:
 - `CodeAuth::find` + `CodeAuth::claim` — two-step atomic redemption (INV-5)
 - `SessionManager::issue` — start a session after a won claim
 - `SessionManager::validate` — authenticate a cookie on each request
+  (takes the cookie value as `Option<&str>`; pass `None` when no cookie was sent)
 - `SessionManager::revoke` — sign out and clear the cookie
 - Sharing `SqliteStore` across managers via `Clone`
 - Reading the `Set-Cookie` / clear-cookie header values from codlet and writing
@@ -34,6 +35,12 @@ through the full codlet authentication cycle end-to-end in a browser:
 cd examples/axum_login_logout && cargo run
 # Open http://127.0.0.1:3000 and paste the printed code to sign in.
 ```
+
+The session lifecycle also includes `SessionManager::rotate` (RFC-045), which
+replaces a live session's secret on a privilege change without ending the
+session. No example demonstrates it yet, nor idle timeout
+(`SessionManager::with_idle_timeout`, RFC-044) or the host-visible failure
+reasons returned by `validate` (RFC-046).
 
 ---
 

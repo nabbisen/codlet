@@ -76,15 +76,24 @@ Add the core crate and your chosen adapter to `Cargo.toml`:
 
 ```toml
 [dependencies]
-codlet = "0.17"
-
-# Cloudflare Workers (wasm32 target only):
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-codlet-worker = "0.17"
+codlet = "0.20"
 
 # SQLite or PostgreSQL (native targets):
-# codlet-sqlx = "0.17"
-# codlet-sqlx = { version = "0.17", default-features = false, features = ["postgres"] }
+# codlet-sqlx = "0.20"
+# codlet-sqlx = { version = "0.20", default-features = false, features = ["postgres"] }
+```
+
+`codlet-worker` (Cloudflare Workers, `wasm32` target only) is **not published
+to crates.io**. Depend on it from git, and take `codlet` from the same git tag
+so the two share one copy of the core types (a crates.io `codlet` alongside a
+git `codlet-worker` would be two different crates):
+
+```toml
+[dependencies]
+codlet        = { git = "https://github.com/nabbisen/codlet", tag = "0.20.0" }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+codlet-worker = { git = "https://github.com/nabbisen/codlet", tag = "0.20.0" }
 ```
 
 The shape of the core primitives:
@@ -121,7 +130,7 @@ let _ = lookup_key; // store this + key_version; never store `code`
   SameSite=Strict` by default.
 - **Small, runtime-neutral core.** `codlet` carries no web-framework,
   database, or async-executor dependencies. Runtime support (Cloudflare
-  Workers/D1/KV, SQLx, Axum) lives in separate adapter crates.
+  Workers/D1/KV, SQLx) lives in separate adapter crates.
 - **Storage proves its own atomicity.** One-time claim and single-use
   form-token consume are trait-level contracts backed by conditional writes;
   every adapter must pass a shared conformance suite.

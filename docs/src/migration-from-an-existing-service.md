@@ -34,14 +34,39 @@ remove the parallel path.
 
 ```rust
 // Pseudocode: parallel lookup
-let new_lk = hasher.lookup_key(SecretDomain::Session, cookie_value)?;
-let session = session_store.find_active_session(&[new_lk], now).await?;
-if session.is_none() {
-    // Fall back to old-style lookup for the transition window.
-    let old_hmac = legacy_hmac(pepper, cookie_value);
-    session = legacy_session_db::find_active(&db, &old_hmac).await?;
+let candidates: Vec<LookupKey> = hasher
+    .lookup_key_candidates(SecretDomain::Session, cookie_value)?
+    .into_iter()
+    .map(|(lk, _version)| lk)
+    .collect();
+let record = session_store.find_active_session(&candidates, now).await?;
+
+// The store returns the record; the classifier decides. A returned record
+// may be expired or revoked, so never branch on `record.is_some()`.
+match classify_session(record, idle_timeout, now) {
+    SessionValidationOutcome::Authenticated { subject, .. } => {
+        // A live codlet session.
+    }
+    SessionValidationOutcome::Unauthenticated { reason: SessionFailure::NotFound } => {
+        // Not a codlet session at all: fall back to the old-style lookup for
+        // the transition window.
+        let old_hmac = legacy_hmac(pepper, cookie_value);
+        let legacy = legacy_session_db::find_active(&db, &old_hmac).await?;
+        // ...authenticate from `legacy`, or treat as unauthenticated.
+    }
+    SessionValidationOutcome::Unauthenticated { .. } => {
+        // A codlet session that is expired, idle-timed-out, or revoked.
+        // Do not fall back: the legacy path must not revive it.
+    }
 }
 ```
+
+`find_active_session` returns the stored record **regardless of expiry or
+revocation**; `classify_session` is what decides whether it is authenticated.
+Only a `NotFound` outcome means "codlet has never seen this credential" and so
+justifies trying the legacy lookup. (`SessionManager::validate` performs this
+classification for you; the example drops to the store level only because the
+fallback needs to see the distinction.)
 
 ## Schema migration
 
