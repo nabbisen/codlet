@@ -95,9 +95,24 @@ judgement. No adapter reads `now` today, so no adapter body changes except to
 drop the parameter.
 
 Replace the rustdoc's "accepted for symmetry with other store methods and
-possible future use" with the real reason it is gone: the store does not consult
-a clock, because every time-based decision belongs to the classifier. State it
-as a contract, not as an apology.
+possible future use" with the real reason it is gone, stated as a contract
+rather than an apology: **the lookup makes no time-based decision, so it is not
+given the time.**
+
+Be precise about the scope of that claim. "The store does not consult a clock"
+would be a **new false statement** — and planting one is the defect this RFC
+exists to remove. These legitimately keep their `now` and are out of scope:
+
+| Keeps `now` | Why |
+|---|---|
+| `revoke_code`, `revoke_session` | records `revoked_at` |
+| `touch_session` | records `last_seen_at` (RFC-044) |
+| `ClaimRequest.now` | written as `used_at`, and the expiry guard of the conditional UPDATE (INV-5) |
+| `expires_at_from_ttl` | a pure helper computing from a caller-supplied now |
+
+The distinction to write down: a **write** is told the time so it can record it;
+a **lookup** is not, because it judges nothing. That sentence is the whole point
+of the change — get it right and the rest is mechanical.
 
 ### 5.2 `classify_code_lookup` takes the record
 
@@ -150,8 +165,46 @@ reorder. Do not collapse, parameterise, or drop any of them.
 | `cargo clippy --workspace --all-targets -- -D warnings` | clean |
 | `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps` | clean — catches a dangling intra-doc link from a rename |
 | `cargo run -p xtask -- release-check` | 5 gates pass |
-| `grep -rnE 'find_redeemable\|RedeemableCode\|find_active_session\|ActiveSessionRecord' --include='*.rs' --include='*.md' . \| grep -v rfcs/done \| grep -v CHANGELOG` | no hits |
-| `grep -rn 'now' crates/codlet/src/store/code.rs crates/codlet/src/store/session.rs` | no lookup parameter remains |
+| the two greps in §7.1 | no hits |
+
+### 7.1 The two residue greps
+
+Run these as written, from the repository root. They are in a block rather than
+the table above because a markdown table cannot hold an unescaped `|`, and an
+alternation escaped as `\|` is a *literal pipe* in an ERE — it matches nothing
+and passes unconditionally. Do not retype them from the table.
+
+```sh
+# 1. No old identifier survives outside the historical record.
+grep -rnE 'find_redeemable|RedeemableCode|find_active_session|ActiveSessionRecord' \
+  --include='*.rs' --include='*.md' . \
+  | grep -v '^./rfcs/done/' | grep -v '^./rfcs/archive/' \
+  | grep -v '^./.git-exclude/' | grep -v '^./CHANGELOG.md' | grep -v '^./target/'
+
+# 2. Which declarations still take a timestamp.
+grep -nE 'now: u64' crates/codlet/src/store/code.rs crates/codlet/src/store/session.rs
+```
+
+**Grep 1 must print nothing.** Check its exit status, not just the absence of
+output — `grep` exits 1 on no match, and a pipeline that errors early also
+prints nothing. Report the exit code.
+
+**Grep 2 must print exactly five lines**, and that is the check — not "no
+output". The five are §5.1's write-side parameters:
+
+| File | Declaration |
+|---|---|
+| `store/code.rs` | `ClaimRequest.now` |
+| `store/code.rs` | `revoke_code` |
+| `store/code.rs` | `expires_at_from_ttl` |
+| `store/session.rs` | `revoke_session` |
+| `store/session.rs` | `touch_session` |
+
+It prints seven at baseline `10c4c84`. Fewer than five means you removed a
+`now` that a write needs; more than five means a lookup still has one. Quote the
+output and name which declaration each line is, so neither of us is counting
+lines alone. The pattern matches declarations only, not the word "now", which
+still appears legitimately in the prose of both files.
 
 **Verify in both environments.** Run the greps on a clean checkout as well as
 your working tree — a stale `target/` or an uncommitted file has produced a
@@ -168,7 +221,8 @@ These are binding. Where §3's table disagrees, these win.
 1. The four old identifiers appear nowhere outside `rfcs/done/`,
    `rfcs/archive/`, `.git-exclude/`, and `CHANGELOG.md` history.
 2. Neither `lookup_code` nor `lookup_session` takes a timestamp, and no
-   adapter implementation of either reads a clock by any means.
+   adapter implementation of either reads a clock by any means — including a
+   SQL-level one. The five write-side `now` parameters in §5.1 are unchanged.
 3. `classify_code_lookup` takes `&StoredCode` and `now`.
 4. The RFC-047 §8.1 decision order is unchanged for both entities, and the nine
    precedence tests still prove it.
