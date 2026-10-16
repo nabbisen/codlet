@@ -11,6 +11,12 @@
 The owner found one stale version string. The audit found ten issues, one of
 which hands readers code that authenticates expired sessions.
 
+**Amended 2026-10-17.** An eleventh was found afterwards, while reviewing the
+rename decision: `docs/src/adapter-matrix-and-config.md` states a guarantee that
+was removed by RFC-047 (§4.9). My audit had listed that file as current, and it
+is not. It is the same defect class as §4.1 — a guarantee statement that outlived
+the behaviour — so it belongs in this sweep.
+
 ## 2. Do §4 first
 
 **§4.1 is a correctness fix to an authentication example.** Everything else is
@@ -25,6 +31,7 @@ version numbers and prose. If you only get one thing right, get that one.
 - `docs/src/rfc-process.md` — §4.6
 - `examples/README.md` — §4.7
 - `CONTRIBUTING.md` — §4.8
+- `docs/src/adapter-matrix-and-config.md` — §4.9
 - `CHANGELOG.md` — one `[Unreleased]` entry for the lot
 
 ## 4. Required implementation
@@ -126,17 +133,51 @@ requires an unforgeable `Authenticated` outcome (INV-9).
 Add both. Keep the list's voice — it is a short "do not weaken these", not a
 copy of the table.
 
+### 4.9 The adapter matrix states a guarantee that no longer exists
+
+`docs/src/adapter-matrix-and-config.md` line 13, in the guarantee-definitions
+table:
+
+> | **Expiry filter** | `find_redeemable` and `find_active_session` exclude expired records server-side. |
+
+Since RFC-047 that is **false for every adapter**. Both lookups return records
+regardless of expiry, use or revocation; the classifiers decide. The adapters'
+rustdoc says so explicitly, and `codlet-conformance` asserts it — an adapter
+that still filtered would fail the suite.
+
+Note also that **"Expiry filter" is an orphan**: the adapters table below it has
+no such column, so nothing in the document ever claims a specific adapter
+satisfies it. It is a definition of a property that is not merely unclaimed but
+now contradicted.
+
+Replace that row with one that states the actual contract — that lookups return
+any matching record and the classifier decides state. Keep it in the same voice
+and the same one-line table form.
+
+Do not add a column to the adapters table. The property is uniform across
+adapters by design; a column of identical cells says less than the definition
+does.
+
 ## 5. Non-change scope
 
-- **No rename of `find_active_session` or `ActiveSessionRecord.`** The audit §4
-  raises it as an API decision for the owner. It is not a documentation fix and
-  it is not yours to make here.
+- **No rename of `find_active_session`, `find_redeemable`, or their record
+  types.** The owner accepted RFC-050 on 2026-10-17, which renames all four and
+  removes the dead `now` parameter. That is a code change with its own handoff
+  and it is not yours here.
+
+  **This sweep runs first, and RFC-050 follows it.** Both touch §4.1's example
+  and §4.9's table row, so write them with the names as they are **today**.
+  RFC-050 then renames the identifiers in whatever text you leave. Do not try to
+  pre-empt it by using the new names — they do not exist yet and the docs are
+  doctested.
 - **No new `docs/src/` chapter** for M6's features — §6.
 - No code changes at all. If a doc fix seems to require one, stop and report.
 - Nothing in `rfcs/done/` or `rfcs/archive/`. Those are historical records.
-- `docs/src/adapter-matrix-and-config.md`, `key-rotation.md`,
-  `introduction.md`, `SECURITY.md`, `crates/codlet-worker/README.md` — audited
-  and current. Leave them.
+- `docs/src/key-rotation.md`, `introduction.md`, `SECURITY.md`,
+  `crates/codlet-worker/README.md` — audited and current. Leave them.
+  (`adapter-matrix-and-config.md` was on this list and has been moved to §4.9 —
+  if you find anything else on it that looks stale, say so in the review request
+  rather than assuming the list is right.)
 
 ## 6. Deliberately out of scope: documenting M6
 
@@ -159,6 +200,7 @@ Prose has no test suite, so the check is mechanical and specific:
 | `grep -rn 'four static gates' docs/src/` | no hits |
 | `grep -rn '4-folder' docs/src/rfc-process.md` | no hits |
 | `grep -c '^- ' <CONTRIBUTING invariants block>` | 9 |
+| `grep -n 'Expiry filter' docs/src/adapter-matrix-and-config.md` | no hits |
 | `cargo run -p xtask -- release-check` | 5 gates — confirms §4.3's number |
 | `cargo test --workspace` | green (the `codlet` README is doctested; do not break it) |
 | `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps` | clean |
@@ -180,7 +222,9 @@ example that is wrong in a new way is worse than the one being replaced.
 7. `rfc-process.md` correct on folders and states, with no hardcoded RFC count.
 8. `examples/README.md` includes `rotate`.
 9. `CONTRIBUTING.md` lists nine invariants.
-10. No code change; full CI green.
+10. The adapter matrix no longer claims server-side expiry filtering, and
+    states the post-RFC-047 contract instead.
+11. No code change; full CI green.
 
 ## 9. Prohibited shortcuts
 
@@ -189,7 +233,9 @@ example that is wrong in a new way is worse than the one being replaced.
 - Do not add M6 chapters.
 - Do not restate the RFC count in prose.
 - Do not leave a dependency example that cannot resolve (§4.5).
-- Do not "fix" `docs/src/` files the audit lists as current.
+- Do not "fix" `docs/src/` files the audit lists as current — but do report one
+  that looks wrong (see §5).
+- Do not use RFC-050's new names anywhere. They do not exist yet.
 
 ## 10. Required evidence
 
