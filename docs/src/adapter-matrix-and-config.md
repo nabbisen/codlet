@@ -10,7 +10,7 @@ requirement are not production-safe for codlet's core use case.
 |----------|-----------|
 | **Atomic claim** | Exactly one concurrent `claim_code` call observes `Won` for a given code. |
 | **Atomic consume** | Exactly one concurrent `consume_form_token` call observes `Proceed` for a given token. |
-| **Lookup returns state** | `find_redeemable` and `find_active_session` return any record matching the lookup key, whatever its expiry, use, or revocation state; the classifiers (`classify_code_lookup`, `classify_session`) decide whether it is redeemable or authenticated (RFC-047). |
+| **Lookup returns state** | `lookup_code` and `lookup_session` return any record matching the lookup key, whatever its expiry, use, or revocation state; the classifiers (`classify_code_lookup`, `classify_session`) decide whether it is redeemable or authenticated (RFC-047). |
 | **Single-process safe** | Safe for all requests within one process. |
 | **Multi-process safe** | Safe for multiple concurrent processes / instances. |
 

@@ -7,9 +7,9 @@ use crate::secret::{SessionId, SubjectId};
 
 use super::error::StoreError;
 
-/// A session record returned by `find_active_session`.
+/// A session record returned by `lookup_session`.
 ///
-/// Despite the name, this may **not** be active: `find_active_session`
+/// Despite the name, this may **not** be active: `lookup_session`
 /// returns any record matching the lookup key regardless of state (RFC-047
 /// step 2), and `revoked_at`/`expires_at` are what
 /// [`crate::state::classify_session`] uses to decide. There is no second
@@ -17,7 +17,7 @@ use super::error::StoreError;
 /// conditional UPDATE (RFC-047 §3), this classifier's decision *is* the
 /// guard.
 #[derive(Debug, Clone)]
-pub struct ActiveSessionRecord {
+pub struct StoredSession {
     /// Opaque session record identifier (not a bearer credential).
     pub id: SessionId,
     /// The subject this session authenticates.
@@ -66,11 +66,11 @@ pub trait SessionStore {
     /// criteria at all. `now` is accepted for symmetry with other store
     /// methods and possible future use; this method itself no longer
     /// compares against it.
-    fn find_active_session(
+    fn lookup_session(
         &self,
         candidates: &[LookupKey],
         now: u64,
-    ) -> impl Future<Output = Result<Option<ActiveSessionRecord>, StoreError>>;
+    ) -> impl Future<Output = Result<Option<StoredSession>, StoreError>>;
 
     /// Insert a new session record.
     fn insert_session(&self, record: SessionRecord)
@@ -86,7 +86,7 @@ pub trait SessionStore {
 
     /// Record that a session was used at `now` (RFC-044 idle timeout).
     ///
-    /// Deliberately **not** part of [`find_active_session`](Self::find_active_session):
+    /// Deliberately **not** part of [`lookup_session`](Self::lookup_session):
     /// keeping the read and the write separate means the read path can never be
     /// made conditional on a write succeeding, and a `touch_session` failure
     /// must never invalidate an otherwise-valid session (RFC-044 §4.5) — the

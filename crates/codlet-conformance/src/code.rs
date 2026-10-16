@@ -17,7 +17,7 @@ where
     Fut: Future<Output = S>,
     S: CodeStore + Send + Sync + 'static,
 {
-    test_insert_and_find_redeemable(&factory).await;
+    test_insert_and_lookup_code(&factory).await;
     test_nonexistent_returns_none(&factory).await;
     test_expired_returned_and_classifier_rejects(&factory).await;
     test_used_returned_and_classifier_rejects(&factory).await;
@@ -29,7 +29,7 @@ where
     test_claim_code_scope_metacharacters_are_opaque(&factory).await;
 }
 
-async fn test_insert_and_find_redeemable<F, Fut, S>(factory: &F)
+async fn test_insert_and_lookup_code<F, Fut, S>(factory: &F)
 where
     F: Fn() -> Fut,
     Fut: Future<Output = S>,
@@ -41,7 +41,7 @@ where
         .await
         .unwrap();
     let found = store
-        .find_redeemable(&[code_lk("secret1")], NOW, None)
+        .lookup_code(&[code_lk("secret1")], NOW, None)
         .await
         .unwrap();
     assert!(
@@ -61,7 +61,7 @@ where
 {
     let store = factory().await;
     let found = store
-        .find_redeemable(&[code_lk("ghost")], NOW, None)
+        .lookup_code(&[code_lk("ghost")], NOW, None)
         .await
         .unwrap();
     assert!(found.is_none(), "nonexistent: must return None");
@@ -69,7 +69,7 @@ where
 
 /// RFC-047 §4.3: this must fail against an adapter that kept its old
 /// exclusion filter, not merely pass against a migrated one. An adapter that
-/// still filters expired rows out of `find_redeemable` returns `None` here,
+/// still filters expired rows out of `lookup_code` returns `None` here,
 /// which trips the `.expect(...)` below -- the inverted assertion carries the
 /// security property this suite exists to prove (verified by temporarily
 /// reintroducing the filter in `MemCodeStore` and confirming this test fails;
@@ -86,7 +86,7 @@ where
         .await
         .unwrap();
     let found = store
-        .find_redeemable(&[code_lk("expiredsec")], NOW, None)
+        .lookup_code(&[code_lk("expiredsec")], NOW, None)
         .await
         .unwrap()
         .expect("RFC-047: the store must return an expired record, not filter it out");
@@ -112,7 +112,7 @@ where
         .await
         .unwrap();
     let found = store
-        .find_redeemable(&[code_lk("usedsec")], NOW, None)
+        .lookup_code(&[code_lk("usedsec")], NOW, None)
         .await
         .unwrap()
         .unwrap();
@@ -128,7 +128,7 @@ where
         .unwrap();
     assert_eq!(won, ClaimOutcome::Won);
     let again = store
-        .find_redeemable(&[code_lk("usedsec")], NOW, None)
+        .lookup_code(&[code_lk("usedsec")], NOW, None)
         .await
         .unwrap()
         .expect("RFC-047: the store must return a used record, not filter it out");
@@ -157,7 +157,7 @@ where
         .await
         .unwrap();
     let found = store
-        .find_redeemable(&[code_lk("revokedsec")], NOW, None)
+        .lookup_code(&[code_lk("revokedsec")], NOW, None)
         .await
         .unwrap()
         .expect("RFC-047: the store must return a revoked record, not filter it out");
@@ -186,7 +186,7 @@ where
         .await
         .unwrap();
     let found = store
-        .find_redeemable(&[code_lk("bothsec")], NOW, None)
+        .lookup_code(&[code_lk("bothsec")], NOW, None)
         .await
         .unwrap()
         .unwrap();
@@ -217,7 +217,7 @@ where
         .await
         .unwrap();
     let found = store
-        .find_redeemable(&[code_lk("racesec")], NOW, None)
+        .lookup_code(&[code_lk("racesec")], NOW, None)
         .await
         .unwrap()
         .unwrap();
@@ -276,7 +276,7 @@ where
     // record within the matching scope is still found by lookup key + scope;
     // the classifier is what rejects it now that it has been revoked.
     let found = store
-        .find_redeemable(&[code_lk("scopedsec")], NOW, Some("scope-A"))
+        .lookup_code(&[code_lk("scopedsec")], NOW, Some("scope-A"))
         .await
         .unwrap()
         .expect("scope revoke: the record must still be found by lookup key + scope");
@@ -304,7 +304,7 @@ where
         .await
         .unwrap();
     let found = store
-        .find_redeemable(&[code_lk("scoped2sec")], NOW, Some("scope-A"))
+        .lookup_code(&[code_lk("scoped2sec")], NOW, Some("scope-A"))
         .await
         .unwrap();
     assert!(
@@ -343,7 +343,7 @@ where
 
     async fn assert_unused<S: CodeStore>(store: &S, secret: &str, label: &str) {
         let r = store
-            .find_redeemable(&[code_lk(secret)], NOW, None)
+            .lookup_code(&[code_lk(secret)], NOW, None)
             .await
             .unwrap()
             .unwrap_or_else(|| panic!("{label} code must still exist"));
@@ -412,7 +412,7 @@ where
         "a legitimate scope value must still claim successfully"
     );
     let victim = store
-        .find_redeemable(&[code_lk("victimsec")], NOW, None)
+        .lookup_code(&[code_lk("victimsec")], NOW, None)
         .await
         .unwrap()
         .unwrap();

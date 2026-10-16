@@ -3,7 +3,7 @@
 use codlet::hashing::{KeyVersion, LookupKey};
 use codlet::secret::CodeId;
 use codlet::state::{ClaimOutcome, classify_claim};
-use codlet::store::code::{ClaimRequest, CodeRecord, CodeStore, RedeemableCode};
+use codlet::store::code::{ClaimRequest, CodeRecord, CodeStore, StoredCode};
 use codlet::store::error::StoreError;
 
 use crate::SqliteStore;
@@ -24,12 +24,12 @@ type CodeRow = (
 );
 
 impl CodeStore for SqliteStore {
-    async fn find_redeemable(
+    async fn lookup_code(
         &self,
         candidates: &[LookupKey],
         _now: u64,
         scope: Option<&str>,
-    ) -> Result<Option<RedeemableCode>, StoreError> {
+    ) -> Result<Option<StoredCode>, StoreError> {
         // Build a parameterised `IN (?, ?, ...)` clause for the candidate keys.
         // SQLx doesn't support dynamic IN lists directly, so we iterate.
         for candidate in candidates {
@@ -189,7 +189,7 @@ async fn find_one(
     pool: &sqlx::SqlitePool,
     lookup_key: &str,
     scope: Option<&str>,
-) -> Result<Option<RedeemableCode>, StoreError> {
+) -> Result<Option<StoredCode>, StoreError> {
     // RFC-047: matches on lookup key and scope only. No expiry/revocation/use
     // predicate here -- `classify_code_lookup` decides that from the returned
     // state fields; `claim_code`'s conditional UPDATE remains the actual
@@ -223,7 +223,7 @@ async fn find_one(
     };
 
     Ok(row.map(
-        |(id, _lk, kv, purpose_val, grant, scope_val, exp, used_at, revoked_at)| RedeemableCode {
+        |(id, _lk, kv, purpose_val, grant, scope_val, exp, used_at, revoked_at)| StoredCode {
             id: CodeId::new(id),
             key_version: KeyVersion::new(kv),
             grant,

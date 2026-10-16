@@ -10,10 +10,10 @@ pub mod ratelimit;
 pub mod session;
 pub mod token;
 
-pub use code::{ClaimRequest, CodeRecord, CodeStore, RedeemableCode};
+pub use code::{ClaimRequest, CodeRecord, CodeStore, StoredCode};
 pub use error::{PublicAuthError, StoreError};
 pub use ratelimit::{
     RateLimitKey, RateLimitOutcome, RateLimitPolicy, RateLimitStore, RateLimitUnavailable,
 };
-pub use session::{ActiveSessionRecord, SessionRecord, SessionStore};
+pub use session::{SessionRecord, SessionStore, StoredSession};
 pub use token::{FormTokenRecord, FormTokenStore, TokenSubject};

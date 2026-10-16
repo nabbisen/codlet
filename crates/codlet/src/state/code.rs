@@ -1,6 +1,6 @@
 //! Code-lookup state machine (RFC-047).
 //!
-//! Pure, storage-free. `find_redeemable` returns any record matching the
+//! Pure, storage-free. `lookup_code` returns any record matching the
 //! lookup key (and scope), regardless of its use/expiry/revocation state —
 //! this module is what decides what that record means. Adapters look records
 //! up; they do not adjudicate (RFC-047 §4.1, extending the principle RFC-044

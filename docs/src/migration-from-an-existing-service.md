@@ -39,7 +39,7 @@ let candidates: Vec<LookupKey> = hasher
     .into_iter()
     .map(|(lk, _version)| lk)
     .collect();
-let record = session_store.find_active_session(&candidates, now).await?;
+let record = session_store.lookup_session(&candidates, now).await?;
 
 // The store returns the record; the classifier decides. A returned record
 // may be expired or revoked, so never branch on `record.is_some()`.
@@ -61,7 +61,7 @@ match classify_session(record, idle_timeout, now) {
 }
 ```
 
-`find_active_session` returns the stored record **regardless of expiry or
+`lookup_session` returns the stored record **regardless of expiry or
 revocation**; `classify_session` is what decides whether it is authenticated.
 Only a `NotFound` outcome means "codlet has never seen this credential" and so
 justifies trying the legacy lookup. (`SessionManager::validate` performs this

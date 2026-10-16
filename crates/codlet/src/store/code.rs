@@ -9,16 +9,16 @@ use crate::state::ClaimOutcome;
 
 use super::error::StoreError;
 
-/// Record returned by a `find_redeemable` call.
+/// Record returned by a `lookup_code` call.
 ///
-/// Despite the name, this may **not** be redeemable: `find_redeemable`
+/// Despite the name, this may **not** be redeemable: `lookup_code`
 /// returns any record matching the lookup key regardless of state (RFC-047),
 /// and `used_at`/`revoked_at`/`expires_at` are what
 /// [`crate::state::classify_code_lookup`] uses to decide. `claim_code`'s
 /// conditional UPDATE is the actual enforcement point (INV-5) — this
 /// classifier is a pre-filter, not a second guard.
 #[derive(Debug, Clone)]
-pub struct RedeemableCode {
+pub struct StoredCode {
     /// Opaque record identifier (not a secret, safe for logs and audit).
     pub id: CodeId,
     /// The lookup key version under which this code was stored. Needed to
@@ -61,7 +61,7 @@ pub struct CodeRecord {
 
 /// Parameters for a claim attempt.
 pub struct ClaimRequest<'a> {
-    /// The record to attempt to claim (from `find_redeemable`).
+    /// The record to attempt to claim (from `lookup_code`).
     pub code_id: &'a CodeId,
     /// The subject that is claiming this code. Stored on the record for audit.
     pub subject: &'a SubjectId,
@@ -78,7 +78,7 @@ pub struct ClaimRequest<'a> {
 ///
 /// Implementors must guarantee:
 ///
-/// - `find_redeemable` matches purely on lookup key and `scope`, carrying no
+/// - `lookup_code` matches purely on lookup key and `scope`, carrying no
 ///   expiry/revocation/use predicate — [`crate::state::classify_code_lookup`]
 ///   is what decides whether the returned record is actually redeemable
 ///   (RFC-047). A filter kept "for defence in depth" makes the classifier
@@ -87,7 +87,7 @@ pub struct ClaimRequest<'a> {
 /// - `claim_code` uses a conditional UPDATE (not read-then-write); the
 ///   affected-row count is exactly 1 for a winner and 0 for all others. This
 ///   remains the sole enforcement point for expiry/revocation/use at claim
-///   time (INV-5) — `find_redeemable`'s state fields are a pre-filter, not a
+///   time (INV-5) — `lookup_code`'s state fields are a pre-filter, not a
 ///   substitute for it;
 /// - `changed > 1` is surfaced as [`StoreError::InvariantViolation`], not
 ///   silently mapped to `Lost`.
@@ -99,12 +99,12 @@ pub trait CodeStore {
     /// the result to [`crate::state::classify_code_lookup`] to decide whether
     /// it is actually redeemable (RFC-047). Returns `Ok(None)` only if no
     /// record matches the lookup criteria at all.
-    fn find_redeemable(
+    fn lookup_code(
         &self,
         candidates: &[LookupKey],
         now: u64,
         scope: Option<&str>,
-    ) -> impl Future<Output = Result<Option<RedeemableCode>, StoreError>>;
+    ) -> impl Future<Output = Result<Option<StoredCode>, StoreError>>;
 
     /// Attempt to atomically claim a code record.
     ///

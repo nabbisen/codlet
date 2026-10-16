@@ -6,7 +6,7 @@
 use std::time::Duration;
 
 use crate::secret::SubjectId;
-use crate::store::session::ActiveSessionRecord;
+use crate::store::session::StoredSession;
 
 /// Why a session failed to validate (RFC-046).
 ///
@@ -111,7 +111,7 @@ impl SessionValidationOutcome {
 /// Classify a session lookup from the store's query result.
 ///
 /// `record` is `None` only when no record matches the lookup key at all —
-/// `find_active_session` no longer filters by expiry or revocation (RFC-047
+/// `lookup_session` no longer filters by expiry or revocation (RFC-047
 /// step 2), so a matched-but-invalid record still arrives here as `Some`,
 /// and this function is what decides. The decision order is fixed (RFC-047
 /// §8.1, restated for sessions in the step-2 handoff): **revoked, then
@@ -127,7 +127,7 @@ impl SessionValidationOutcome {
 /// RFC-047 generalised.
 #[must_use]
 pub fn classify_session(
-    record: Option<ActiveSessionRecord>,
+    record: Option<StoredSession>,
     idle_timeout: Option<Duration>,
     now: u64,
 ) -> SessionValidationOutcome {

@@ -146,7 +146,7 @@ pub mod mem_admin {
         ) -> Result<Vec<CodeMeta>, StoreError> {
             // Reflect on internal rows via the store's public query surface.
             // The in-memory implementation has no index, so we synthesise from
-            // what find_redeemable exposes. For the test implementation we
+            // what lookup_code exposes. For the test implementation we
             // return a best-effort view without touching private fields.
             //
             // Real adapters (SQLx, D1) implement this with a direct SELECT.

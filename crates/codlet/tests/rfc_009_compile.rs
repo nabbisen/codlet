@@ -13,7 +13,7 @@ use std::ptr;
 use codlet::LookupKey;
 use codlet::secret::CodeId;
 use codlet::state::ClaimOutcome;
-use codlet::store::code::{ClaimRequest, CodeRecord, CodeStore, RedeemableCode};
+use codlet::store::code::{ClaimRequest, CodeRecord, CodeStore, StoredCode};
 use codlet::store::error::StoreError;
 
 // ── Item 2: !Send store satisfies CodeStore ───────────────────────────────────
@@ -23,12 +23,12 @@ use codlet::store::error::StoreError;
 /// crate, which is `!Send` on the wasm32-unknown-unknown target.
 struct NotSendStore(#[allow(dead_code)] *const u8);
 impl CodeStore for NotSendStore {
-    async fn find_redeemable(
+    async fn lookup_code(
         &self,
         _candidates: &[LookupKey],
         _now: u64,
         _scope: Option<&str>,
-    ) -> Result<Option<RedeemableCode>, StoreError> {
+    ) -> Result<Option<StoredCode>, StoreError> {
         Ok(None)
     }
 
@@ -72,12 +72,12 @@ struct SendStore;
 static_assertions::assert_impl_all!(SendStore: Send, Sync);
 
 impl CodeStore for SendStore {
-    async fn find_redeemable(
+    async fn lookup_code(
         &self,
         _candidates: &[LookupKey],
         _now: u64,
         _scope: Option<&str>,
-    ) -> Result<Option<RedeemableCode>, StoreError> {
+    ) -> Result<Option<StoredCode>, StoreError> {
         Ok(None)
     }
 

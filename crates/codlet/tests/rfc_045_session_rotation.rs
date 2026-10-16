@@ -28,7 +28,7 @@ use codlet::rng::SystemRandom;
 use codlet::secret::{SessionId, SubjectId};
 use codlet::state::{SessionFailure, SessionValidationOutcome};
 use codlet::store::error::StoreError;
-use codlet::store::session::{ActiveSessionRecord, SessionRecord, SessionStore};
+use codlet::store::session::{SessionRecord, SessionStore, StoredSession};
 
 const NOW: u64 = 1_700_000_000;
 const OLD_EXPIRES_AT: u64 = NOW + 3_600;
@@ -77,12 +77,12 @@ struct FailingRevokeStore {
 }
 
 impl SessionStore for FailingRevokeStore {
-    fn find_active_session(
+    fn lookup_session(
         &self,
         candidates: &[codlet::LookupKey],
         now: u64,
-    ) -> impl Future<Output = Result<Option<ActiveSessionRecord>, StoreError>> {
-        self.inner.find_active_session(candidates, now)
+    ) -> impl Future<Output = Result<Option<StoredSession>, StoreError>> {
+        self.inner.lookup_session(candidates, now)
     }
 
     fn insert_session(

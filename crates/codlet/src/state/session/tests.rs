@@ -9,7 +9,7 @@ fn sid() -> crate::secret::SessionId {
     crate::secret::SessionId::new("sess-abc".to_string())
 }
 
-fn record(created_at: u64, expires_at: u64, last_seen_at: Option<u64>) -> ActiveSessionRecord {
+fn record(created_at: u64, expires_at: u64, last_seen_at: Option<u64>) -> StoredSession {
     record_with_revocation(created_at, expires_at, last_seen_at, None)
 }
 
@@ -18,8 +18,8 @@ fn record_with_revocation(
     expires_at: u64,
     last_seen_at: Option<u64>,
     revoked_at: Option<u64>,
-) -> ActiveSessionRecord {
-    ActiveSessionRecord {
+) -> StoredSession {
+    StoredSession {
         id: sid(),
         subject: subject(),
         created_at,

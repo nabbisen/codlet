@@ -5,7 +5,7 @@ use std::sync::Mutex;
 use crate::hashing::LookupKey;
 use crate::secret::{SessionId, SubjectId};
 use crate::store::error::StoreError;
-use crate::store::session::{ActiveSessionRecord, SessionRecord, SessionStore};
+use crate::store::session::{SessionRecord, SessionStore, StoredSession};
 
 #[derive(Debug, Clone)]
 struct MemSessionRow {
@@ -33,11 +33,11 @@ impl MemSessionStore {
 }
 
 impl SessionStore for MemSessionStore {
-    async fn find_active_session(
+    async fn lookup_session(
         &self,
         candidates: &[LookupKey],
         _now: u64,
-    ) -> Result<Option<ActiveSessionRecord>, StoreError> {
+    ) -> Result<Option<StoredSession>, StoreError> {
         let rows = self
             .rows
             .lock()
@@ -45,7 +45,7 @@ impl SessionStore for MemSessionStore {
         let found = rows
             .iter()
             .find(|r| candidates.iter().any(|c| r.lookup_key.ct_eq(c)))
-            .map(|r| ActiveSessionRecord {
+            .map(|r| StoredSession {
                 id: r.id.clone(),
                 subject: r.subject.clone(),
                 created_at: r.created_at,

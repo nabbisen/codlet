@@ -48,20 +48,20 @@ fn basic_code_record(
 // ── RFC-005: Code lifecycle ──────────────────────────────────────────────────
 
 #[tokio::test]
-async fn find_redeemable_returns_valid_code() {
+async fn lookup_code_returns_valid_code() {
     let store = MemCodeStore::new();
     let lk = code_lookup("ABCD2345");
     store
         .insert_code(basic_code_record(code_id(1), lk.clone(), LATER))
         .await
         .unwrap();
-    let found = store.find_redeemable(&[lk], NOW, None).await.unwrap();
+    let found = store.lookup_code(&[lk], NOW, None).await.unwrap();
     assert!(found.is_some());
     assert_eq!(found.unwrap().grant.as_deref(), Some("grant-payload"));
 }
 
 #[tokio::test]
-async fn find_redeemable_returns_expired_record_and_classifier_rejects_it() {
+async fn lookup_code_returns_expired_record_and_classifier_rejects_it() {
     // RFC-047: the store no longer excludes expired rows -- it returns the
     // record with its state fields, and `classify_code_lookup` is what
     // rejects it. Asserting `is_none()` here would pass against an adapter
@@ -75,7 +75,7 @@ async fn find_redeemable_returns_expired_record_and_classifier_rejects_it() {
         .await
         .unwrap();
     let found = store
-        .find_redeemable(&[lk], NOW, None)
+        .lookup_code(&[lk], NOW, None)
         .await
         .unwrap()
         .expect("RFC-047: the store must return the expired record, not filter it out");
@@ -87,7 +87,7 @@ async fn find_redeemable_returns_expired_record_and_classifier_rejects_it() {
 }
 
 #[tokio::test]
-async fn find_redeemable_returns_used_code_and_classifier_rejects_it() {
+async fn lookup_code_returns_used_code_and_classifier_rejects_it() {
     let store = MemCodeStore::new();
     let lk = code_lookup("USED0001");
     store
@@ -95,7 +95,7 @@ async fn find_redeemable_returns_used_code_and_classifier_rejects_it() {
         .await
         .unwrap();
     let found = store
-        .find_redeemable(std::slice::from_ref(&lk), NOW, None)
+        .lookup_code(std::slice::from_ref(&lk), NOW, None)
         .await
         .unwrap()
         .unwrap();
@@ -114,7 +114,7 @@ async fn find_redeemable_returns_used_code_and_classifier_rejects_it() {
     // RFC-047: find again -- the store must still return it (now with
     // used_at set); the classifier is what rejects it.
     let again = store
-        .find_redeemable(&[lk], NOW, None)
+        .lookup_code(&[lk], NOW, None)
         .await
         .unwrap()
         .expect("RFC-047: the store must return the used record, not filter it out");
@@ -138,11 +138,7 @@ async fn claim_returns_won_exactly_once() {
         .insert_code(basic_code_record(code_id(1), lk.clone(), LATER))
         .await
         .unwrap();
-    let found = store
-        .find_redeemable(&[lk], NOW, None)
-        .await
-        .unwrap()
-        .unwrap();
+    let found = store.lookup_code(&[lk], NOW, None).await.unwrap().unwrap();
 
     let r1 = store
         .claim_code(&ClaimRequest {
@@ -186,17 +182,17 @@ async fn claim_after_revoke_returns_lost() {
         .await
         .unwrap();
     let found = store
-        .find_redeemable(std::slice::from_ref(&lk), NOW, None)
+        .lookup_code(std::slice::from_ref(&lk), NOW, None)
         .await
         .unwrap()
         .unwrap();
     store.revoke_code(&found.id, None, NOW).await.unwrap();
 
-    // RFC-047: after revocation, find_redeemable must still return the
+    // RFC-047: after revocation, lookup_code must still return the
     // record (now with revoked_at set) -- the classifier rejects it, not
     // the store's WHERE clause.
     let after_revoke = store
-        .find_redeemable(&[lk], NOW, None)
+        .lookup_code(&[lk], NOW, None)
         .await
         .unwrap()
         .expect("RFC-047: the store must return the revoked record, not filter it out");
@@ -236,11 +232,7 @@ async fn claim_after_expiry_returns_lost() {
         .insert_code(basic_code_record(code_id(1), lk.clone(), NOW + 10))
         .await
         .unwrap();
-    let found = store
-        .find_redeemable(&[lk], NOW, None)
-        .await
-        .unwrap()
-        .unwrap();
+    let found = store.lookup_code(&[lk], NOW, None).await.unwrap().unwrap();
 
     // Claim at NOW + 100 (after the code expired).
     let claim = store
@@ -284,7 +276,7 @@ async fn wrong_scope_does_not_revoke() {
         .unwrap();
     // Must still be found.
     let found = store
-        .find_redeemable(&[lk], NOW, Some("community-A"))
+        .lookup_code(&[lk], NOW, Some("community-A"))
         .await
         .unwrap();
     assert!(

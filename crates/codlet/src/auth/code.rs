@@ -6,7 +6,7 @@
 //!
 //! 1. rate-limit check;
 //! 2. input normalization + validation;
-//! 3. code lookup (`find_redeemable`);
+//! 3. code lookup (`lookup_code`);
 //! 4. atomic claim (`claim_code`);
 //! 5. host callback (creates / resolves subject);
 //! 6. audit event;
@@ -26,9 +26,7 @@ use crate::error::RedemptionFailReason;
 use crate::hashing::{KeyProvider, SecretDomain, SecretHasher};
 use crate::secret::{CodeId, SubjectId};
 use crate::state::{CodeLookupOutcome, classify_code_lookup};
-use crate::store::code::{
-    ClaimRequest, CodeRecord, CodeStore, RedeemableCode, expires_at_from_ttl,
-};
+use crate::store::code::{ClaimRequest, CodeRecord, CodeStore, StoredCode, expires_at_from_ttl};
 use crate::store::ratelimit::{RateLimitKey, RateLimitOutcome, RateLimitPolicy, RateLimitStore};
 
 use super::error::{ClaimProof, RedeemError, RedeemSuccess};
@@ -143,7 +141,7 @@ where
 
     /// Step 1: validate and look up a submitted code without claiming it.
     ///
-    /// Returns a [`RedeemableCode`] that the caller can inspect (e.g. to
+    /// Returns a [`StoredCode`] that the caller can inspect (e.g. to
     /// display a confirmation or collect additional user input) before
     /// committing the claim in [`Self::claim`].
     ///
@@ -155,7 +153,7 @@ where
         &self,
         raw_input: &str,
         rate_key: Option<&RateLimitKey>,
-    ) -> Result<RedeemableCode, RedeemError> {
+    ) -> Result<StoredCode, RedeemError> {
         // Step 1: rate-limit check. Honour unavailable policy on store error.
         if let (Some(key), Some(rl_policy)) = (rate_key, &self.rate_limit_policy) {
             match self.rate_limit_store.check(key, rl_policy).await {
@@ -219,7 +217,7 @@ where
         let now = self.clock.unix_now();
         let looked_up = self
             .store
-            .find_redeemable(&candidates, now, None)
+            .lookup_code(&candidates, now, None)
             .await
             .map_err(RedeemError::from_store)?;
 
@@ -262,7 +260,7 @@ where
         Ok(record)
     }
 
-    /// Step 2: atomically claim a [`RedeemableCode`] found by [`Self::find`].
+    /// Step 2: atomically claim a [`StoredCode`] found by [`Self::find`].
     ///
     /// Returns a [`RedeemSuccess`] proof only if `claim_code` returns `Won`.
     /// A `Lost` result means a concurrent caller already claimed the code.
@@ -275,7 +273,7 @@ where
     /// [`RedeemError::Internal`] on store failure.
     pub async fn claim(
         &self,
-        record: &RedeemableCode,
+        record: &StoredCode,
         subject: SubjectId,
         rate_key: Option<&RateLimitKey>,
     ) -> Result<RedeemSuccess, RedeemError> {
@@ -360,7 +358,7 @@ where
         on_won: F,
     ) -> Result<RedeemSuccess, RedeemError>
     where
-        F: FnOnce(&RedeemableCode) -> Fut,
+        F: FnOnce(&StoredCode) -> Fut,
         Fut: Future<Output = Result<SubjectId, E>>,
         E: std::fmt::Display,
     {

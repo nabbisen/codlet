@@ -3,7 +3,7 @@
 use codlet::hashing::LookupKey;
 use codlet::secret::{SessionId, SubjectId};
 use codlet::store::error::StoreError;
-use codlet::store::session::{ActiveSessionRecord, SessionRecord, SessionStore};
+use codlet::store::session::{SessionRecord, SessionStore, StoredSession};
 
 use super::PostgresStore;
 
@@ -15,11 +15,11 @@ fn to_err(e: sqlx::Error) -> StoreError {
 type ActiveRow = (String, String, i64, i64, Option<i64>, Option<i64>);
 
 impl SessionStore for PostgresStore {
-    async fn find_active_session(
+    async fn lookup_session(
         &self,
         candidates: &[LookupKey],
         _now: u64,
-    ) -> Result<Option<ActiveSessionRecord>, StoreError> {
+    ) -> Result<Option<StoredSession>, StoreError> {
         // RFC-047 step 2: no state predicate here -- the store returns the
         // record regardless of expiry/revocation, and `classify_session`
         // decides. `_now` is accepted for symmetry with other store methods
@@ -37,7 +37,7 @@ impl SessionStore for PostgresStore {
             .map_err(to_err)?;
 
             if let Some((id, subject, created_at, expires_at, revoked_at, last_seen_at)) = row {
-                return Ok(Some(ActiveSessionRecord {
+                return Ok(Some(StoredSession {
                     id: SessionId::new(id),
                     subject: SubjectId::new(subject),
                     created_at: created_at as u64,

@@ -8,7 +8,7 @@ use codlet::admin::{CodeAdminStore, CodeListFilter, CodeMeta};
 use codlet::hashing::{KeyVersion, LookupKey};
 use codlet::secret::{CodeId, SubjectId};
 use codlet::state::{ClaimOutcome, classify_claim};
-use codlet::store::code::{ClaimRequest, CodeRecord, CodeStore, RedeemableCode};
+use codlet::store::code::{ClaimRequest, CodeRecord, CodeStore, StoredCode};
 use codlet::store::error::StoreError;
 
 use crate::d1::{bind, changes, to_store_err, ts};
@@ -81,12 +81,12 @@ fn admin_row_to_meta(r: AdminRow) -> CodeMeta {
 }
 
 impl CodeStore for D1CodeStore {
-    async fn find_redeemable(
+    async fn lookup_code(
         &self,
         candidates: &[LookupKey],
         _now: u64,
         scope: Option<&str>,
-    ) -> Result<Option<RedeemableCode>, StoreError> {
+    ) -> Result<Option<StoredCode>, StoreError> {
         use worker::d1::D1Type;
 
         // RFC-047: matches on lookup key and scope only. No expiry/
@@ -120,7 +120,7 @@ impl CodeStore for D1CodeStore {
             };
 
             if let Some(r) = row {
-                return Ok(Some(RedeemableCode {
+                return Ok(Some(StoredCode {
                     id: CodeId::new(r.id),
                     key_version: KeyVersion::new(r.key_version),
                     grant: r.grant_payload,

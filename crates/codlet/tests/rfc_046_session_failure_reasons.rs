@@ -132,9 +132,9 @@ async fn well_formed_but_unknown_secret_reports_not_found() {
 #[tokio::test]
 async fn revoked_session_is_reported_as_revoked() {
     // The gap this test used to document (RFC-046 review request: Revoked
-    // collapsed to NotFound because find_active_session's active-row filter
+    // collapsed to NotFound because lookup_session's active-row filter
     // couldn't tell "revoked" apart from "never issued") is closed by
-    // RFC-047 step 2: find_active_session returns the record regardless of
+    // RFC-047 step 2: lookup_session returns the record regardless of
     // state, and classify_session reports the precise reason.
     let store = MemSessionStore::new();
     let h = hasher();

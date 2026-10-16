@@ -38,7 +38,7 @@ where
         .await
         .unwrap();
     let found = store
-        .find_active_session(&[session_lk("sessec1")], NOW)
+        .lookup_session(&[session_lk("sessec1")], NOW)
         .await
         .unwrap();
     assert!(found.is_some(), "active session must be found");
@@ -47,7 +47,7 @@ where
 
 /// RFC-047 step 2: this must fail against an adapter that kept its old
 /// exclusion filter, not merely pass against a migrated one. An adapter that
-/// still filters expired rows out of `find_active_session` returns `None`
+/// still filters expired rows out of `lookup_session` returns `None`
 /// here, which trips the `.expect(...)` below -- the inverted assertion
 /// carries the security property this suite exists to prove (verified by
 /// temporarily reintroducing the filter in `MemSessionStore` and confirming
@@ -64,7 +64,7 @@ where
         .await
         .unwrap();
     let found = store
-        .find_active_session(&[session_lk("sessec2")], NOW)
+        .lookup_session(&[session_lk("sessec2")], NOW)
         .await
         .unwrap()
         .expect("RFC-047: the store must return the expired record, not filter it out");
@@ -96,7 +96,7 @@ where
         .await
         .unwrap();
     let found = store
-        .find_active_session(&[session_lk("sessec3")], NOW)
+        .lookup_session(&[session_lk("sessec3")], NOW)
         .await
         .unwrap()
         .expect("RFC-047: the store must return the revoked record, not filter it out");
@@ -127,7 +127,7 @@ where
         .await
         .unwrap();
     let found = store
-        .find_active_session(&[session_lk("bothsessec")], NOW)
+        .lookup_session(&[session_lk("bothsessec")], NOW)
         .await
         .unwrap()
         .unwrap();
@@ -152,7 +152,7 @@ where
         .await
         .unwrap();
     let found = store
-        .find_active_session(&[session_lk("wrong-secret")], NOW)
+        .lookup_session(&[session_lk("wrong-secret")], NOW)
         .await
         .unwrap();
     assert!(found.is_none(), "wrong HMAC must not match");
@@ -172,7 +172,7 @@ where
         .await
         .unwrap();
     let found = store
-        .find_active_session(&[session_lk("sessec5")], NOW)
+        .lookup_session(&[session_lk("sessec5")], NOW)
         .await
         .unwrap()
         .expect("active session must be found");
@@ -203,7 +203,7 @@ where
         .await
         .unwrap();
     let found = store
-        .find_active_session(&[session_lk("sessec6")], NOW)
+        .lookup_session(&[session_lk("sessec6")], NOW)
         .await
         .unwrap()
         .expect("active session must be found");
@@ -225,7 +225,7 @@ where
     store.touch_session(&id, NOW + 10).await.unwrap();
     store.touch_session(&id, NOW + 20).await.unwrap();
     let found = store
-        .find_active_session(&[session_lk("sessec7")], NOW)
+        .lookup_session(&[session_lk("sessec7")], NOW)
         .await
         .unwrap()
         .expect("active session must be found");
@@ -282,13 +282,13 @@ where
         .unwrap();
 
     let old_before = store
-        .find_active_session(&[session_lk("rot-old-secret")], NOW)
+        .lookup_session(&[session_lk("rot-old-secret")], NOW)
         .await
         .unwrap()
         .expect("the old record must still be active during the overlap window");
     assert!(old_before.revoked_at.is_none());
     let new_during_overlap = store
-        .find_active_session(&[session_lk("rot-new-secret")], NOW)
+        .lookup_session(&[session_lk("rot-new-secret")], NOW)
         .await
         .unwrap()
         .expect("the new record must already be active during the overlap window");
@@ -301,7 +301,7 @@ where
         .unwrap();
 
     let old_after = store
-        .find_active_session(&[session_lk("rot-old-secret")], NOW)
+        .lookup_session(&[session_lk("rot-old-secret")], NOW)
         .await
         .unwrap()
         .expect("RFC-047: the store must return the revoked record, not filter it out");
@@ -314,7 +314,7 @@ where
 
     // Revoking the old record must not disturb the new one.
     let new_after = store
-        .find_active_session(&[session_lk("rot-new-secret")], NOW)
+        .lookup_session(&[session_lk("rot-new-secret")], NOW)
         .await
         .unwrap()
         .expect("the new record must remain active after the old one is revoked");

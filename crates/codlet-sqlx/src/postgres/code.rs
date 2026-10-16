@@ -4,7 +4,7 @@ use codlet::admin::{CodeAdminStore, CodeListFilter, CodeMeta};
 use codlet::hashing::{KeyVersion, LookupKey};
 use codlet::secret::{CodeId, SubjectId};
 use codlet::state::{ClaimOutcome, classify_claim};
-use codlet::store::code::{ClaimRequest, CodeRecord, CodeStore, RedeemableCode};
+use codlet::store::code::{ClaimRequest, CodeRecord, CodeStore, StoredCode};
 use codlet::store::error::StoreError;
 
 use super::PostgresStore;
@@ -59,12 +59,12 @@ fn admin_row_to_meta(r: AdminRow) -> CodeMeta {
 }
 
 impl CodeStore for PostgresStore {
-    async fn find_redeemable(
+    async fn lookup_code(
         &self,
         candidates: &[LookupKey],
         _now: u64,
         scope: Option<&str>,
-    ) -> Result<Option<RedeemableCode>, StoreError> {
+    ) -> Result<Option<StoredCode>, StoreError> {
         // RFC-047: matches on lookup key and scope only. No expiry/revocation/
         // use predicate here -- `classify_code_lookup` decides that from the
         // returned state fields; `claim_code`'s conditional UPDATE remains
@@ -98,7 +98,7 @@ impl CodeStore for PostgresStore {
             };
 
             if let Some((id, kv, purpose_val, grant, scope_val, exp, used_at, revoked_at)) = row {
-                return Ok(Some(RedeemableCode {
+                return Ok(Some(StoredCode {
                     id: CodeId::new(id),
                     key_version: KeyVersion::new(kv),
                     grant,

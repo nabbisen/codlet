@@ -275,7 +275,7 @@ async fn validate_expired_session_returns_unauthenticated_expired() {
         cookie(),
     );
 
-    // RFC-047 step 2: find_active_session returns the expired record;
+    // RFC-047 step 2: lookup_session returns the expired record;
     // classify_session is what rejects it with the precise reason, no
     // longer collapsed to NotFound.
     let outcome = sm.validate(Some(&secret)).await.unwrap();

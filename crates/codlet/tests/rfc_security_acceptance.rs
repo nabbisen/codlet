@@ -147,7 +147,7 @@ mod rfc_b_rate_limit {
     }
 }
 
-// ── RFC-C: Purpose/scope in RedeemableCode ───────────────────────────────────
+// ── RFC-C: Purpose/scope in StoredCode ───────────────────────────────────
 
 #[cfg(feature = "test-utils")]
 mod rfc_c_purpose_scope {

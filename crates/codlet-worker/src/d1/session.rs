@@ -6,7 +6,7 @@ use std::rc::Rc;
 use codlet::hashing::LookupKey;
 use codlet::secret::{SessionId, SubjectId};
 use codlet::store::error::StoreError;
-use codlet::store::session::{ActiveSessionRecord, SessionRecord, SessionStore};
+use codlet::store::session::{SessionRecord, SessionStore, StoredSession};
 
 use crate::d1::{bind, to_store_err, ts};
 use crate::table_config::D1TableConfig;
@@ -45,11 +45,11 @@ struct ActiveRow {
 }
 
 impl SessionStore for D1SessionStore {
-    async fn find_active_session(
+    async fn lookup_session(
         &self,
         candidates: &[LookupKey],
         _now: u64,
-    ) -> Result<Option<ActiveSessionRecord>, StoreError> {
+    ) -> Result<Option<StoredSession>, StoreError> {
         use worker::d1::D1Type;
 
         // RFC-047 step 2: matches on lookup key only. No expiry/revocation
@@ -66,7 +66,7 @@ impl SessionStore for D1SessionStore {
             let stmt = bind(self.db.prepare(&sql), &[D1Type::Text(candidate.as_str())])?;
             let row: Option<ActiveRow> = stmt.first(None).await.map_err(to_store_err)?;
             if let Some(r) = row {
-                return Ok(Some(ActiveSessionRecord {
+                return Ok(Some(StoredSession {
                     id: SessionId::new(r.id),
                     subject: SubjectId::new(r.subject),
                     created_at: r.created_at as u64,

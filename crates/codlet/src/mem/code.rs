@@ -11,7 +11,7 @@ use std::sync::Mutex;
 use crate::hashing::LookupKey;
 use crate::secret::{CodeId, SubjectId};
 use crate::state::{ClaimOutcome, classify_claim};
-use crate::store::code::{ClaimRequest, CodeRecord, CodeStore, RedeemableCode};
+use crate::store::code::{ClaimRequest, CodeRecord, CodeStore, StoredCode};
 use crate::store::error::StoreError;
 
 #[derive(Debug, Clone)]
@@ -65,12 +65,12 @@ impl MemCodeStore {
 }
 
 impl CodeStore for MemCodeStore {
-    async fn find_redeemable(
+    async fn lookup_code(
         &self,
         candidates: &[LookupKey],
         _now: u64,
         scope: Option<&str>,
-    ) -> Result<Option<RedeemableCode>, StoreError> {
+    ) -> Result<Option<StoredCode>, StoreError> {
         let rows = self
             .rows
             .lock()
@@ -78,7 +78,7 @@ impl CodeStore for MemCodeStore {
         let found = rows
             .iter()
             .find(|r| r.matches_scope(scope) && r.matches_any(candidates))
-            .map(|r| RedeemableCode {
+            .map(|r| StoredCode {
                 id: r.id.clone(),
                 key_version: r.key_version.clone(),
                 grant: r.grant.clone(),
