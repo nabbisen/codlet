@@ -47,12 +47,12 @@ allow = [
     "Zlib",
     "Unlicense",
     "BSL-1.0",
-    # Covers `ring`, `rustls-webpki`, `untrusted` -- reached via
-    # `codlet-sqlx`'s `postgres-test` feature (testcontainers -> bollard ->
-    # rustls). `postgres-test` is a published, optional *normal* dependency
-    # feature of `codlet-sqlx`, not a dev-dependency, so a consumer who
-    # enables it receives this subtree: in scope because it ships. Permissive,
-    # OSI-approved, no copyleft.
+    # Covers `ring`, `rustls-webpki`, `untrusted` -- reached only through
+    # `codlet-sqlx`'s dev-dependency on `testcontainers-modules`
+    # (testcontainers -> bollard -> rustls). It does not ship to consumers
+    # (RFC-052; the `core-deps` CI job asserts that), but `include-dev = true`
+    # below makes this check walk dev-dependencies, so the entry is still
+    # needed. Permissive, OSI-approved, no copyleft.
     "ISC",
 ]
 confidence-threshold = 0.8
