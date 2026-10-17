@@ -9,9 +9,12 @@ lifecycle, rate-limit contracts — plus optional runtime adapters.
 
 This documentation is organized for three audiences:
 
-- **New users:** features, tutorials, and integration guides (forthcoming).
-- **Intermediate users:** API references and functional specifications
-  (forthcoming).
+- **New users:** the README quick start, the runnable programs in the
+  workspace `examples/` directory, and the guides in this book — secure
+  configuration, key rotation, and migrating from an existing service.
+  Step-by-step tutorials are not written yet.
+- **Intermediate users:** the API reference is each crate's rustdoc (docs.rs),
+  and the [threat model](threat-model.md) states the security invariants.
 - **Maintainers/contributors:** project goals, design philosophy, the RFC
   process, and local development. See the workspace `rfcs/` directory and
   `CONTRIBUTING.md`.

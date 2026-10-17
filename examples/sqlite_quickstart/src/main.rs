@@ -15,15 +15,16 @@
 
 use std::time::Duration;
 
-use codlet::CodePolicy;
 use codlet::audit::NoopAuditSink;
 use codlet::auth::{CodeAuth, SessionManager};
 use codlet::clock::SystemClock;
 use codlet::cookie::CookiePolicy;
 use codlet::hashing::{SecretHasher, StaticKeyProvider};
+use codlet::mem::MemRateLimitStore;
 use codlet::rng::SystemRandom;
 use codlet::secret::{CodeId, SessionId, SubjectId};
 use codlet::state::SessionValidationOutcome;
+use codlet::{CodePolicy, RateLimitKey, RateLimitPolicy};
 use codlet_sqlx::{SqliteStore, run_migrations};
 
 #[tokio::main]
@@ -40,22 +41,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // ── 2. Configure crypto ──────────────────────────────────────────────────
     // In production: load key bytes from an environment variable or secret manager.
     // Never commit real key material to source control.
-    let key_bytes = b"EXAMPLE-32-byte-key-change-me!!".to_vec();
+    let key_bytes = b"EXAMPLE-32-byte-key-change-me!!!".to_vec();
     let hasher = SecretHasher::new(
         StaticKeyProvider::single("v1", key_bytes)
-            .expect("non-empty key required — use a secret manager in production"),
+            .expect("a key of at least 32 bytes is required — use a secret manager in production"),
     );
     let mut rng = SystemRandom::new();
 
     // ── 3. Build managers ────────────────────────────────────────────────────
     let policy = CodePolicy::default_human(Duration::from_secs(24 * 3600))?;
-    let code_auth = CodeAuth::without_rate_limit(
+    // Rate limiting is required for every code policy (see the threat model).
+    // `MemRateLimitStore` counts in-process only: with more than one instance a
+    // shared backend is needed (see the adapter matrix).
+    let code_auth = CodeAuth::new(
         store.clone(),
+        MemRateLimitStore::new(),
         hasher.clone(),
         SystemClock::new(),
         NoopAuditSink,
         policy,
+        RateLimitPolicy::default_invite(),
     );
+    // Key for the rate limit: in a web service, the verified client address.
+    let rate_key = RateLimitKey::new("local-quickstart");
     let cookie_policy =
         CookiePolicy::production_strict("app_sid", Duration::from_secs(30 * 24 * 3600));
     let session_mgr = SessionManager::new(
@@ -85,13 +93,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // ── 5. User submits the code ─────────────────────────────────────────────
     // The user may type spaces or hyphens; validate_code_input handles that.
     let raw_input = plain_code.expose().to_string(); // simulating user submission
-    let found = code_auth.find(&raw_input, None).await?;
+    let found = code_auth.find(&raw_input, Some(&rate_key)).await?;
 
     // ── 6. Host creates or resolves its subject, then claims ─────────────────
     // The host owns all user/membership creation. codlet only records
     // which SubjectId claimed the code — it does not create users.
     let subject = SubjectId::new("user-42".into()); // host-assigned after its own DB write
-    let redeem_success = code_auth.claim(&found, subject, None).await?;
+    let redeem_success = code_auth.claim(&found, subject, Some(&rate_key)).await?;
     println!("[auth] code claimed by {:?}", redeem_success.grant);
 
     // ── 7. Issue a session ───────────────────────────────────────────────────
@@ -141,15 +149,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 async fn callback_flow_example(
     code_auth: &codlet::auth::CodeAuth<
         SqliteStore,
-        codlet::auth::NoRateLimit,
+        MemRateLimitStore,
         StaticKeyProvider,
         codlet::clock::SystemClock,
         codlet::audit::NoopAuditSink,
     >,
     raw_code: &str,
+    rate_key: &RateLimitKey,
 ) -> Result<codlet::auth::RedeemSuccess, codlet::auth::RedeemError> {
     code_auth
-        .redeem_with_callback(raw_code, None, |_record| async {
+        .redeem_with_callback(raw_code, Some(rate_key), |_record| async {
             // The host creates or resolves its subject here, *after* the claim
             // is won. codlet does not create users — the host owns that step.
             Ok::<_, std::convert::Infallible>(codlet::secret::SubjectId::new("user-99".into()))

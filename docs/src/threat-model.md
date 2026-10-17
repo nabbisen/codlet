@@ -16,6 +16,19 @@ number of attempts without controls. codlet defends with:
   alphabet = ~39.6 bits entropy by default);
 - single-use enforcement via atomic conditional UPDATE.
 
+**Rate limiting is required for every code policy, not only short ones.**
+This is the single statement of the requirement; the configuration guide cites
+it. Per-code entropy is not the quantity that matters: the endpoint accepts
+*any* outstanding code, so an attacker guesses against the whole population at
+once. With N codes outstanding and G guesses, the chance of at least one hit is
+about 1 − e^(−N·G / 31⁸) for the default 8-symbol codes (31⁸ ≈ 8.5 × 10¹¹).
+With 10,000 outstanding and a million guesses (about 30 a second for nine
+hours) that is roughly 1.2%; with 100,000 outstanding and ten million guesses it
+is roughly 69%. A hit is not harmless — the code is consumed for the guesser.
+Entropy lengthens the attack; only a rate limit bounds it.
+`CodeAuth::without_rate_limit` exists for tests that deliberately opt out and
+is `#[deprecated]` for this reason.
+
 **Double-claim under concurrency.** Two concurrent requests submitting the same
 code will both attempt `claim_code`. The conditional UPDATE (`WHERE used_at IS
 NULL AND expires_at > :now`) ensures exactly one winner. The loser receives
@@ -94,8 +107,9 @@ builder that stopped emitting an attribute; it was retired (RFC-042) once
 `xtask self-test` (RFC-040) proved it against a realistic fixture.
 
 **Key exhaustion / weak HMAC.** codlet uses HMAC-SHA-256 which provides
-128-bit collision resistance. Key material must be ≥ 16 bytes; the
-`StaticKeyProvider` rejects empty key bytes.
+128-bit collision resistance. Key material must be ≥ 32 bytes;
+`StaticKeyProvider::new` rejects any active or previous key shorter than that.
+A custom `KeyProvider` is not checked and must meet the same minimum.
 
 ## What codlet does NOT protect against
 

@@ -33,8 +33,8 @@ let provider = StaticKeyProvider::new(
 ).expect("key material required");
 ```
 
-- **No fallback key.** `StaticKeyProvider::new` fails if the active key
-  bytes are empty. There is no built-in default; a missing key is a
+- **No fallback key.** `StaticKeyProvider::new` fails if the active key,
+  or any previous key, is shorter than 32 bytes. There is no built-in default; a missing key is a
   configuration error, not a degraded-mode.
 - **Missing previous key version** → `KeyError::MissingKeyVersion`. The
   record that required it cannot be validated until the key is added back

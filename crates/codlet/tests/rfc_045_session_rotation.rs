@@ -35,7 +35,9 @@ const OLD_EXPIRES_AT: u64 = NOW + 3_600;
 const OLD_SECRET: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
 fn hasher() -> SecretHasher<StaticKeyProvider> {
-    SecretHasher::new(StaticKeyProvider::single("v1", b"test-key-32bytes".to_vec()).unwrap())
+    SecretHasher::new(
+        StaticKeyProvider::single("v1", b"test-key-0123456789-0123456789-abc".to_vec()).unwrap(),
+    )
 }
 
 fn cookie() -> CookiePolicy {

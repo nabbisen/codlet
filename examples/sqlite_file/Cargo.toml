@@ -13,7 +13,7 @@ publish = false
 workspace = true
 
 [dependencies]
-codlet      = { workspace = true }
+codlet      = { workspace = true, features = ["test-utils"] }
 codlet-sqlx = { workspace = true }
 sqlx        = { workspace = true, features = ["sqlite", "runtime-tokio"] }
 tokio       = { workspace = true, features = ["rt-multi-thread", "macros"] }

@@ -21,7 +21,9 @@ pub const EXPIRED: u64 = NOW - 1;
 
 /// A deterministic hasher for use in conformance tests.
 pub fn hasher() -> SecretHasher<StaticKeyProvider> {
-    SecretHasher::new(StaticKeyProvider::single("v1", b"conformance-test-key".to_vec()).unwrap())
+    SecretHasher::new(
+        StaticKeyProvider::single("v1", b"conformance-test-key-32-bytes!!!!!".to_vec()).unwrap(),
+    )
 }
 
 /// The standard key version used in conformance fixtures.

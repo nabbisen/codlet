@@ -27,15 +27,16 @@
 use std::path::Path;
 use std::time::Duration;
 
-use codlet::CodePolicy;
 use codlet::audit::NoopAuditSink;
 use codlet::auth::{CodeAuth, SessionManager};
 use codlet::clock::SystemClock;
 use codlet::cookie::CookiePolicy;
 use codlet::hashing::{SecretHasher, StaticKeyProvider};
+use codlet::mem::MemRateLimitStore;
 use codlet::rng::SystemRandom;
 use codlet::secret::{CodeId, SessionId, SubjectId};
 use codlet::state::SessionValidationOutcome;
+use codlet::{CodePolicy, RateLimitKey, RateLimitPolicy};
 use codlet_sqlx::{SqliteStore, run_migrations};
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions};
 
@@ -62,9 +63,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // ── Crypto ────────────────────────────────────────────────────────────────
     // In production: load from an environment variable or secret manager.
-    let key_bytes = b"EXAMPLE-32-byte-key-change-me!!".to_vec();
+    let key_bytes = b"EXAMPLE-32-byte-key-change-me!!!".to_vec();
     let hasher = SecretHasher::new(
-        StaticKeyProvider::single("v1", key_bytes).expect("non-empty key required"),
+        StaticKeyProvider::single("v1", key_bytes).expect("a key of at least 32 bytes is required"),
     );
     let mut rng = SystemRandom::new();
 
@@ -73,13 +74,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cookie_policy =
         CookiePolicy::production_strict("app_sid", Duration::from_secs(30 * 24 * 3600));
 
-    let code_auth = CodeAuth::without_rate_limit(
+    // Rate limiting is required for every code policy (see the threat model).
+    // `MemRateLimitStore` counts in-process only, and this example redeems in a
+    // fresh process each run: production needs a shared backend (see the
+    // adapter matrix).
+    let code_auth = CodeAuth::new(
         store.clone(),
+        MemRateLimitStore::new(),
         hasher.clone(),
         SystemClock::new(),
         NoopAuditSink,
         policy,
+        RateLimitPolicy::default_invite(),
     );
+    // Key for the rate limit: in a web service, the verified client address.
+    let rate_key = RateLimitKey::new("local-cli");
     let session_mgr = SessionManager::new(
         store,
         hasher,
@@ -119,7 +128,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // ── Code supplied: redeem it and issue a session ──────────────────────
         Some(raw_input) => {
             // Step 1: validate format + look up the record.
-            let found = match code_auth.find(raw_input, None).await {
+            let found = match code_auth.find(raw_input, Some(&rate_key)).await {
                 Ok(f) => f,
                 Err(e) => {
                     eprintln!("Code not valid or already used: {e:?}");
@@ -131,7 +140,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             // Step 2: host resolves or creates its subject, then claims.
             // codlet does not create users — the host owns that step.
             let subject = SubjectId::new("user-42".into());
-            let redeem = code_auth.claim(&found, subject, None).await?;
+            let redeem = code_auth.claim(&found, subject, Some(&rate_key)).await?;
             println!("Code claimed. Grant: {:?}", redeem.grant);
 
             // Step 3: issue a session.

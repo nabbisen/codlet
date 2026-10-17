@@ -447,6 +447,20 @@ where
 {
     /// Construct without a rate-limit store. Equivalent to passing
     /// `NoRateLimit` explicitly.
+    ///
+    /// Rate limiting is required for **every** code policy: an attacker guesses
+    /// against all outstanding codes at once, so per-code entropy does not bound
+    /// the attack (see the threat model, "Rate limiting is required for every
+    /// code policy"). This constructor is for tests and single-process programs
+    /// that have decided to go without; it is `#[deprecated]` so the compiler
+    /// says so at every call site. Suppress it with `#[allow(deprecated)]` at
+    /// the call site only, never crate-wide.
+    #[deprecated(
+        note = "rate limiting is required for every code policy, because an attacker guesses \
+                against all outstanding codes at once (docs/src/threat-model.md); use \
+                CodeAuth::new with a RateLimitStore, or suppress with #[allow(deprecated)] \
+                at the call site to acknowledge going without"
+    )]
     #[must_use]
     pub fn without_rate_limit(
         store: CS,

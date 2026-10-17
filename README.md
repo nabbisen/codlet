@@ -114,7 +114,7 @@ let code = generate_code(&policy, &mut rng).unwrap();
 // Derive the value stored in the database: a domain-separated HMAC, never the
 // plaintext. Real key material comes from a secret manager, not a literal.
 let hasher = SecretHasher::new(
-    StaticKeyProvider::single("v1", b"real-key-from-secret-manager".to_vec()).unwrap(),
+    StaticKeyProvider::single("v1", b"real-key-from-secret-manager-32-bytes-or-more".to_vec()).unwrap(),
 );
 let normalized = validate_code_input(code.expose(), &policy).unwrap();
 let (lookup_key, key_version) = hasher.lookup_key(SecretDomain::Code, &normalized).unwrap();

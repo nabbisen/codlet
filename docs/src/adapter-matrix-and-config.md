@@ -21,7 +21,7 @@ requirement are not production-safe for codlet's core use case.
 | `MemCodeStore` (test-utils) | ✓ (Mutex) | ✓ (Mutex) | ✗ | In-process only; not for production. |
 | `SqliteStore` (codlet-sqlx) | ✓ (cond. UPDATE) | ✓ (cond. UPDATE) | ✓ (WAL mode) | SQLite serialises writes; WAL recommended for concurrent reads. Also implements `CodeAdminStore`. |
 | `PostgresStore` (codlet-sqlx, `--features postgres`) | ✓ (cond. UPDATE, READ COMMITTED row-lock) | ✓ (cond. UPDATE) | ✓ | Multi-instance production. No `RETURNING`, no `FOR UPDATE`. Also implements `CodeAdminStore`. See note below. |
-| `D1CodeStore` / `D1SessionStore` / `D1FormTokenStore` (codlet-worker) | ✓ (cond. UPDATE + `meta().changes`) | ✓ (cond. UPDATE + `meta().changes`) | ✓ (D1 global) | wasm32 target only; timestamps as REAL (f64). Also implements `CodeAdminStore`. |
+| `D1CodeStore` / `D1SessionStore` / `D1FormTokenStore` (codlet-worker) | ✓ (cond. UPDATE + `meta().changes`) | ✓ (cond. UPDATE + `meta().changes`) | ✓ (D1 global) | wasm32 target only; timestamp columns are `INTEGER`, bound through `f64` (exact for Unix seconds). Also implements `CodeAdminStore`. |
 
 > **`PostgresStore` conformance status (RFC-038).** Until v0.17.1,
 > `run_postgres_migrations` could not create its own schema: a hand-rolled SQL
@@ -76,11 +76,16 @@ requirement are not production-safe for codlet's core use case.
 ## Code policy
 
 `CodePolicy::default_human` is the recommended constructor. It produces 8-symbol
-codes over the 31-symbol unambiguous alphabet (~39.6 bits of entropy) and does
-not require rate limiting to be safe — the entropy is sufficient.
+codes over the 31-symbol unambiguous alphabet (~39.6 bits of entropy).
+
+**A `RateLimitStore` is required with every code policy, this one included.**
+Per-code entropy is not the relevant quantity, because an attacker guesses
+against every outstanding code at once. The [threat model](threat-model.md)
+states the requirement and the arithmetic; this guide does not restate them.
 
 ```rust
-// Recommended: 8 symbols, ~39.6 bits, no rate-limit dependency.
+// Recommended: 8 symbols, ~39.6 bits. Pair it with a `RateLimitStore`
+// (see "Rate limiting" below).
 let policy = CodePolicy::default_human(Duration::from_secs(24 * 3600))?;
 ```
 
@@ -110,11 +115,13 @@ let key_bytes = std::env::var("CODLET_HMAC_KEY")
     .expect("CODLET_HMAC_KEY must be set")
     .into_bytes();
 let provider = StaticKeyProvider::single("v1", key_bytes)
-    .expect("non-empty key required");
+    .expect("a key of at least 32 bytes is required");
 ```
 
 Key requirements:
-- at least 32 bytes (256 bits) of random material;
+- at least 32 bytes (256 bits) of random material — `StaticKeyProvider::new`
+  rejects a shorter active or previous key; a custom `KeyProvider` must meet the
+  same minimum, as it is not checked;
 - generated with a CSPRNG (e.g. `openssl rand -hex 32`);
 - stored in a secret manager or environment variable, never in source control.
 
@@ -135,6 +142,7 @@ Never use `local_development` in production.
 
 ## Rate limiting
 
+Rate limiting is required, not optional (see the [threat model](threat-model.md)).
 Always check the rate limit **before** the code lookup:
 
 ```rust

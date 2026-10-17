@@ -60,7 +60,11 @@ fn normalization_is_idempotent_and_total_over_unicode() {
 // requiring a key-version migration. The expected hex is computed by the
 // reference implementation and frozen here.
 
-const TEST_KEY: &[u8] = b"codlet-test-vector-key-v1";
+// 25 bytes. `StaticKeyProvider` now requires 32 (RFC-053), so the key is padded
+// with 7 NUL bytes. HMAC zero-pads any key shorter than the block size (64
+// bytes for SHA-256) before use, so the padded key is *the same key* to HMAC:
+// the frozen vectors below are byte-for-byte unchanged, which this test proves.
+const TEST_KEY: &[u8] = b"codlet-test-vector-key-v1\0\0\0\0\0\0\0";
 const TEST_SECRET: &str = "ABCD2345";
 
 fn vector_hasher() -> SecretHasher<StaticKeyProvider> {

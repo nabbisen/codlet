@@ -31,7 +31,9 @@ use codlet::store::token::TokenSubject;
 const NOW: u64 = 1_700_000_000;
 
 fn hasher() -> SecretHasher<StaticKeyProvider> {
-    SecretHasher::new(StaticKeyProvider::single("v1", b"test-key-32bytes".to_vec()).unwrap())
+    SecretHasher::new(
+        StaticKeyProvider::single("v1", b"test-key-0123456789-0123456789-abc".to_vec()).unwrap(),
+    )
 }
 
 fn policy() -> CodePolicy {
@@ -42,6 +44,9 @@ fn cookie() -> CookiePolicy {
     CookiePolicy::production_strict("sid", Duration::from_secs(30 * 86_400))
 }
 
+// RFC-053: `without_rate_limit` is deprecated; these tests exercise the flow
+// itself and deliberately opt out of rate limiting.
+#[allow(deprecated)]
 fn code_auth()
 -> CodeAuth<MemCodeStore, NoRateLimit, StaticKeyProvider, FixedClock, CollectingAuditSink> {
     CodeAuth::without_rate_limit(
@@ -430,6 +435,7 @@ async fn audit_events_emitted_through_complete_flow() {
     // the manager -- this is what makes the assertions below possible at
     // all (RFC-044 follow-up #2).
     let code_sink = CollectingAuditSink::new();
+    #[allow(deprecated)] // RFC-053: deliberately opts out of rate limiting
     let ca = CodeAuth::without_rate_limit(
         MemCodeStore::new(),
         hasher(),

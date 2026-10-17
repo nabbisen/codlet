@@ -2,7 +2,9 @@
 use super::*;
 
 fn hasher() -> SecretHasher<StaticKeyProvider> {
-    let kp = StaticKeyProvider::single("v1", b"super-secret-key-material".to_vec()).unwrap();
+    let kp =
+        StaticKeyProvider::single("v1", b"super-secret-key-material-32-bytes-or-more".to_vec())
+            .unwrap();
     SecretHasher::new(kp)
 }
 
@@ -45,8 +47,12 @@ fn domain_separation_distinguishes_same_value() {
 
 #[test]
 fn different_key_different_output() {
-    let h1 = SecretHasher::new(StaticKeyProvider::single("v1", b"key-one".to_vec()).unwrap());
-    let h2 = SecretHasher::new(StaticKeyProvider::single("v1", b"key-two".to_vec()).unwrap());
+    let h1 = SecretHasher::new(
+        StaticKeyProvider::single("v1", b"key-one-key-one-key-one-key-one-0001".to_vec()).unwrap(),
+    );
+    let h2 = SecretHasher::new(
+        StaticKeyProvider::single("v1", b"key-two-key-two-key-two-key-two-0002".to_vec()).unwrap(),
+    );
     let (a, _) = h1.lookup_key(SecretDomain::Code, "X").unwrap();
     let (b, _) = h2.lookup_key(SecretDomain::Code, "X").unwrap();
     assert_ne!(a, b);
@@ -74,13 +80,54 @@ fn empty_key_rejected_at_construction() {
     );
 }
 
+// RFC-053: `StaticKeyProvider::new` enforces a 32-byte minimum on every key.
+
+#[test]
+fn short_active_key_rejected_at_construction() {
+    // 31 bytes: one under the minimum.
+    assert_eq!(
+        StaticKeyProvider::single("v1", vec![7u8; 31]).unwrap_err(),
+        KeyError::InvalidKeyMaterial
+    );
+}
+
+#[test]
+fn short_previous_key_rejected_at_construction() {
+    // A valid active key must not excuse a short previous key.
+    assert_eq!(
+        StaticKeyProvider::new(
+            "v2",
+            vec![7u8; 32],
+            vec![(KeyVersion::new("v1"), vec![9u8; 31])],
+        )
+        .unwrap_err(),
+        KeyError::InvalidKeyMaterial
+    );
+}
+
+#[test]
+fn thirty_two_byte_keys_accepted() {
+    // Exactly the minimum, in both positions.
+    assert!(
+        StaticKeyProvider::new(
+            "v2",
+            vec![7u8; 32],
+            vec![(KeyVersion::new("v1"), vec![9u8; 32])],
+        )
+        .is_ok()
+    );
+}
+
 #[test]
 fn key_version_round_trip_validation() {
     // Derive under v1, rotate active to v2, re-derive the v1 candidate.
     let kp = StaticKeyProvider::new(
         "v2",
-        b"key-two".to_vec(),
-        vec![(KeyVersion::new("v1"), b"key-one".to_vec())],
+        b"key-two-key-two-key-two-key-two-0002".to_vec(),
+        vec![(
+            KeyVersion::new("v1"),
+            b"key-one-key-one-key-one-key-one-0001".to_vec(),
+        )],
     )
     .unwrap();
     let h = SecretHasher::new(kp);
@@ -113,7 +160,8 @@ fn lookup_key_ct_eq_matches_value_eq() {
 
 #[test]
 fn key_material_redacted_in_debug() {
-    let kp = StaticKeyProvider::single("v1", b"secret-bytes".to_vec()).unwrap();
+    let kp = StaticKeyProvider::single("v1", b"secret-bytes-secret-bytes-secret-bytes".to_vec())
+        .unwrap();
     let dbg = format!("{kp:?}");
     assert!(!dbg.contains("secret-bytes"), "key bytes leaked: {dbg}");
     assert!(dbg.contains("<redacted>"));

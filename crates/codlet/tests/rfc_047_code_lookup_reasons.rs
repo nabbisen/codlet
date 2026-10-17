@@ -25,7 +25,9 @@ const LATER: u64 = NOW + 3_600;
 const EXPIRED: u64 = NOW - 1;
 
 fn hasher() -> SecretHasher<StaticKeyProvider> {
-    SecretHasher::new(StaticKeyProvider::single("v1", b"test-key-32bytes".to_vec()).unwrap())
+    SecretHasher::new(
+        StaticKeyProvider::single("v1", b"test-key-0123456789-0123456789-abc".to_vec()).unwrap(),
+    )
 }
 
 fn code_lk(val: &str) -> LookupKey {
@@ -51,6 +53,9 @@ async fn insert(store: &MemCodeStore, code: &str, expires_at: u64) -> CodeId {
     id
 }
 
+// RFC-053: `without_rate_limit` is deprecated; these tests exercise the lookup
+// reasons and deliberately opt out of rate limiting.
+#[allow(deprecated)]
 fn code_auth(
     store: MemCodeStore,
     audit: CollectingAuditSink,

@@ -137,6 +137,14 @@ impl core::fmt::Debug for HmacKeyRef<'_> {
 /// Supplies HMAC key material. Synchronous, so key lookup does not couple to a
 /// web/runtime async model (RFC-004 §3.3). **No fallback key exists**: missing
 /// material is an error (INV-2, SR-29).
+///
+/// # Contract for implementations
+///
+/// Every key an implementation returns — active and historical — **must be at
+/// least 32 bytes** of random material (the HMAC-SHA-256 output length).
+/// [`StaticKeyProvider`] enforces this at construction. [`SecretHasher::new`]
+/// is infallible and does **not** check it, so a custom provider that returns a
+/// shorter key is accepted silently; this requirement is the only safeguard.
 pub trait KeyProvider {
     /// The active key used for new derivations.
     ///
@@ -159,6 +167,10 @@ pub trait KeyProvider {
     fn all_hmac_keys(&self) -> Result<Vec<HmacKeyRef<'_>>, KeyError>;
 }
 
+/// The minimum length, in bytes, of any HMAC key: the HMAC-SHA-256 output
+/// length. Enforced by [`StaticKeyProvider::new`].
+const MIN_HMAC_KEY_BYTES: usize = 32;
+
 /// A key provider holding an active key and zero or more previous keys, in
 /// memory. Suitable for production when constructed from real secret material
 /// loaded at startup, and for tests/examples.
@@ -175,13 +187,20 @@ impl StaticKeyProvider {
     /// Construct from an active version+key and optional previous versions.
     ///
     /// # Errors
-    /// [`KeyError::InvalidKeyMaterial`] if the active key is empty.
+    /// [`KeyError::InvalidKeyMaterial`] if the active key, or any previous key,
+    /// is shorter than 32 bytes (which includes empty). The minimum is the
+    /// HMAC-SHA-256 output length; see [`KeyProvider`] for the same
+    /// requirement on custom providers.
     pub fn new(
         active_version: impl Into<String>,
         active_key: Vec<u8>,
         previous: Vec<(KeyVersion, Vec<u8>)>,
     ) -> Result<Self, KeyError> {
-        if active_key.is_empty() {
+        if active_key.len() < MIN_HMAC_KEY_BYTES
+            || previous
+                .iter()
+                .any(|(_, key)| key.len() < MIN_HMAC_KEY_BYTES)
+        {
             return Err(KeyError::InvalidKeyMaterial);
         }
         let active_version = KeyVersion::new(active_version);
@@ -197,7 +216,7 @@ impl StaticKeyProvider {
     /// Convenience constructor with a single key and no previous versions.
     ///
     /// # Errors
-    /// [`KeyError::InvalidKeyMaterial`] if `key` is empty.
+    /// [`KeyError::InvalidKeyMaterial`] if `key` is shorter than 32 bytes.
     pub fn single(version: impl Into<String>, key: Vec<u8>) -> Result<Self, KeyError> {
         Self::new(version, key, Vec::new())
     }

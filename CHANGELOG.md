@@ -8,6 +8,29 @@ semantic versioning once it reaches a stable release.
 
 ### Changed
 
+- **Rate limiting is documented as required for every code policy, and
+  `CodeAuth::without_rate_limit` is now `#[deprecated]` (RFC-053).** The
+  Secure Configuration Guide said 8-symbol codes "do not require rate limiting
+  to be safe". They do: per-code entropy (~39.6 bits) is the cost of guessing
+  one specific code, but the endpoint accepts *any* outstanding code, so the
+  attacker's odds grow with how many are outstanding (about 1.2% for 10,000
+  codes and a million guesses; about 69% for 100,000 codes and ten million).
+  The threat model is now the single statement of the requirement and the
+  guide cites it. `without_rate_limit` is kept, but warns at every call site,
+  the way `CodePolicy::six_symbol` does. The `axum_login_logout`,
+  `sqlite_file` and `sqlite_quickstart` examples now use `CodeAuth::new` with
+  `MemRateLimitStore` and pass a rate-limit key (they enable codlet's
+  `test-utils` feature for it). Note that `find`/`claim` apply the limiter only
+  when given a `RateLimitKey`; passing `None` disables it.
+- **`StaticKeyProvider::new` now rejects any key — active or previous — under
+  32 bytes (RFC-053). Breaking, pre-v1.** The threat model said 16 and the
+  configuration guide said 32; the code only rejected an empty key. 32 is now
+  enforced, `threat-model.md` agrees, and `KeyProvider`'s docs state the same
+  minimum as a contract for custom providers (which `SecretHasher::new` does
+  not check). `KeyError::InvalidKeyMaterial`'s message now names the minimum.
+  Also corrected: the D1 timestamp columns are `INTEGER` (bound through `f64`),
+  not `REAL`, and `docs/src/introduction.md` no longer calls existing material
+  "forthcoming".
 - **`codlet-sqlx`'s `postgres-test` feature no longer pulls any dependency into a
   consumer's graph (RFC-052).** `testcontainers-modules` — and with it a Docker
   client, an HTTP stack and a TLS stack — was an optional *normal* dependency

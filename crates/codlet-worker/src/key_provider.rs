@@ -17,7 +17,8 @@ pub struct WorkerKeyProvider {
 impl WorkerKeyProvider {
     /// Load key material from `Env` secrets (RFC-033 §9).
     ///
-    /// Fails closed if any binding is missing or empty (INV-2).
+    /// Fails closed if any binding is missing, empty, or yields a key shorter than
+    /// 32 bytes (INV-2; enforced by `StaticKeyProvider::new`).
     pub fn from_env(
         env: &worker::Env,
         active_version: &str,

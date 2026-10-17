@@ -27,8 +27,9 @@ pub enum KeyError {
     /// closed for that candidate rather than falling back.
     #[error("HMAC key version not available")]
     MissingKeyVersion,
-    /// Key material was present but unusable (e.g. empty).
-    #[error("HMAC key material is invalid")]
+    /// Key material was present but unusable: shorter than the 32-byte
+    /// minimum (which includes empty).
+    #[error("HMAC key material is invalid: every key must be at least 32 bytes")]
     InvalidKeyMaterial,
 }
 

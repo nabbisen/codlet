@@ -23,12 +23,13 @@
 //! **Never use hard-coded key material in production.**
 //! This example uses a fixed byte string for readability only.
 
+use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
 use axum::{
     Form, Router,
-    extract::State,
+    extract::{ConnectInfo, State},
     http::{HeaderMap, StatusCode, header},
     response::{Html, IntoResponse, Redirect, Response},
     routing::{get, post},
@@ -38,10 +39,11 @@ use codlet::auth::{CodeAuth, SessionManager};
 use codlet::clock::SystemClock;
 use codlet::cookie::CookiePolicy;
 use codlet::hashing::{SecretHasher, StaticKeyProvider};
+use codlet::mem::MemRateLimitStore;
 use codlet::rng::SystemRandom;
 use codlet::secret::{CodeId, SessionId, SubjectId};
 use codlet::state::SessionValidationOutcome;
-use codlet::{CodePolicy, IssuedSession};
+use codlet::{CodePolicy, IssuedSession, RateLimitKey, RateLimitPolicy};
 use codlet_sqlx::{SqliteStore, run_migrations};
 use serde::Deserialize;
 
@@ -51,13 +53,7 @@ use serde::Deserialize;
 #[derive(Clone)]
 struct AppState {
     code_auth: Arc<
-        CodeAuth<
-            SqliteStore,
-            codlet::auth::NoRateLimit,
-            StaticKeyProvider,
-            SystemClock,
-            NoopAuditSink,
-        >,
+        CodeAuth<SqliteStore, MemRateLimitStore, StaticKeyProvider, SystemClock, NoopAuditSink>,
     >,
     session_mgr: Arc<SessionManager<SqliteStore, StaticKeyProvider, SystemClock, NoopAuditSink>>,
     cookie_name: String,
@@ -78,9 +74,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // ── Crypto ────────────────────────────────────────────────────────────────
     // IMPORTANT: load key bytes from an environment variable or secret manager
     // in production.  Never commit real key material to source control.
-    let key_bytes = b"EXAMPLE-32-byte-key-change-me!!".to_vec();
+    let key_bytes = b"EXAMPLE-32-byte-key-change-me!!!".to_vec();
     let hasher = SecretHasher::new(
-        StaticKeyProvider::single("v1", key_bytes).expect("non-empty key bytes required"),
+        StaticKeyProvider::single("v1", key_bytes).expect("a key of at least 32 bytes is required"),
     );
 
     // ── Policies ──────────────────────────────────────────────────────────────
@@ -92,12 +88,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cookie_name = cookie_policy.name().to_string();
 
     // ── Managers ─────────────────────────────────────────────────────────────
-    let code_auth = Arc::new(CodeAuth::without_rate_limit(
+    // Rate limiting is required for every code policy (see the threat model).
+    // `MemRateLimitStore` counts in-process only: with more than one instance a
+    // shared backend is needed (see the adapter matrix).
+    let code_auth = Arc::new(CodeAuth::new(
         store.clone(),
+        MemRateLimitStore::new(),
         hasher.clone(),
         SystemClock::new(),
         NoopAuditSink,
         code_policy,
+        RateLimitPolicy::default_invite(),
     ));
     let session_mgr = Arc::new(SessionManager::new(
         store,
@@ -145,7 +146,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000").await?;
     println!("Listening on http://127.0.0.1:3000");
-    axum::serve(listener, app).await?;
+    // `ConnectInfo` makes the peer address available to `login`, which keys the
+    // rate limit on it.
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await?;
     Ok(())
 }
 
@@ -181,9 +188,17 @@ struct LoginForm {
     code: String,
 }
 
-async fn login(State(state): State<AppState>, Form(form): Form<LoginForm>) -> Response {
+async fn login(
+    State(state): State<AppState>,
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    Form(form): Form<LoginForm>,
+) -> Response {
+    // Rate-limit key: the peer address. Behind a proxy, use the client address
+    // from a header your proxy sets and verifies instead.
+    let rate_key = RateLimitKey::new(peer.ip().to_string());
+
     // Step 1: find the redeemable code record.
-    let found = match state.code_auth.find(&form.code, None).await {
+    let found = match state.code_auth.find(&form.code, Some(&rate_key)).await {
         Ok(r) => r,
         Err(_) => return Html(page_login(Some("Invalid or expired code."))).into_response(),
     };
@@ -194,7 +209,11 @@ async fn login(State(state): State<AppState>, Form(form): Form<LoginForm>) -> Re
     let subject = SubjectId::new(subject_str);
 
     // Step 3: claim the code atomically (single-winner, INV-5).
-    let redeem = match state.code_auth.claim(&found, subject, None).await {
+    let redeem = match state
+        .code_auth
+        .claim(&found, subject, Some(&rate_key))
+        .await
+    {
         Ok(r) => r,
         Err(_) => return Html(page_login(Some("Code already used or expired."))).into_response(),
     };
