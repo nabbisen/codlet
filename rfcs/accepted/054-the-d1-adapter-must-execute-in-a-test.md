@@ -1,6 +1,6 @@
 # RFC-054: The D1 Adapter Must Execute In a Test
 
-- **Status:** Proposed
+- **Status:** Accepted (owner, 2026-10-18)
 - **Target milestone:** M7 — **before the API freeze**
 - **Primary crate(s):** `codlet-conformance`, `codlet-worker`, CI
 - **Source basis:** RFC-051 review request §5.1; verified and extended 2026-10-18

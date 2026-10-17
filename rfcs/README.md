@@ -11,17 +11,16 @@ inside each file mirrors it.
 
 Counts below are derived from the filesystem, not hand-maintained.
 
-## Proposed (2)
+## Proposed (0)
+
+No open RFCs.
+
+## Accepted (3)
 
 | ID | Title | Milestone |
 |----|-------|-----------|
-| [054](./proposed/054-the-d1-adapter-must-execute-in-a-test.md) | The D1 Adapter Must Execute In a Test | M7 |
-| [055](./proposed/055-a-configured-rate-limit-with-no-key-is-a-silent-opt-out.md) | A Configured Rate Limit With No Key Is a Silent Opt-Out | M7 |
-
-## Accepted (1)
-
-| ID | Title | Milestone |
-|----|-------|-----------|
+| [054](./accepted/054-the-d1-adapter-must-execute-in-a-test.md) | The D1 Adapter Must Execute In a Test | M7 |
+| [055](./accepted/055-a-configured-rate-limit-with-no-key-is-a-silent-opt-out.md) | **Security:** A Configured Rate Limit With No Key Is a Silent Opt-Out | M7 |
 | [056](./accepted/056-postgresql-connections-must-be-able-to-use-tls.md) | **Security:** PostgreSQL Connections Must Be Able To Use TLS | M7 |
 
 ## Implemented (53)
