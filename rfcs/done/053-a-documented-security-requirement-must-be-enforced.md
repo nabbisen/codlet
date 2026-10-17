@@ -1,6 +1,6 @@
 # RFC-053: A Documented Security Requirement Must Be Enforced, Not Described
 
-- **Status:** Accepted (architect, under delegated authority, 2026-10-17)
+- **Status:** Implemented (Unreleased) — reviewed and approved 2026-10-18
 - **Target milestone:** M7 — **before the API freeze**
 - **Primary crate(s):** `codlet`, `docs/`
 - **Source basis:** RFC-016 accuracy sweep review request §5 items 2 and 3; verified independently 2026-10-17
@@ -29,10 +29,16 @@ with the number of codes outstanding:
 
 P(at least one hit) ≈ N × G / 31⁸, for N codes outstanding and G guesses.
 
-| Outstanding codes | Guesses | Rate needed | P(success) |
-|---|---|---|---|
-| 10,000 | 10⁶ | ~30/s for 9 h | **~1.2 %** |
-| 100,000 | 10⁷ | ~300/s for 9 h | **effectively certain** |
+| Outstanding codes | Guesses | Rate needed | λ = N·G/31⁸ | P(≥1 hit) = 1 − e^−λ |
+|---|---|---|---|---|
+| 10,000 | 10⁶ | ~31/s for 9 h | 0.0117 | **1.2 %** |
+| 100,000 | 10⁷ | ~309/s for 9 h | 1.1725 | **69 %** |
+
+**Corrected 2026-10-18.** This table first read "effectively certain" for the
+second row, from treating λ > 1 as a probability. λ is an expected count; the
+probability is 1 − e^−λ = 69%. The linear form N·G/31⁸ is usable only while it
+is small. 69% is not a mitigation — a two-in-three chance of consuming a
+stranger's code is a successful attack — so the conclusion is unchanged.
 
 A 24-hour TTL — `default_human`'s own documented example — is what makes N
 large. And a hit is not nothing: `claim_code` binds the code to the *claiming*

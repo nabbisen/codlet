@@ -11,19 +11,18 @@ inside each file mirrors it.
 
 Counts below are derived from the filesystem, not hand-maintained.
 
-## Proposed (0)
-
-No open RFCs.
-
-## Accepted (3)
+## Proposed (2)
 
 | ID | Title | Milestone |
 |----|-------|-----------|
-| [051](./accepted/051-form-tokens-must-honour-every-candidate.md) | Form Tokens Must Honour Every Lookup-Key Candidate | M7 |
-| [052](./accepted/052-test-only-dependencies-must-not-be-reachable-from-a-published-feature.md) | Test-Only Dependencies Must Not Be Reachable From a Published Feature | M7 |
-| [053](./accepted/053-a-documented-security-requirement-must-be-enforced.md) | A Documented Security Requirement Must Be Enforced, Not Described | M7 |
+| [054](./proposed/054-the-d1-adapter-must-execute-in-a-test.md) | The D1 Adapter Must Execute In a Test | M7 |
+| [055](./proposed/055-a-configured-rate-limit-with-no-key-is-a-silent-opt-out.md) | A Configured Rate Limit With No Key Is a Silent Opt-Out | M7 |
 
-## Implemented (50)
+## Accepted (0)
+
+No RFCs awaiting implementation.
+
+## Implemented (53)
 
 | ID | Title | Version |
 |----|-------|---------|
@@ -77,6 +76,9 @@ No open RFCs.
 | [048](./done/048-bind-purpose-and-scope-in-claim-code.md) | **Security:** Bind `purpose` and `scope` — SQL Injection in `claim_code` | v0.19.1 |
 | [049](./done/049-supply-chain-carried-items.md) | Resolving RFC-039's Deferred Questions — Yanked Crates and Duplicate Versions | *(Unreleased)* |
 | [050](./done/050-the-store-surface-must-describe-what-it-does.md) | The Store Surface Must Describe What It Does | *(Unreleased)* |
+| [051](./done/051-form-tokens-must-honour-every-candidate.md) | Form Tokens Must Honour Every Lookup-Key Candidate | *(Unreleased)* |
+| [052](./done/052-test-only-dependencies-must-not-be-reachable-from-a-published-feature.md) | **Security:** Test-Only Dependencies Must Not Be Reachable From a Published Feature | *(Unreleased)* |
+| [053](./done/053-a-documented-security-requirement-must-be-enforced.md) | **Security:** A Documented Security Requirement Must Be Enforced, Not Described | *(Unreleased)* |
 
 RFC-002 describes `crates/codlet-axum` and `crates/codlet-test` in its
 workspace layout; neither was built. `codlet-test`'s role was filled by

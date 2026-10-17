@@ -30,9 +30,12 @@ is wrong. 39.6 bits is the cost of guessing **one specific** code; the endpoint
 accepts **any** valid code, so the attacker's odds scale with how many are
 outstanding:
 
-P ≈ N × G / 31⁸ — with 10,000 codes outstanding and 10⁶ guesses (~30/s for nine
-hours, trivially unthrottled) that is ~1.2%; at 100,000 outstanding and 10⁷
-guesses it is a certainty.
+P(≥1 hit) = 1 − e^−λ where λ = N × G / 31⁸ — with 10,000 codes outstanding and
+10⁶ guesses (~31/s for nine hours, trivially unthrottled) that is 1.2%; at
+100,000 outstanding and 10⁷ guesses, λ = 1.17 and the probability is **69%**.
+
+**Corrected 2026-10-18:** this section first said "a certainty" for the second
+case, from treating λ as a probability. The dev team recomputed and was right.
 
 Do not restate my numbers without checking them. If you get a different answer,
 tell me — I would rather be corrected than have you reproduce my figure.

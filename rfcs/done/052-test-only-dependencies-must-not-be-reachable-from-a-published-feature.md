@@ -1,6 +1,6 @@
 # RFC-052: Test-Only Dependencies Must Not Be Reachable From a Published Feature
 
-- **Status:** Accepted (architect, under delegated authority, 2026-10-17)
+- **Status:** Implemented (Unreleased) — reviewed and approved 2026-10-18
 - **Target milestone:** M7 — **required before the next release tag**
 - **Primary crate(s):** `codlet-sqlx`, `xtask`, CI
 - **Source basis:** CI run 39005981164; four RUSTSEC advisories; verified independently 2026-10-17
@@ -123,14 +123,33 @@ Extend the `core-deps` CI job — which already asserts that `codlet`'s publishe
 tree carries no runtime, no framework and no duplicate versions — with the
 corresponding assertion for `codlet-sqlx`:
 
+**Amended 2026-10-18 — the first draft of this gate could not fail.** It is
+recorded rather than quietly replaced, because the mistake is instructive.
+
+The original text checked `--features postgres --no-default-features` only.
+That graph never contains an optional dependency enabled by a *different*
+feature — which is exactly the shape of the defect in §3. Reproduced against a
+tree with the defect reintroduced:
+
+```
+--features postgres --no-default-features  → exit 0   (passed, violation present)
+--all-features                             → exit 1   (fired)
+```
+
+So the gate must walk **every published feature**, not the production subset.
+Both passes are kept: `--all-features` is the one that catches this class, and
+the production-graph pass still catches a non-optional dependency added to
+`[dependencies]` directly.
+
 ```sh
-tree="$(cargo tree -p codlet-sqlx --features postgres --no-default-features \
-          -e normal --prefix none --color never | sort -u)"
-test -n "$tree"
-echo "$tree" | grep -q '^codlet-sqlx ' || { echo "::error::unexpected cargo tree output"; exit 1; }
-if echo "$tree" | grep -Eiq '^(testcontainers|testcontainers-modules|bollard|bollard-stubs|bollard-buildkit-proto|ureq|rustls|hyper-rustls|tokio-rustls)( |$)'; then
-  echo "::error::test-only dependency reachable from a published feature"; exit 1
-fi
+for features in "--features postgres --no-default-features" "--all-features"; do
+  tree="$(cargo tree -p codlet-sqlx $features -e normal --prefix none --color never | sort -u)"
+  test -n "$tree"
+  echo "$tree" | grep -q '^codlet-sqlx ' || { echo "::error::unexpected cargo tree output ($features)"; exit 1; }
+  if echo "$tree" | grep -Eiq '^(testcontainers|testcontainers-modules|bollard|bollard-stubs|bollard-buildkit-proto|ureq|rustls|hyper-rustls|tokio-rustls)( |$)'; then
+    echo "::error::test-only dependency reachable from a published feature ($features)"; exit 1
+  fi
+done
 ```
 
 Written in the shape RFC-036 and RFC-049 settled: capture to a variable, assert
@@ -177,8 +196,10 @@ re-derive from the manifest.
    `dep:`.
 3. The Docker-backed PostgreSQL tests still run and pass under
    `--features postgres-test`.
-4. `cargo tree -p codlet-sqlx --features postgres --no-default-features -e normal`
-   contains none of the crates listed in §4.3.
+4. Neither the `--features postgres --no-default-features` graph **nor the
+   `--all-features` graph** contains any crate listed in §4.3, with `-e normal`.
+   The production-only graph alone is **not** sufficient — see §4.3's
+   amendment.
 5. The §4.3 gate exists, is wired into CI, and **fails** against a deliberately
    reintroduced violation — demonstrated, not assumed.
 6. Full blocking CI green; the advisories job green.
