@@ -15,9 +15,13 @@ Counts below are derived from the filesystem, not hand-maintained.
 
 No open RFCs.
 
-## Accepted (0)
+## Accepted (3)
 
-No RFCs awaiting implementation.
+| ID | Title | Milestone |
+|----|-------|-----------|
+| [051](./accepted/051-form-tokens-must-honour-every-candidate.md) | Form Tokens Must Honour Every Lookup-Key Candidate | M7 |
+| [052](./accepted/052-test-only-dependencies-must-not-be-reachable-from-a-published-feature.md) | Test-Only Dependencies Must Not Be Reachable From a Published Feature | M7 |
+| [053](./accepted/053-a-documented-security-requirement-must-be-enforced.md) | A Documented Security Requirement Must Be Enforced, Not Described | M7 |
 
 ## Implemented (50)
 
