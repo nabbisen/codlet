@@ -58,7 +58,6 @@ impl FormTokenStore for MemFormTokenStore {
         bound_resource: Option<&str>,
         now: u64,
     ) -> Result<(TokenConsumeOutcome, Option<String>), StoreError> {
-        let lookup_key = candidates.first().expect("at least one candidate");
         let mut rows = self
             .rows
             .lock()
@@ -69,8 +68,10 @@ impl FormTokenStore for MemFormTokenStore {
         let mut found_row_idx: Option<usize> = None;
 
         for (i, row) in rows.iter_mut().enumerate() {
-            // Binding checks: lookup key + subject + purpose + binding.
-            if !row.lookup_key.ct_eq(lookup_key)
+            // Binding checks: lookup key (any candidate, RFC-051) + subject
+            // + purpose + binding. One token is one row, so at most one
+            // candidate can match it.
+            if !candidates.iter().any(|c| row.lookup_key.ct_eq(c))
                 || row.subject != *subject
                 || row.purpose != purpose
             {
@@ -132,13 +133,12 @@ impl FormTokenStore for MemFormTokenStore {
         candidates: &[LookupKey],
         result_ref: &str,
     ) -> Result<(), StoreError> {
-        let lookup_key = candidates.first().expect("at least one candidate");
         let mut rows = self
             .rows
             .lock()
             .map_err(|e| StoreError::Backend(e.to_string()))?;
         for row in rows.iter_mut() {
-            if row.lookup_key.ct_eq(lookup_key) && row.consumed_at.is_some() {
+            if candidates.iter().any(|c| row.lookup_key.ct_eq(c)) && row.consumed_at.is_some() {
                 row.result_ref = Some(result_ref.to_string());
             }
         }

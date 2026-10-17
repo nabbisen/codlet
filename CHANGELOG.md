@@ -78,6 +78,22 @@ semantic versioning once it reaches a stable release.
   tree and observing the gate fail before reverting. No published crate's
   behavior changes.
 
+### Fixed
+
+- **A form token issued under a previous key can now be consumed after a key
+  rotation (RFC-051).** All four `FormTokenStore` adapters (in-memory, SQLite,
+  PostgreSQL, D1) used only the *first* lookup-key candidate in
+  `consume_form_token` and `set_token_result`, although the trait, the manager
+  and `docs/src/key-rotation.md` all say every held key is tried. Candidates
+  are ordered active-key-first, so after a rotation every outstanding form token
+  was rejected for up to its TTL (1 hour by default) — the documented grace
+  period did not exist for form tokens. It failed closed (no bypass). Every
+  candidate is now tried in order. An empty candidate slice is now "no match"
+  instead of a panic (`.expect("at least one candidate")`). Codes and sessions
+  were already correct. `codlet-conformance` gained tests that pass the
+  non-matching key first, which is what exposes the defect; the suite had never
+  passed more than one candidate.
+
 ## [0.20.0] — 2026-09-06
 
 ### Added
