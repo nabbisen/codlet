@@ -1,6 +1,6 @@
 # RFC-050: The Store Surface Must Describe What It Does
 
-- **Status:** Accepted (owner, 2026-10-17)
+- **Status:** Implemented (Unreleased) — `c3664cc`, `d2f84ee`; reviewed and approved 2026-10-17
 - **Target milestone:** M7 — **before the API freeze**
 - **Primary crate(s):** `codlet`, all four adapters, `codlet-conformance`
 - **Source basis:** documentation audit 2026-10-17; RFC-047; RFC-013 §10.1

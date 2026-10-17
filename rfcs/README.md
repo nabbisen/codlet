@@ -15,13 +15,11 @@ Counts below are derived from the filesystem, not hand-maintained.
 
 No open RFCs.
 
-## Accepted (1)
+## Accepted (0)
 
-| ID | Title | Milestone |
-|----|-------|-----------|
-| [050](./accepted/050-the-store-surface-must-describe-what-it-does.md) | The Store Surface Must Describe What It Does | M7 |
+No RFCs awaiting implementation.
 
-## Implemented (49)
+## Implemented (50)
 
 | ID | Title | Version |
 |----|-------|---------|
@@ -71,9 +69,10 @@ No open RFCs.
 | [044](./done/044-session-inactivity-timeout.md) | Session Inactivity Timeout | v0.20.0 |
 | [045](./done/045-session-rotation.md) | Session Rotation on Privilege Change | v0.20.0 |
 | [046](./done/046-host-visible-session-failure-reasons.md) | Host-Visible Session Failure Reasons | v0.20.0 |
+| [047](./done/047-the-classifier-should-own-record-state.md) | The Classifier Should Own Record State, Not the Adapter's WHERE Clause | v0.20.0 |
 | [048](./done/048-bind-purpose-and-scope-in-claim-code.md) | **Security:** Bind `purpose` and `scope` — SQL Injection in `claim_code` | v0.19.1 |
 | [049](./done/049-supply-chain-carried-items.md) | Resolving RFC-039's Deferred Questions — Yanked Crates and Duplicate Versions | *(Unreleased)* |
-| [047](./done/047-the-classifier-should-own-record-state.md) | The Classifier Should Own Record State, Not the Adapter's WHERE Clause | v0.20.0 |
+| [050](./done/050-the-store-surface-must-describe-what-it-does.md) | The Store Surface Must Describe What It Does | *(Unreleased)* |
 
 RFC-002 describes `crates/codlet-axum` and `crates/codlet-test` in its
 workspace layout; neither was built. `codlet-test`'s role was filled by
@@ -81,11 +80,11 @@ workspace layout; neither was built. `codlet-test`'s role was filled by
 scope by RFC-037. RFC-002 itself is not edited — it is an Implemented RFC and
 a historical record; the divergence is tracked here and in `ROADMAP.md`.
 
-RFCs with a companion implementation handoff under
-[`rfcs/handoffs/`](./handoffs/): [035](./handoffs/035-rfc-directory-conformance-and-naming/),
-[036](./handoffs/036-gate-integrity-ci-conformance-and-msrv/),
-[038](./handoffs/038-migration-runner-must-not-parse-sql/). A handoff has no
-lifecycle state of its own — it inherits the state of its governing RFC.
+Most RFCs from 035 onward have a companion implementation handoff under
+[`rfcs/handoffs/`](./handoffs/), alongside one directory per release. That
+directory is the list; it is not restated here, because a hand-maintained copy
+of it goes stale. A handoff has no lifecycle state of its own — it inherits the
+state of its governing RFC.
 
 ## Archive (1)
 
