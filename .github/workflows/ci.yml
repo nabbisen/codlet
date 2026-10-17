@@ -193,17 +193,27 @@ jobs:
       # dev-dependencies. Same shape as above (RFC-036 §3.5): capture, assert
       # non-empty, assert a known marker line, and only then match, so a
       # failed `cargo tree` cannot pass as an empty grep.
+      #
+      # Two feature sets, not one. `--features postgres` is the production
+      # PostgreSQL graph, but it cannot see a dependency that is optional and
+      # enabled only by another feature -- which is exactly how the original
+      # defect was shaped (`postgres-test` -> `dep:testcontainers-modules`).
+      # Demonstrated: with that defect reintroduced, `--features postgres`
+      # passes. `--all-features` walks every published feature, so it fails.
       - name: assert no test-only crates reachable from codlet-sqlx's published features
         run: |
           set -euo pipefail
-          tree="$(cargo tree -p codlet-sqlx --features postgres --no-default-features -e normal --prefix none --color never | sort -u)"
-          echo "$tree"
-          test -n "$tree"
-          echo "$tree" | grep -q '^codlet-sqlx ' || { echo "::error::unexpected cargo tree output"; exit 1; }
-          if echo "$tree" | grep -Eiq '^(testcontainers|testcontainers-modules|bollard|bollard-stubs|bollard-buildkit-proto|ureq|rustls|hyper-rustls|tokio-rustls)( |$)'; then
-            echo "::error::test-only dependency reachable from a published feature"
-            exit 1
-          fi
+          for features in "--features postgres --no-default-features" "--all-features"; do
+            tree="$(cargo tree -p codlet-sqlx $features -e normal --prefix none --color never | sort -u)"
+            echo "== cargo tree -p codlet-sqlx $features"
+            echo "$tree"
+            test -n "$tree"
+            echo "$tree" | grep -q '^codlet-sqlx ' || { echo "::error::unexpected cargo tree output ($features)"; exit 1; }
+            if echo "$tree" | grep -Eiq '^(testcontainers|testcontainers-modules|bollard|bollard-stubs|bollard-buildkit-proto|ureq|rustls|hyper-rustls|tokio-rustls)( |$)'; then
+              echo "::error::test-only dependency reachable from a published feature ($features)"
+              exit 1
+            fi
+          done
 
   # RFC-036 §3.2 / review R-1: rust-version is a per-package field, not a
   # single workspace-wide floor. codlet, codlet-conformance, codlet-worker,

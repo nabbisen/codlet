@@ -8,6 +8,17 @@ semantic versioning once it reaches a stable release.
 
 ### Changed
 
+- **`codlet-sqlx`'s `postgres-test` feature no longer pulls any dependency into a
+  consumer's graph (RFC-052).** `testcontainers-modules` — and with it a Docker
+  client, an HTTP stack and a TLS stack — was an optional *normal* dependency
+  enabled by `postgres-test`, so a host choosing that feature (one word away
+  from `postgres`) shipped test tooling to production. It is now a
+  dev-dependency, and `postgres-test = ["postgres"]` only gates the
+  Docker-backed tests. The `core dependency gate` CI job now asserts that no
+  test-only crate is reachable from `codlet-sqlx`'s published features. Also
+  `cargo update -p rustls` (0.23.41 → 0.23.46), which clears RUSTSEC-2026-0285,
+  -0346, -0348 and -0349; none was reachable from a default or `postgres`
+  build of `codlet-sqlx`.
 - **The store lookups and their record types now say what they do (RFC-050).**
   **Breaking, pre-v1.** Since RFC-047 the lookups return a record whatever its
   expiry, use, or revocation state and the classifiers decide; the names still
