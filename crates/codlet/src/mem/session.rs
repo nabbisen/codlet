@@ -36,7 +36,6 @@ impl SessionStore for MemSessionStore {
     async fn lookup_session(
         &self,
         candidates: &[LookupKey],
-        _now: u64,
     ) -> Result<Option<StoredSession>, StoreError> {
         let rows = self
             .rows

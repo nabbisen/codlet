@@ -217,7 +217,7 @@ where
         let now = self.clock.unix_now();
         let looked_up = self
             .store
-            .lookup_code(&candidates, now, None)
+            .lookup_code(&candidates, None)
             .await
             .map_err(RedeemError::from_store)?;
 
@@ -228,14 +228,12 @@ where
         // audit event and rate limiter, not a collapsed `NotFound`.
         let record = match looked_up {
             None => Err(RedemptionFailReason::NotFound),
-            Some(rec) => {
-                match classify_code_lookup(rec.revoked_at, rec.used_at, rec.expires_at, now) {
-                    CodeLookupOutcome::Redeemable => Ok(rec),
-                    CodeLookupOutcome::Revoked => Err(RedemptionFailReason::Revoked),
-                    CodeLookupOutcome::Expired => Err(RedemptionFailReason::Expired),
-                    CodeLookupOutcome::Used => Err(RedemptionFailReason::AlreadyUsed),
-                }
-            }
+            Some(rec) => match classify_code_lookup(&rec, now) {
+                CodeLookupOutcome::Redeemable => Ok(rec),
+                CodeLookupOutcome::Revoked => Err(RedemptionFailReason::Revoked),
+                CodeLookupOutcome::Expired => Err(RedemptionFailReason::Expired),
+                CodeLookupOutcome::Used => Err(RedemptionFailReason::AlreadyUsed),
+            },
         };
 
         let record = match record {

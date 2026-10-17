@@ -188,7 +188,7 @@ where
                 let now = self.clock.unix_now();
                 let record = self
                     .store
-                    .lookup_session(&candidates, now)
+                    .lookup_session(&candidates)
                     .await
                     .map_err(SessionError::from_store)?;
 

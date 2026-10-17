@@ -69,7 +69,7 @@ mod sqlite_tests {
 
         // Neither code was touched: both must still be redeemable.
         let victim = store
-            .lookup_code(&[code_lk("victimsec")], NOW, None)
+            .lookup_code(&[code_lk("victimsec")], None)
             .await
             .unwrap()
             .expect("victim code must still exist");
@@ -78,7 +78,7 @@ mod sqlite_tests {
             "victim code must not have been marked used"
         );
         let other = store
-            .lookup_code(&[code_lk("othersec")], NOW, None)
+            .lookup_code(&[code_lk("othersec")], None)
             .await
             .unwrap()
             .expect("other code must still exist");
@@ -177,7 +177,7 @@ mod sqlite_tests {
             .unwrap();
         // Claim one.
         let found = store
-            .lookup_code(&[code_lk("seca1")], NOW, None)
+            .lookup_code(&[code_lk("seca1")], None)
             .await
             .unwrap()
             .unwrap();
@@ -300,7 +300,7 @@ mod sqlite_tests {
             .await
             .unwrap();
         let found = store
-            .lookup_code(&[code_lk("secu1")], NOW, None)
+            .lookup_code(&[code_lk("secu1")], None)
             .await
             .unwrap()
             .unwrap();
@@ -423,7 +423,7 @@ mod postgres_tests {
         );
 
         let victim = store
-            .lookup_code(&[code_lk("victimsec")], NOW, None)
+            .lookup_code(&[code_lk("victimsec")], None)
             .await
             .unwrap()
             .expect("victim code must still exist");
@@ -432,7 +432,7 @@ mod postgres_tests {
             "victim code must not have been marked used"
         );
         let other = store
-            .lookup_code(&[code_lk("othersec")], NOW, None)
+            .lookup_code(&[code_lk("othersec")], None)
             .await
             .unwrap()
             .expect("other code must still exist");
@@ -540,7 +540,7 @@ mod postgres_tests {
             .await
             .unwrap();
         let found = store
-            .lookup_code(&[code_lk("secpgclaim")], NOW, None)
+            .lookup_code(&[code_lk("secpgclaim")], None)
             .await
             .unwrap()
             .unwrap();

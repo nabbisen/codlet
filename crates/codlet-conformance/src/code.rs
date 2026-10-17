@@ -41,7 +41,7 @@ where
         .await
         .unwrap();
     let found = store
-        .lookup_code(&[code_lk("secret1")], NOW, None)
+        .lookup_code(&[code_lk("secret1")], None)
         .await
         .unwrap();
     assert!(
@@ -60,10 +60,7 @@ where
     S: CodeStore + Send + Sync + 'static,
 {
     let store = factory().await;
-    let found = store
-        .lookup_code(&[code_lk("ghost")], NOW, None)
-        .await
-        .unwrap();
+    let found = store.lookup_code(&[code_lk("ghost")], None).await.unwrap();
     assert!(found.is_none(), "nonexistent: must return None");
 }
 
@@ -86,13 +83,13 @@ where
         .await
         .unwrap();
     let found = store
-        .lookup_code(&[code_lk("expiredsec")], NOW, None)
+        .lookup_code(&[code_lk("expiredsec")], None)
         .await
         .unwrap()
         .expect("RFC-047: the store must return an expired record, not filter it out");
     assert_eq!(found.expires_at, EXPIRED);
     assert_eq!(
-        classify_code_lookup(found.revoked_at, found.used_at, found.expires_at, NOW),
+        classify_code_lookup(&found, NOW),
         CodeLookupOutcome::Expired,
         "the classifier must reject the returned record"
     );
@@ -112,7 +109,7 @@ where
         .await
         .unwrap();
     let found = store
-        .lookup_code(&[code_lk("usedsec")], NOW, None)
+        .lookup_code(&[code_lk("usedsec")], None)
         .await
         .unwrap()
         .unwrap();
@@ -128,15 +125,12 @@ where
         .unwrap();
     assert_eq!(won, ClaimOutcome::Won);
     let again = store
-        .lookup_code(&[code_lk("usedsec")], NOW, None)
+        .lookup_code(&[code_lk("usedsec")], None)
         .await
         .unwrap()
         .expect("RFC-047: the store must return a used record, not filter it out");
     assert!(again.used_at.is_some());
-    assert_eq!(
-        classify_code_lookup(again.revoked_at, again.used_at, again.expires_at, NOW),
-        CodeLookupOutcome::Used
-    );
+    assert_eq!(classify_code_lookup(&again, NOW), CodeLookupOutcome::Used);
 }
 
 /// See `test_expired_returned_and_classifier_rejects` for why this asserts
@@ -157,13 +151,13 @@ where
         .await
         .unwrap();
     let found = store
-        .lookup_code(&[code_lk("revokedsec")], NOW, None)
+        .lookup_code(&[code_lk("revokedsec")], None)
         .await
         .unwrap()
         .expect("RFC-047: the store must return a revoked record, not filter it out");
     assert!(found.revoked_at.is_some());
     assert_eq!(
-        classify_code_lookup(found.revoked_at, found.used_at, found.expires_at, NOW),
+        classify_code_lookup(&found, NOW),
         CodeLookupOutcome::Revoked
     );
 }
@@ -186,12 +180,12 @@ where
         .await
         .unwrap();
     let found = store
-        .lookup_code(&[code_lk("bothsec")], NOW, None)
+        .lookup_code(&[code_lk("bothsec")], None)
         .await
         .unwrap()
         .unwrap();
     assert_eq!(
-        classify_code_lookup(found.revoked_at, found.used_at, found.expires_at, NOW),
+        classify_code_lookup(&found, NOW),
         CodeLookupOutcome::Revoked,
         "revoked must win over expired"
     );
@@ -217,7 +211,7 @@ where
         .await
         .unwrap();
     let found = store
-        .lookup_code(&[code_lk("racesec")], NOW, None)
+        .lookup_code(&[code_lk("racesec")], None)
         .await
         .unwrap()
         .unwrap();
@@ -276,13 +270,13 @@ where
     // record within the matching scope is still found by lookup key + scope;
     // the classifier is what rejects it now that it has been revoked.
     let found = store
-        .lookup_code(&[code_lk("scopedsec")], NOW, Some("scope-A"))
+        .lookup_code(&[code_lk("scopedsec")], Some("scope-A"))
         .await
         .unwrap()
         .expect("scope revoke: the record must still be found by lookup key + scope");
     assert!(found.revoked_at.is_some());
     assert_eq!(
-        classify_code_lookup(found.revoked_at, found.used_at, found.expires_at, NOW),
+        classify_code_lookup(&found, NOW),
         CodeLookupOutcome::Revoked
     );
 }
@@ -304,7 +298,7 @@ where
         .await
         .unwrap();
     let found = store
-        .lookup_code(&[code_lk("scoped2sec")], NOW, Some("scope-A"))
+        .lookup_code(&[code_lk("scoped2sec")], Some("scope-A"))
         .await
         .unwrap();
     assert!(
@@ -343,7 +337,7 @@ where
 
     async fn assert_unused<S: CodeStore>(store: &S, secret: &str, label: &str) {
         let r = store
-            .lookup_code(&[code_lk(secret)], NOW, None)
+            .lookup_code(&[code_lk(secret)], None)
             .await
             .unwrap()
             .unwrap_or_else(|| panic!("{label} code must still exist"));
@@ -412,7 +406,7 @@ where
         "a legitimate scope value must still claim successfully"
     );
     let victim = store
-        .lookup_code(&[code_lk("victimsec")], NOW, None)
+        .lookup_code(&[code_lk("victimsec")], None)
         .await
         .unwrap()
         .unwrap();

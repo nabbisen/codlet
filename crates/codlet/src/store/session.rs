@@ -7,15 +7,15 @@ use crate::secret::{SessionId, SubjectId};
 
 use super::error::StoreError;
 
-/// A session record returned by `lookup_session`.
+/// A session record as held in storage, returned by `lookup_session`.
 ///
-/// Despite the name, this may **not** be active: `lookup_session`
-/// returns any record matching the lookup key regardless of state (RFC-047
-/// step 2), and `revoked_at`/`expires_at` are what
-/// [`crate::state::classify_session`] uses to decide. There is no second
-/// enforcement point downstream of this call — unlike codes' `claim_code`
-/// conditional UPDATE (RFC-047 §3), this classifier's decision *is* the
-/// guard.
+/// This is what the store holds, with no claim about whether it is usable: it
+/// may be live, expired, idle-timed-out, or revoked.
+/// `revoked_at`/`expires_at`/`last_seen_at` are the inputs
+/// [`crate::state::classify_session`] uses to decide (RFC-047 step 2). There
+/// is no second enforcement point downstream of this call — unlike codes'
+/// `claim_code` conditional UPDATE (RFC-047 §3), this classifier's decision
+/// *is* the guard.
 #[derive(Debug, Clone)]
 pub struct StoredSession {
     /// Opaque session record identifier (not a bearer credential).
@@ -63,13 +63,14 @@ pub trait SessionStore {
     /// its expiry or revocation state** (RFC-047 step 2) — pass the result to
     /// [`crate::state::classify_session`] to decide whether it is actually
     /// authenticated. Returns `Ok(None)` only if no record matches the lookup
-    /// criteria at all. `now` is accepted for symmetry with other store
-    /// methods and possible future use; this method itself no longer
-    /// compares against it.
+    /// criteria at all.
+    ///
+    /// This lookup makes no time-based decision, so it is not given the time.
+    /// A write is told the time so it can record it (`revoke_session`,
+    /// `touch_session`); a lookup is not, because it judges nothing.
     fn lookup_session(
         &self,
         candidates: &[LookupKey],
-        now: u64,
     ) -> impl Future<Output = Result<Option<StoredSession>, StoreError>>;
 
     /// Insert a new session record.

@@ -47,7 +47,7 @@ async fn session_issuance_and_validation() {
         .await
         .unwrap();
 
-    let active = store.lookup_session(&[lk], NOW).await.unwrap().unwrap();
+    let active = store.lookup_session(&[lk]).await.unwrap().unwrap();
     assert_eq!(active.subject.as_str(), "user-1");
     assert_eq!(active.id.as_str(), "sess-1");
     // Plaintext must not be stored.
@@ -77,7 +77,7 @@ async fn expired_session_is_returned_and_classifier_rejects_it() {
         .await
         .unwrap();
     let found = store
-        .lookup_session(&[lk], NOW)
+        .lookup_session(&[lk])
         .await
         .unwrap()
         .expect("RFC-047: the store must return the expired record, not filter it out");
@@ -109,7 +109,7 @@ async fn revoked_session_is_returned_and_classifier_rejects_it() {
         .unwrap();
     store.revoke_session(&session_id(1), NOW).await.unwrap();
     let found = store
-        .lookup_session(&[lk], NOW)
+        .lookup_session(&[lk])
         .await
         .unwrap()
         .expect("RFC-047: the store must return the revoked record, not filter it out");

@@ -68,7 +68,6 @@ impl CodeStore for MemCodeStore {
     async fn lookup_code(
         &self,
         candidates: &[LookupKey],
-        _now: u64,
         scope: Option<&str>,
     ) -> Result<Option<StoredCode>, StoreError> {
         let rows = self

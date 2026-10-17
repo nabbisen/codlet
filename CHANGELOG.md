@@ -8,6 +8,23 @@ semantic versioning once it reaches a stable release.
 
 ### Changed
 
+- **The store lookups and their record types now say what they do (RFC-050).**
+  **Breaking, pre-v1.** Since RFC-047 the lookups return a record whatever its
+  expiry, use, or revocation state and the classifiers decide; the names still
+  said otherwise. Renamed: `CodeStore::find_redeemable` → `lookup_code`,
+  `RedeemableCode` → `StoredCode`, `SessionStore::find_active_session` →
+  `lookup_session`, `ActiveSessionRecord` → `StoredSession`. Dropped the `now:
+  u64` parameter from both lookups — no adapter ever read it, and a lookup
+  that makes no time-based decision is not given the time (writes —
+  `revoke_*`, `touch_session`, `ClaimRequest.now` — keep theirs, since they
+  record it). `classify_code_lookup` now takes `&StoredCode` and `now` instead
+  of four loose scalars, removing a silent `revoked_at`/`used_at`
+  transposition hazard and matching `classify_session`. No behavioural
+  change: every decision is made in the same place by the same logic, and no
+  test assertion changed beyond renamed identifiers and how the classifier's
+  input is constructed. No compatibility aliases are provided; the compiler
+  flags every affected call site.
+
 - **Documentation accuracy sweep (RFC-016 follow-up).** No code changes. The
   migration guide's session example (Option B) branched on
   `find_active_session(...).is_none()`; since RFC-047 that function returns

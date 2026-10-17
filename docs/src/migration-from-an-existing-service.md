@@ -39,7 +39,7 @@ let candidates: Vec<LookupKey> = hasher
     .into_iter()
     .map(|(lk, _version)| lk)
     .collect();
-let record = session_store.lookup_session(&candidates, now).await?;
+let record = session_store.lookup_session(&candidates).await?;
 
 // The store returns the record; the classifier decides. A returned record
 // may be expired or revoked, so never branch on `record.is_some()`.

@@ -27,7 +27,6 @@ impl CodeStore for SqliteStore {
     async fn lookup_code(
         &self,
         candidates: &[LookupKey],
-        _now: u64,
         scope: Option<&str>,
     ) -> Result<Option<StoredCode>, StoreError> {
         // Build a parameterised `IN (?, ?, ...)` clause for the candidate keys.

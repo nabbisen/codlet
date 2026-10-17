@@ -3,10 +3,25 @@ use super::*;
 
 const NOW: u64 = 1_000;
 
+/// A stored code with the given state fields; everything else is fixed
+/// dummy data the classifier does not read.
+fn stored(revoked_at: Option<u64>, used_at: Option<u64>, expires_at: u64) -> StoredCode {
+    StoredCode {
+        id: crate::secret::CodeId::new("code-id".into()),
+        key_version: crate::hashing::KeyVersion::new("v1"),
+        grant: None,
+        purpose: None,
+        scope: None,
+        expires_at,
+        used_at,
+        revoked_at,
+    }
+}
+
 #[test]
 fn redeemable_when_nothing_is_set() {
     assert_eq!(
-        classify_code_lookup(None, None, NOW + 1, NOW),
+        classify_code_lookup(&stored(None, None, NOW + 1), NOW),
         CodeLookupOutcome::Redeemable
     );
 }
@@ -14,7 +29,7 @@ fn redeemable_when_nothing_is_set() {
 #[test]
 fn revoked_alone() {
     assert_eq!(
-        classify_code_lookup(Some(NOW), None, NOW + 1, NOW),
+        classify_code_lookup(&stored(Some(NOW), None, NOW + 1), NOW),
         CodeLookupOutcome::Revoked
     );
 }
@@ -23,11 +38,11 @@ fn revoked_alone() {
 fn expired_alone() {
     // expires_at <= now.
     assert_eq!(
-        classify_code_lookup(None, None, NOW, NOW),
+        classify_code_lookup(&stored(None, None, NOW), NOW),
         CodeLookupOutcome::Expired
     );
     assert_eq!(
-        classify_code_lookup(None, None, NOW - 1, NOW),
+        classify_code_lookup(&stored(None, None, NOW - 1), NOW),
         CodeLookupOutcome::Expired
     );
 }
@@ -35,7 +50,7 @@ fn expired_alone() {
 #[test]
 fn used_alone() {
     assert_eq!(
-        classify_code_lookup(None, Some(NOW), NOW + 1, NOW),
+        classify_code_lookup(&stored(None, Some(NOW), NOW + 1), NOW),
         CodeLookupOutcome::Used
     );
 }
@@ -45,7 +60,7 @@ fn used_alone() {
 #[test]
 fn revoked_and_expired_classifies_revoked() {
     assert_eq!(
-        classify_code_lookup(Some(NOW), None, NOW, NOW),
+        classify_code_lookup(&stored(Some(NOW), None, NOW), NOW),
         CodeLookupOutcome::Revoked,
         "revoked must win over expired"
     );
@@ -54,7 +69,7 @@ fn revoked_and_expired_classifies_revoked() {
 #[test]
 fn revoked_and_used_classifies_revoked() {
     assert_eq!(
-        classify_code_lookup(Some(NOW), Some(NOW), NOW + 1, NOW),
+        classify_code_lookup(&stored(Some(NOW), Some(NOW), NOW + 1), NOW),
         CodeLookupOutcome::Revoked,
         "revoked must win over used"
     );
@@ -63,7 +78,7 @@ fn revoked_and_used_classifies_revoked() {
 #[test]
 fn expired_and_used_classifies_expired() {
     assert_eq!(
-        classify_code_lookup(None, Some(NOW), NOW, NOW),
+        classify_code_lookup(&stored(None, Some(NOW), NOW), NOW),
         CodeLookupOutcome::Expired,
         "expired must win over used when not revoked"
     );
@@ -72,7 +87,7 @@ fn expired_and_used_classifies_expired() {
 #[test]
 fn revoked_expired_and_used_classifies_revoked() {
     assert_eq!(
-        classify_code_lookup(Some(NOW), Some(NOW), NOW, NOW),
+        classify_code_lookup(&stored(Some(NOW), Some(NOW), NOW), NOW),
         CodeLookupOutcome::Revoked,
         "revoked must win over every other combination"
     );

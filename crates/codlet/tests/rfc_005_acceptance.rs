@@ -55,7 +55,7 @@ async fn lookup_code_returns_valid_code() {
         .insert_code(basic_code_record(code_id(1), lk.clone(), LATER))
         .await
         .unwrap();
-    let found = store.lookup_code(&[lk], NOW, None).await.unwrap();
+    let found = store.lookup_code(&[lk], None).await.unwrap();
     assert!(found.is_some());
     assert_eq!(found.unwrap().grant.as_deref(), Some("grant-payload"));
 }
@@ -75,13 +75,13 @@ async fn lookup_code_returns_expired_record_and_classifier_rejects_it() {
         .await
         .unwrap();
     let found = store
-        .lookup_code(&[lk], NOW, None)
+        .lookup_code(&[lk], None)
         .await
         .unwrap()
         .expect("RFC-047: the store must return the expired record, not filter it out");
     assert_eq!(found.expires_at, EXPIRED);
     assert_eq!(
-        classify_code_lookup(found.revoked_at, found.used_at, found.expires_at, NOW),
+        classify_code_lookup(&found, NOW),
         CodeLookupOutcome::Expired
     );
 }
@@ -95,7 +95,7 @@ async fn lookup_code_returns_used_code_and_classifier_rejects_it() {
         .await
         .unwrap();
     let found = store
-        .lookup_code(std::slice::from_ref(&lk), NOW, None)
+        .lookup_code(std::slice::from_ref(&lk), None)
         .await
         .unwrap()
         .unwrap();
@@ -114,15 +114,12 @@ async fn lookup_code_returns_used_code_and_classifier_rejects_it() {
     // RFC-047: find again -- the store must still return it (now with
     // used_at set); the classifier is what rejects it.
     let again = store
-        .lookup_code(&[lk], NOW, None)
+        .lookup_code(&[lk], None)
         .await
         .unwrap()
         .expect("RFC-047: the store must return the used record, not filter it out");
     assert!(again.used_at.is_some());
-    assert_eq!(
-        classify_code_lookup(again.revoked_at, again.used_at, again.expires_at, NOW),
-        CodeLookupOutcome::Used
-    );
+    assert_eq!(classify_code_lookup(&again, NOW), CodeLookupOutcome::Used);
 }
 
 #[tokio::test]
@@ -138,7 +135,7 @@ async fn claim_returns_won_exactly_once() {
         .insert_code(basic_code_record(code_id(1), lk.clone(), LATER))
         .await
         .unwrap();
-    let found = store.lookup_code(&[lk], NOW, None).await.unwrap().unwrap();
+    let found = store.lookup_code(&[lk], None).await.unwrap().unwrap();
 
     let r1 = store
         .claim_code(&ClaimRequest {
@@ -182,7 +179,7 @@ async fn claim_after_revoke_returns_lost() {
         .await
         .unwrap();
     let found = store
-        .lookup_code(std::slice::from_ref(&lk), NOW, None)
+        .lookup_code(std::slice::from_ref(&lk), None)
         .await
         .unwrap()
         .unwrap();
@@ -192,18 +189,13 @@ async fn claim_after_revoke_returns_lost() {
     // record (now with revoked_at set) -- the classifier rejects it, not
     // the store's WHERE clause.
     let after_revoke = store
-        .lookup_code(&[lk], NOW, None)
+        .lookup_code(&[lk], None)
         .await
         .unwrap()
         .expect("RFC-047: the store must return the revoked record, not filter it out");
     assert!(after_revoke.revoked_at.is_some());
     assert_eq!(
-        classify_code_lookup(
-            after_revoke.revoked_at,
-            after_revoke.used_at,
-            after_revoke.expires_at,
-            NOW
-        ),
+        classify_code_lookup(&after_revoke, NOW),
         CodeLookupOutcome::Revoked
     );
     // And a direct claim must still return Lost -- INV-5's guard, untouched.
@@ -232,7 +224,7 @@ async fn claim_after_expiry_returns_lost() {
         .insert_code(basic_code_record(code_id(1), lk.clone(), NOW + 10))
         .await
         .unwrap();
-    let found = store.lookup_code(&[lk], NOW, None).await.unwrap().unwrap();
+    let found = store.lookup_code(&[lk], None).await.unwrap().unwrap();
 
     // Claim at NOW + 100 (after the code expired).
     let claim = store
@@ -275,10 +267,7 @@ async fn wrong_scope_does_not_revoke() {
         .await
         .unwrap();
     // Must still be found.
-    let found = store
-        .lookup_code(&[lk], NOW, Some("community-A"))
-        .await
-        .unwrap();
+    let found = store.lookup_code(&[lk], Some("community-A")).await.unwrap();
     assert!(
         found.is_some(),
         "wrong-scope revoke must not affect the record"

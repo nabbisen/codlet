@@ -14,12 +14,11 @@ impl SessionStore for SqliteStore {
     async fn lookup_session(
         &self,
         candidates: &[LookupKey],
-        _now: u64,
     ) -> Result<Option<StoredSession>, StoreError> {
         // RFC-047 step 2: no state predicate here -- the store returns the
         // record regardless of expiry/revocation, and `classify_session`
-        // decides. `_now` is accepted for symmetry with other store methods
-        // only; this query no longer compares against it.
+        // decides. The lookup takes no timestamp because it makes no
+        // time-based decision.
         for candidate in candidates {
             let row: Option<ActiveRow> = sqlx::query_as(
                 "SELECT id, subject, created_at, expires_at, revoked_at, last_seen_at

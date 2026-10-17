@@ -6,6 +6,8 @@
 //! up; they do not adjudicate (RFC-047 §4.1, extending the principle RFC-044
 //! established for session idle timeout).
 
+use crate::store::code::StoredCode;
+
 /// The current state of a looked-up code record (RFC-047).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CodeLookupOutcome {
@@ -23,23 +25,22 @@ pub enum CodeLookupOutcome {
 
 /// Classify a looked-up code record's redeemability from its state fields.
 ///
+/// Takes the whole record rather than its `revoked_at`/`used_at` fields as
+/// loose scalars: both are `Option<u64>` and adjacent, so a caller transposing
+/// them would compile silently and log the wrong reason.
+///
 /// A record can satisfy more than one condition at once (e.g. revoked *and*
 /// expired). The decision order is fixed (RFC-047 §8.1, owner-resolved):
 /// **revoked, then expired, then used, then redeemable.** Revoked is checked
 /// first because it is the only state an operator caused deliberately, and
 /// the most useful thing to see in a log during an incident.
 #[must_use]
-pub fn classify_code_lookup(
-    revoked_at: Option<u64>,
-    used_at: Option<u64>,
-    expires_at: u64,
-    now: u64,
-) -> CodeLookupOutcome {
-    if revoked_at.is_some() {
+pub fn classify_code_lookup(record: &StoredCode, now: u64) -> CodeLookupOutcome {
+    if record.revoked_at.is_some() {
         CodeLookupOutcome::Revoked
-    } else if expires_at <= now {
+    } else if record.expires_at <= now {
         CodeLookupOutcome::Expired
-    } else if used_at.is_some() {
+    } else if record.used_at.is_some() {
         CodeLookupOutcome::Used
     } else {
         CodeLookupOutcome::Redeemable

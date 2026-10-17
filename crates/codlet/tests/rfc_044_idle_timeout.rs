@@ -50,9 +50,8 @@ impl SessionStore for CountingTouchStore {
     fn lookup_session(
         &self,
         candidates: &[codlet::LookupKey],
-        now: u64,
     ) -> impl Future<Output = Result<Option<StoredSession>, StoreError>> {
-        self.inner.lookup_session(candidates, now)
+        self.inner.lookup_session(candidates)
     }
 
     fn insert_session(
@@ -84,9 +83,8 @@ impl SessionStore for FailingTouchStore {
     fn lookup_session(
         &self,
         candidates: &[codlet::LookupKey],
-        now: u64,
     ) -> impl Future<Output = Result<Option<StoredSession>, StoreError>> {
-        self.inner.lookup_session(candidates, now)
+        self.inner.lookup_session(candidates)
     }
 
     fn insert_session(

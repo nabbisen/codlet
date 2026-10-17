@@ -26,7 +26,6 @@ impl CodeStore for NotSendStore {
     async fn lookup_code(
         &self,
         _candidates: &[LookupKey],
-        _now: u64,
         _scope: Option<&str>,
     ) -> Result<Option<StoredCode>, StoreError> {
         Ok(None)
@@ -75,7 +74,6 @@ impl CodeStore for SendStore {
     async fn lookup_code(
         &self,
         _candidates: &[LookupKey],
-        _now: u64,
         _scope: Option<&str>,
     ) -> Result<Option<StoredCode>, StoreError> {
         Ok(None)

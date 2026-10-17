@@ -38,7 +38,7 @@ where
         .await
         .unwrap();
     let found = store
-        .lookup_session(&[session_lk("sessec1")], NOW)
+        .lookup_session(&[session_lk("sessec1")])
         .await
         .unwrap();
     assert!(found.is_some(), "active session must be found");
@@ -64,7 +64,7 @@ where
         .await
         .unwrap();
     let found = store
-        .lookup_session(&[session_lk("sessec2")], NOW)
+        .lookup_session(&[session_lk("sessec2")])
         .await
         .unwrap()
         .expect("RFC-047: the store must return the expired record, not filter it out");
@@ -96,7 +96,7 @@ where
         .await
         .unwrap();
     let found = store
-        .lookup_session(&[session_lk("sessec3")], NOW)
+        .lookup_session(&[session_lk("sessec3")])
         .await
         .unwrap()
         .expect("RFC-047: the store must return the revoked record, not filter it out");
@@ -127,7 +127,7 @@ where
         .await
         .unwrap();
     let found = store
-        .lookup_session(&[session_lk("bothsessec")], NOW)
+        .lookup_session(&[session_lk("bothsessec")])
         .await
         .unwrap()
         .unwrap();
@@ -152,7 +152,7 @@ where
         .await
         .unwrap();
     let found = store
-        .lookup_session(&[session_lk("wrong-secret")], NOW)
+        .lookup_session(&[session_lk("wrong-secret")])
         .await
         .unwrap();
     assert!(found.is_none(), "wrong HMAC must not match");
@@ -172,7 +172,7 @@ where
         .await
         .unwrap();
     let found = store
-        .lookup_session(&[session_lk("sessec5")], NOW)
+        .lookup_session(&[session_lk("sessec5")])
         .await
         .unwrap()
         .expect("active session must be found");
@@ -203,7 +203,7 @@ where
         .await
         .unwrap();
     let found = store
-        .lookup_session(&[session_lk("sessec6")], NOW)
+        .lookup_session(&[session_lk("sessec6")])
         .await
         .unwrap()
         .expect("active session must be found");
@@ -225,7 +225,7 @@ where
     store.touch_session(&id, NOW + 10).await.unwrap();
     store.touch_session(&id, NOW + 20).await.unwrap();
     let found = store
-        .lookup_session(&[session_lk("sessec7")], NOW)
+        .lookup_session(&[session_lk("sessec7")])
         .await
         .unwrap()
         .expect("active session must be found");
@@ -282,13 +282,13 @@ where
         .unwrap();
 
     let old_before = store
-        .lookup_session(&[session_lk("rot-old-secret")], NOW)
+        .lookup_session(&[session_lk("rot-old-secret")])
         .await
         .unwrap()
         .expect("the old record must still be active during the overlap window");
     assert!(old_before.revoked_at.is_none());
     let new_during_overlap = store
-        .lookup_session(&[session_lk("rot-new-secret")], NOW)
+        .lookup_session(&[session_lk("rot-new-secret")])
         .await
         .unwrap()
         .expect("the new record must already be active during the overlap window");
@@ -301,7 +301,7 @@ where
         .unwrap();
 
     let old_after = store
-        .lookup_session(&[session_lk("rot-old-secret")], NOW)
+        .lookup_session(&[session_lk("rot-old-secret")])
         .await
         .unwrap()
         .expect("RFC-047: the store must return the revoked record, not filter it out");
@@ -314,7 +314,7 @@ where
 
     // Revoking the old record must not disturb the new one.
     let new_after = store
-        .lookup_session(&[session_lk("rot-new-secret")], NOW)
+        .lookup_session(&[session_lk("rot-new-secret")])
         .await
         .unwrap()
         .expect("the new record must remain active after the old one is revoked");

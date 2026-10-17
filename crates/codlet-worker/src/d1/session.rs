@@ -48,7 +48,6 @@ impl SessionStore for D1SessionStore {
     async fn lookup_session(
         &self,
         candidates: &[LookupKey],
-        _now: u64,
     ) -> Result<Option<StoredSession>, StoreError> {
         use worker::d1::D1Type;
 

@@ -9,14 +9,14 @@ use crate::state::ClaimOutcome;
 
 use super::error::StoreError;
 
-/// Record returned by a `lookup_code` call.
+/// A code record as held in storage, returned by `lookup_code`.
 ///
-/// Despite the name, this may **not** be redeemable: `lookup_code`
-/// returns any record matching the lookup key regardless of state (RFC-047),
-/// and `used_at`/`revoked_at`/`expires_at` are what
-/// [`crate::state::classify_code_lookup`] uses to decide. `claim_code`'s
-/// conditional UPDATE is the actual enforcement point (INV-5) — this
-/// classifier is a pre-filter, not a second guard.
+/// This is what the store holds, with no claim about whether it is usable: it
+/// may be unused, used, revoked, or expired. `used_at`/`revoked_at`/
+/// `expires_at` are the inputs [`crate::state::classify_code_lookup`] uses to
+/// decide (RFC-047). `claim_code`'s conditional UPDATE is the actual
+/// enforcement point (INV-5) — the classifier is a pre-filter, not a second
+/// guard.
 #[derive(Debug, Clone)]
 pub struct StoredCode {
     /// Opaque record identifier (not a secret, safe for logs and audit).
@@ -99,10 +99,13 @@ pub trait CodeStore {
     /// the result to [`crate::state::classify_code_lookup`] to decide whether
     /// it is actually redeemable (RFC-047). Returns `Ok(None)` only if no
     /// record matches the lookup criteria at all.
+    ///
+    /// This lookup makes no time-based decision, so it is not given the time.
+    /// A write is told the time so it can record it (`revoke_code`,
+    /// [`ClaimRequest::now`]); a lookup is not, because it judges nothing.
     fn lookup_code(
         &self,
         candidates: &[LookupKey],
-        now: u64,
         scope: Option<&str>,
     ) -> impl Future<Output = Result<Option<StoredCode>, StoreError>>;
 

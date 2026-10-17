@@ -84,7 +84,6 @@ impl CodeStore for D1CodeStore {
     async fn lookup_code(
         &self,
         candidates: &[LookupKey],
-        _now: u64,
         scope: Option<&str>,
     ) -> Result<Option<StoredCode>, StoreError> {
         use worker::d1::D1Type;

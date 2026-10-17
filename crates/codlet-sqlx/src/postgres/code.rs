@@ -62,7 +62,6 @@ impl CodeStore for PostgresStore {
     async fn lookup_code(
         &self,
         candidates: &[LookupKey],
-        _now: u64,
         scope: Option<&str>,
     ) -> Result<Option<StoredCode>, StoreError> {
         // RFC-047: matches on lookup key and scope only. No expiry/revocation/
