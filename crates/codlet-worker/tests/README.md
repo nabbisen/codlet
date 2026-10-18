@@ -1,0 +1,49 @@
+# codlet-worker Miniflare tests
+
+**Test-only, and unreachable by consumers.** Nothing in this directory is part of
+any published crate (`codlet-worker` is `publish = false`, and `tests/` is never
+compiled into a library). The npm tree here exists to run the tests; a host that
+depends on codlet never receives it. The same reasoning RFC-052 applied to the
+Rust dev-dependencies applies here, so `npm audit` findings are triaged for the
+**harness**, not for users.
+
+## What runs
+
+`npx vitest run` runs two vitest projects (see `vitest.workspace.ts`):
+
+| Project | Config | Runs |
+|---|---|---|
+| `js-harness` | `vitest.config.ts`, `wrangler.toml` → `worker.js` | D1 binding behaviour, KV, and the concurrent-claim route. `worker.js` re-implements the store SQL in JavaScript; the **schema** is the shipped `crates/codlet-worker/migrations/0001_initial.sql`, read from disk (RFC-054 stage A). |
+| `rust-d1` | `vitest.rust.config.ts`, `wrangler.rust.toml` → `rust-build/worker/shim.mjs` | The **real Rust** `D1CodeStore` / `D1SessionStore` / `D1FormTokenStore`, driven one test at a time by `codlet-conformance` (RFC-054 stage C). |
+
+The `rust-d1` Worker is built from the test-only crate
+`crates/codlet-worker-miniflare` and must be built first (needs the
+`wasm32-unknown-unknown` target and `worker-build`):
+
+```sh
+cargo install worker-build --version 0.8.4 --locked
+npm run build:rust      # writes ./rust-build (git-ignored)
+npx vitest run
+```
+
+(`npm test` does both steps.)
+
+## Known gaps, recorded as `it.fails` tests
+
+These pass today *because* they fail; when the underlying defect is fixed they
+flip and tell you to remove `.fails`. See `conformance.test.ts` and
+`rust_d1.test.ts`.
+
+- `run_d1_migrations` is rejected by D1 (one `exec` of a multi-line file).
+- Nothing adds `last_seen_at` to a `codlet_sessions` table created before RFC-044.
+
+## npm advisories
+
+`npm audit fix` (without `--force`) was applied on 2026-10-18: 19 → 16 findings.
+The 16 that remain (3 critical: `vitest`, `tinypool`, `@cloudflare/vitest-pool-workers`;
+the rest in `wrangler`, `miniflare`, `sharp`, `undici`, `ws`, `vite`, `esbuild` and
+friends) all sit under `@cloudflare/vitest-pool-workers` ^0.6 and `vitest` ^2, and
+every fix is a major-version bump (`@cloudflare/vitest-pool-workers` 0.23, `vitest`
+5). `--force` was not run: it would move the harness across several major versions
+at once, which needs its own change and its own verification. They affect a local
+test runner on a developer or CI machine, not anything a consumer installs.
