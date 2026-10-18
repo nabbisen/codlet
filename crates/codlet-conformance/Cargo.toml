@@ -12,7 +12,18 @@ publish = false  # test/dev tool; not published to crates.io
 [lints]
 workspace = true
 
+[features]
+# The concurrent single-winner test needs tokio's `LocalSet` and `Barrier`,
+# which do not build for `wasm32-unknown-unknown`. A Workers consumer depends on
+# this crate with `default-features = false` and runs everything else.
+default     = ["concurrency"]
+concurrency = ["dep:tokio", "dep:futures"]
+
 [dependencies]
-codlet = { workspace = true, features = ["test-utils"] }
-tokio = { workspace = true, features = ["rt", "macros", "sync", "time"] }
-futures = "0.3"
+codlet  = { workspace = true, features = ["test-utils"] }
+tokio   = { workspace = true, features = ["rt", "macros", "sync", "time"], optional = true }
+futures = { version = "0.3", optional = true }
+
+[dev-dependencies]
+# The test harness itself needs a runtime regardless of the `concurrency` feature.
+tokio = { workspace = true, features = ["rt", "macros"] }

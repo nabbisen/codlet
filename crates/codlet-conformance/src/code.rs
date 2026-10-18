@@ -1,6 +1,7 @@
 //! Code-store conformance tests (RFC-023).
 
 use std::future::Future;
+#[cfg(feature = "concurrency")]
 use std::sync::Arc;
 
 use crate::fixtures::*;
@@ -8,14 +9,18 @@ use codlet::state::{ClaimOutcome, CodeLookupOutcome, classify_code_lookup};
 
 // ── CodeStore conformance ────────────────────────────────────────────────────
 
-/// Run the full code-store conformance suite against a store produced by
+/// Run the sequential code-store conformance tests against a store produced by
 /// `factory`. The factory is called once per sub-test so each test starts with
 /// a clean store.
+///
+/// Needs only `S: CodeStore` — no `Send`, `Sync` or `'static` — so a `!Send`
+/// store such as the D1 one (which holds an `Rc`) can run it. The concurrent
+/// single-winner test is [`run_code_store_concurrency_conformance`].
 pub async fn run_code_store_conformance<F, Fut, S>(factory: F)
 where
     F: Fn() -> Fut,
     Fut: Future<Output = S>,
-    S: CodeStore + Send + Sync + 'static,
+    S: CodeStore,
 {
     test_insert_and_lookup_code(&factory).await;
     test_nonexistent_returns_none(&factory).await;
@@ -23,17 +28,34 @@ where
     test_used_returned_and_classifier_rejects(&factory).await;
     test_revoked_returned_and_classifier_rejects(&factory).await;
     test_revoked_and_expired_classifies_revoked(&factory).await;
-    test_exactly_one_claim_winner(&factory).await;
     test_scope_revoke_returned_and_classifier_rejects(&factory).await;
     test_wrong_scope_does_not_revoke(&factory).await;
     test_claim_code_scope_metacharacters_are_opaque(&factory).await;
+}
+
+/// Run the concurrent single-winner test (RFC-022, RFC-023): `CONCURRENCY` tasks
+/// claim the same code at once and exactly one must win.
+///
+/// Separate from [`run_code_store_conformance`] because it needs `tokio`
+/// (`LocalSet`, `Barrier`), which a Workers/wasm consumer cannot build; it is
+/// compiled only with the `concurrency` feature (on by default). **Every adapter
+/// that can run it must run both entry points** — this one is the only guard on
+/// INV-5's single-winner property under real concurrency.
+#[cfg(feature = "concurrency")]
+pub async fn run_code_store_concurrency_conformance<F, Fut, S>(factory: F)
+where
+    F: Fn() -> Fut,
+    Fut: Future<Output = S>,
+    S: CodeStore + 'static,
+{
+    test_exactly_one_claim_winner(&factory).await;
 }
 
 async fn test_insert_and_lookup_code<F, Fut, S>(factory: &F)
 where
     F: Fn() -> Fut,
     Fut: Future<Output = S>,
-    S: CodeStore + Send + Sync + 'static,
+    S: CodeStore,
 {
     let store = factory().await;
     store
@@ -57,7 +79,7 @@ async fn test_nonexistent_returns_none<F, Fut, S>(factory: &F)
 where
     F: Fn() -> Fut,
     Fut: Future<Output = S>,
-    S: CodeStore + Send + Sync + 'static,
+    S: CodeStore,
 {
     let store = factory().await;
     let found = store.lookup_code(&[code_lk("ghost")], None).await.unwrap();
@@ -75,7 +97,7 @@ async fn test_expired_returned_and_classifier_rejects<F, Fut, S>(factory: &F)
 where
     F: Fn() -> Fut,
     Fut: Future<Output = S>,
-    S: CodeStore + Send + Sync + 'static,
+    S: CodeStore,
 {
     let store = factory().await;
     store
@@ -101,7 +123,7 @@ async fn test_used_returned_and_classifier_rejects<F, Fut, S>(factory: &F)
 where
     F: Fn() -> Fut,
     Fut: Future<Output = S>,
-    S: CodeStore + Send + Sync + 'static,
+    S: CodeStore,
 {
     let store = factory().await;
     store
@@ -139,7 +161,7 @@ async fn test_revoked_returned_and_classifier_rejects<F, Fut, S>(factory: &F)
 where
     F: Fn() -> Fut,
     Fut: Future<Output = S>,
-    S: CodeStore + Send + Sync + 'static,
+    S: CodeStore,
 {
     let store = factory().await;
     store
@@ -168,7 +190,7 @@ async fn test_revoked_and_expired_classifies_revoked<F, Fut, S>(factory: &F)
 where
     F: Fn() -> Fut,
     Fut: Future<Output = S>,
-    S: CodeStore + Send + Sync + 'static,
+    S: CodeStore,
 {
     let store = factory().await;
     store
@@ -191,73 +213,11 @@ where
     );
 }
 
-/// RFC-022: exactly one concurrent claim winner (RFC-023 requirement).
-///
-/// Runs `CONCURRENCY` tasks all attempting to claim the same code concurrently.
-/// Exactly one must return `Won`; the rest must return `Lost`.
-///
-/// Uses `spawn_local` on a `LocalSet` so the test works with store
-/// implementations whose futures are `!Send` (e.g. Cloudflare Workers D1).
-async fn test_exactly_one_claim_winner<F, Fut, S>(factory: &F)
-where
-    F: Fn() -> Fut,
-    Fut: Future<Output = S>,
-    S: CodeStore + Send + Sync + 'static,
-{
-    const CONCURRENCY: usize = 8;
-    let store = Arc::new(factory().await);
-    store
-        .insert_code(code_record("race", "racesec", LATER, None))
-        .await
-        .unwrap();
-    let found = store
-        .lookup_code(&[code_lk("racesec")], None)
-        .await
-        .unwrap()
-        .unwrap();
-    let code_id = found.id.clone();
-
-    // Use a tokio barrier to maximise overlap between the concurrent claims.
-    let barrier = Arc::new(tokio::sync::Barrier::new(CONCURRENCY));
-    let local = tokio::task::LocalSet::new();
-
-    let mut handles = Vec::with_capacity(CONCURRENCY);
-    for i in 0..CONCURRENCY {
-        let store = Arc::clone(&store);
-        let code_id = code_id.clone();
-        let barrier = Arc::clone(&barrier);
-        handles.push(local.spawn_local(async move {
-            barrier.wait().await;
-            store
-                .claim_code(&ClaimRequest {
-                    code_id: &code_id,
-                    subject: &SubjectId::new(format!("u{i}")),
-                    now: NOW,
-                    purpose: None,
-                    scope: None,
-                })
-                .await
-                .unwrap()
-        }));
-    }
-
-    local.await;
-
-    let outcomes: Vec<ClaimOutcome> = futures::future::join_all(handles)
-        .await
-        .into_iter()
-        .map(|r| r.expect("task panicked"))
-        .collect();
-
-    let wins = outcomes.iter().filter(|o| **o == ClaimOutcome::Won).count();
-    assert_eq!(wins, 1, "exactly one winner expected, got {wins}");
-}
-
 async fn test_scope_revoke_returned_and_classifier_rejects<F, Fut, S>(factory: &F)
 where
     F: Fn() -> Fut,
     Fut: Future<Output = S>,
-    S: CodeStore + Send + Sync + 'static,
+    S: CodeStore,
 {
     let store = factory().await;
     let rec = code_record("cs1", "scopedsec", LATER, Some("scope-A"));
@@ -285,7 +245,7 @@ async fn test_wrong_scope_does_not_revoke<F, Fut, S>(factory: &F)
 where
     F: Fn() -> Fut,
     Fut: Future<Output = S>,
-    S: CodeStore + Send + Sync + 'static,
+    S: CodeStore,
 {
     let store = factory().await;
     store
@@ -320,7 +280,7 @@ async fn test_claim_code_scope_metacharacters_are_opaque<F, Fut, S>(factory: &F)
 where
     F: Fn() -> Fut,
     Fut: Future<Output = S>,
-    S: CodeStore + Send + Sync + 'static,
+    S: CodeStore,
 {
     let store = factory().await;
     // "victim": the code an attacker's claim targets. "other": an unrelated
@@ -412,4 +372,68 @@ where
         .unwrap();
     assert!(victim.used_at.is_some());
     assert_unused(&store, "othersec", "other").await;
+}
+
+#[cfg(feature = "concurrency")]
+/// RFC-022: exactly one concurrent claim winner (RFC-023 requirement).
+///
+/// Runs `CONCURRENCY` tasks all attempting to claim the same code concurrently.
+/// Exactly one must return `Won`; the rest must return `Lost`.
+///
+/// Uses `spawn_local` on a `LocalSet`, so it needs only `S: 'static`, not `Send`.
+/// It still needs `tokio` (`LocalSet`, `Barrier`), which does not exist on
+/// `wasm32-unknown-unknown`, hence the `concurrency` feature.
+async fn test_exactly_one_claim_winner<F, Fut, S>(factory: &F)
+where
+    F: Fn() -> Fut,
+    Fut: Future<Output = S>,
+    S: CodeStore + 'static,
+{
+    const CONCURRENCY: usize = 8;
+    let store = Arc::new(factory().await);
+    store
+        .insert_code(code_record("race", "racesec", LATER, None))
+        .await
+        .unwrap();
+    let found = store
+        .lookup_code(&[code_lk("racesec")], None)
+        .await
+        .unwrap()
+        .unwrap();
+    let code_id = found.id.clone();
+
+    // Use a tokio barrier to maximise overlap between the concurrent claims.
+    let barrier = Arc::new(tokio::sync::Barrier::new(CONCURRENCY));
+    let local = tokio::task::LocalSet::new();
+
+    let mut handles = Vec::with_capacity(CONCURRENCY);
+    for i in 0..CONCURRENCY {
+        let store = Arc::clone(&store);
+        let code_id = code_id.clone();
+        let barrier = Arc::clone(&barrier);
+        handles.push(local.spawn_local(async move {
+            barrier.wait().await;
+            store
+                .claim_code(&ClaimRequest {
+                    code_id: &code_id,
+                    subject: &SubjectId::new(format!("u{i}")),
+                    now: NOW,
+                    purpose: None,
+                    scope: None,
+                })
+                .await
+                .unwrap()
+        }));
+    }
+
+    local.await;
+
+    let outcomes: Vec<ClaimOutcome> = futures::future::join_all(handles)
+        .await
+        .into_iter()
+        .map(|r| r.expect("task panicked"))
+        .collect();
+
+    let wins = outcomes.iter().filter(|o| **o == ClaimOutcome::Won).count();
+    assert_eq!(wins, 1, "exactly one winner expected, got {wins}");
 }

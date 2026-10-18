@@ -9,6 +9,9 @@ use codlet::mem::{MemCodeStore, MemFormTokenStore, MemSessionStore};
 #[tokio::test]
 async fn mem_code_store_conformance() {
     codlet_conformance::run_code_store_conformance(|| async { MemCodeStore::new() }).await;
+    #[cfg(feature = "concurrency")]
+    codlet_conformance::run_code_store_concurrency_conformance(|| async { MemCodeStore::new() })
+        .await;
 }
 
 #[tokio::test]

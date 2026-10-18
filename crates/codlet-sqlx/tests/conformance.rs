@@ -31,6 +31,7 @@ mod sqlite_tests {
     #[tokio::test]
     async fn sqlite_code_store_conformance() {
         codlet_conformance::run_code_store_conformance(fresh_store).await;
+        codlet_conformance::run_code_store_concurrency_conformance(fresh_store).await;
     }
 
     /// RFC-048 regression: `claim_code`'s `scope` parameter must be bound,
@@ -384,6 +385,7 @@ mod postgres_tests {
     #[tokio::test]
     async fn postgres_code_store_conformance() {
         codlet_conformance::run_code_store_conformance(fresh_pg_store).await;
+        codlet_conformance::run_code_store_concurrency_conformance(fresh_pg_store).await;
     }
 
     /// RFC-048 regression: `claim_code`'s `scope` parameter must be bound,

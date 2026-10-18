@@ -13,6 +13,12 @@
 //!     codlet_conformance::run_code_store_conformance(|| async {
 //!         MyCodeStore::new_for_test().await
 //!     }).await;
+//!     // The concurrent single-winner test is a separate entry point (it needs
+//!     // tokio, behind the default `concurrency` feature). Run it too wherever
+//!     // you can.
+//!     codlet_conformance::run_code_store_concurrency_conformance(|| async {
+//!         MyCodeStore::new_for_test().await
+//!     }).await;
 //! }
 //! ```
 
@@ -21,6 +27,8 @@ pub mod fixtures;
 pub mod session;
 pub mod token;
 
+#[cfg(feature = "concurrency")]
+pub use code::run_code_store_concurrency_conformance;
 pub use code::run_code_store_conformance;
 pub use session::run_session_store_conformance;
 pub use token::run_form_token_store_conformance;
