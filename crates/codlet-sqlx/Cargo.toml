@@ -23,6 +23,10 @@ workspace = true
 default       = ["sqlite"]
 sqlite        = ["sqlx/sqlite"]
 postgres      = ["sqlx/postgres"]
+# Opt-in TLS for PostgreSQL connections (RFC-056): rustls with the ring provider
+# and the webpki root store. Named as the resolved sqlx feature, not the
+# `tls-rustls` alias, so an upstream alias change cannot swap the provider.
+postgres-rustls = ["postgres", "sqlx/tls-rustls-ring-webpki"]
 # A test gate only: enables the Docker-backed integration tests. It pulls no
 # dependency into a consumer's graph.
 postgres-test = ["postgres"]

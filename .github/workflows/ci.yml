@@ -136,6 +136,18 @@ jobs:
       # verifying the feature isolation that RFC-034 requires.
       - run: cargo test -p codlet-sqlx --no-default-features --features postgres-test
 
+  # RFC-056: the `postgres-rustls` feature, against a real TLS-enabled PostgreSQL.
+  # Runs the whole PostgreSQL suite with the feature on, plus the TLS test: a
+  # sslmode=require connection, checked from the server's side (pg_stat_ssl), with
+  # a real store operation over it. Needs Docker and the `openssl` binary.
+  test-postgres-tls:
+    name: test codlet-sqlx postgres over TLS (RFC-056)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test -p codlet-sqlx --no-default-features --features postgres-test,postgres-rustls
+
   test-examples:
     name: build and run codlet examples
     runs-on: ubuntu-latest
@@ -223,7 +235,7 @@ jobs:
             echo "$tree"
             test -n "$tree"
             echo "$tree" | grep -q '^codlet-sqlx ' || { echo "::error::unexpected cargo tree output ($features)"; exit 1; }
-            if echo "$tree" | grep -Eiq '^(testcontainers|testcontainers-modules|bollard|bollard-stubs|bollard-buildkit-proto|ureq|rustls|hyper-rustls|tokio-rustls)( |$)'; then
+            if echo "$tree" | grep -Eiq '^(testcontainers|testcontainers-modules|bollard|bollard-stubs|bollard-buildkit-proto|ureq)( |$)'; then
               echo "::error::test-only dependency reachable from a published feature ($features)"
               exit 1
             fi
