@@ -11,6 +11,7 @@ requirement are not production-safe for codlet's core use case.
 | **Atomic claim** | Exactly one concurrent `claim_code` call observes `Won` for a given code. |
 | **Atomic consume** | Exactly one concurrent `consume_form_token` call observes `Proceed` for a given token. |
 | **Lookup returns state** | `lookup_code` and `lookup_session` return any record matching the lookup key, whatever its expiry, use, or revocation state; the classifiers (`classify_code_lookup`, `classify_session`) decide whether it is redeemable or authenticated (RFC-047). |
+| **Transport encryption** | The connection between the adapter and its backing store is encrypted. See [Transport security](#transport-security-postgresql); it is a property of the *connection*, which codlet never owns, not of the adapter alone. |
 | **Single-process safe** | Safe for all requests within one process. |
 | **Multi-process safe** | Safe for multiple concurrent processes / instances. |
 
@@ -22,6 +23,45 @@ requirement are not production-safe for codlet's core use case.
 | `SqliteStore` (codlet-sqlx) | ✓ (cond. UPDATE) | ✓ (cond. UPDATE) | ✓ (WAL mode) | SQLite serialises writes; WAL recommended for concurrent reads. Also implements `CodeAdminStore`. |
 | `PostgresStore` (codlet-sqlx, `--features postgres`) | ✓ (cond. UPDATE, READ COMMITTED row-lock) | ✓ (cond. UPDATE) | ✓ | Multi-instance production. No `RETURNING`, no `FOR UPDATE`. Also implements `CodeAdminStore`. See note below. |
 | `D1CodeStore` / `D1SessionStore` / `D1FormTokenStore` (codlet-worker) | ✓ (cond. UPDATE + `meta().changes`) | ✓ (cond. UPDATE + `meta().changes`) | ✓ (D1 global) | wasm32 target only; timestamp columns are `INTEGER`, bound through `f64` (exact for Unix seconds). Also implements `CodeAdminStore`. |
+
+## Transport security (PostgreSQL)
+
+Per adapter, what is encrypted in transit:
+
+| Adapter | Transport |
+|---|---|
+| `MemCodeStore`, `SqliteStore` | No network: in-process memory, or a local file. |
+| `PostgresStore` | **Only if you configure it** — see below. Without `postgres-rustls` there is no TLS stack in the build at all. |
+| `D1*Store` | Workers' own binding to D1; not a connection the host configures. |
+
+**A remote PostgreSQL connection is not production-safe unless you do two
+things: enable the `postgres-rustls` feature of `codlet-sqlx` *and* set
+`sslmode=require` (or stronger) in the connection string.** Both. The reason is
+integrity, not just secrecy: an attacker on the path to the database can return
+a fabricated session row, or hide a `revoked_at`, and since RFC-047 the
+classifier is the only guard on what the store returns. What each knob does
+alone:
+
+| `postgres-rustls` | `sslmode` | Result |
+|---|---|---|
+| off | `require` | **Fails closed**: "TLS upgrade required by connect options but SQLx was built without TLS support enabled". Safe. |
+| on | default (`prefer`) | Opportunistic: TLS if the server offers it, but an active attacker can force a downgrade. **Not safe.** |
+| off | default (`prefer`) | **Silent plaintext**, no error — session lookups, subject ids and grant payloads in the clear. The worst case, and what you get by doing nothing. |
+| on | `require` | Encrypted; verified by CI against a real TLS-enabled server (the server itself reports the session as encrypted). |
+
+`require` encrypts but does **not** authenticate the server, so it does not stop
+an active attacker who can impersonate it. `verify-full` does, and the
+`postgres-rustls` feature's webpki root store makes it work for providers whose
+certificate chains to a public CA. codlet does not parse connection strings or
+handle `sslmode` itself; both are sqlx's, and `verify-full` is not exercised by
+codlet's tests.
+
+If your provider's CA is in the operating system's trust store rather than the
+webpki set, enable `sqlx`'s `tls-rustls-ring-native-roots` feature in your own
+manifest as well: from reading `sqlx-core`'s source, native roots take
+precedence when both are present (the build succeeds, and the webpki roots go
+unused). That precedence has been read, not exercised against a server with an
+OS-only CA.
 
 > **What is proven for D1, and by what (RFC-054).** The real Rust
 > `D1CodeStore`, `D1SessionStore` and `D1FormTokenStore` run

@@ -8,6 +8,21 @@ semantic versioning once it reaches a stable release.
 
 ### Added
 
+- **`codlet-sqlx`: opt-in TLS for PostgreSQL, the `postgres-rustls` feature
+  (RFC-056).** Until now the PostgreSQL adapter had no TLS stack, so a remote
+  connection was impossible or, with sqlx's default `sslmode=prefer`, **silently
+  in plaintext** — carrying lookup keys, subject ids and grant payloads, and
+  letting an attacker on the path return a forged session row. The feature
+  (`postgres-rustls = ["postgres", "sqlx/tls-rustls-ring-webpki"]`) adds rustls
+  with the ring provider and the webpki roots; it is off by default and absent from
+  the production dependency graph unless enabled. **Enable it *and* set
+  `sslmode=require` (or stronger)**: either alone is not enough (see
+  `docs/src/adapter-matrix-and-config.md`, "Transport security"). CI now runs a
+  `sslmode=require` connection to a TLS-enabled PostgreSQL container, checked from the
+  server's side, with a store operation over it. `deny.toml` allows
+  `CDLA-Permissive-2.0` (the licence of `webpki-roots`), and the `core-deps` gate no
+  longer bans the rustls crates, only the test-only ones.
+
 - **`codlet::hashing::MIN_HMAC_KEY_BYTES` (also `codlet::MIN_HMAC_KEY_BYTES`)
   (RFC-053 follow-up).** The 32-byte key minimum `StaticKeyProvider::new`
   enforces, now public so a custom `KeyProvider` can check its key lengths
