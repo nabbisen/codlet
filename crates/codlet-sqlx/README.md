@@ -13,7 +13,13 @@ the full `codlet-conformance` suite, including the concurrent-claim race test:
 | Feature | Store | Use case |
 |---------|-------|----------|
 | `sqlite` (default) | `SqliteStore` | Local development, single-server |
-| `postgres` | `PostgresStore` | Multi-instance production |
+| `postgres` | `PostgresStore` | Multi-instance production. **No TLS stack**: see below |
+| `postgres-rustls` | `PostgresStore` + TLS | Implies `postgres`; adds rustls (ring, webpki roots) so `sslmode=require` works |
+
+A remote PostgreSQL connection is production-safe only with `postgres-rustls`
+**and** `sslmode=require` (or stronger) in the connection string; without the
+feature the default `sslmode` silently connects in plaintext. See *Transport
+security* in `docs/src/adapter-matrix-and-config.md`.
 
 The crate's minimum supported Rust version is higher than `codlet`'s because
 of its `sqlx` dependency; see `SECURITY.md` for the per-crate table.
