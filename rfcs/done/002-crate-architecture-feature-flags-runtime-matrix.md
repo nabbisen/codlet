@@ -53,7 +53,6 @@ Runtime matrix:
 | codlet-worker | wasm/Workers | `?Send` | D1/KV |
 | codlet-sqlx | server | `Send` | SQLite/Postgres |
 | codlet-axum | server | `Send` | user-supplied stores |
-```
 
 
 ## 5. Security considerations
