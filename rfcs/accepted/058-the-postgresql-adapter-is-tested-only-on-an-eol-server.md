@@ -1,6 +1,6 @@
 # RFC-058: The PostgreSQL Adapter Is Tested Only On an End-of-Life Server
 
-- **Status:** Proposed
+- **Status:** Accepted (owner, 2026-10-19) — floor corrected from 13 to 15, see §4.1
 - **Target milestone:** M7 — **before the API freeze**
 - **Primary crate(s):** `codlet-sqlx`, CI, `docs/`
 - **Source basis:** noticed in the RFC-056 review request's closing note; established 2026-10-19
@@ -66,11 +66,39 @@ by what is tested.
 This is the root cause. Without a declared range, "is this tested on the right
 version?" has no answer, which is why three years passed.
 
-**Recommendation: support PostgreSQL 13 and newer.** 13 is the oldest release
-still receiving security updates for most of this project's horizon, and every
-construct `0002_postgres.sql` relies on is 9.6-or-older — so the floor is set by
-support policy, not by SQL. If the owner prefers a different floor, the SQL
-imposes no constraint.
+**Decision: support PostgreSQL 15 and newer.**
+
+The owner agreed to a floor of 13 on 2026-10-19, on my recommendation that 13
+was "the oldest release still receiving security updates for most of this
+project's horizon". **That was wrong**, and I checked it before writing the
+handoff rather than after:
+
+| Version | Upstream support ends | Status on 2026-10-19 |
+|---|---|---|
+| 13 | 2025-11-13 (final release 13.23) | **already end of life** |
+| 14 | 2026-11-12 | ends in ~4 weeks |
+| 15 | 2027-11-11 | supported |
+| 16 | 2028-11-09 | supported |
+| 17 | 2029-11-08 | supported |
+| 18 | 2030-11-14 | supported, newest GA |
+| 19 | — | RC 1 on 2026-10-15; pre-release |
+
+A floor of 13 would have codlet declare support for an already-EOL server,
+which is the defect this RFC exists to remove, merely two years less badly. A
+floor of 14 expires within a month of being written.
+
+So **15**, which is supported until November 2027, and **18** as the upper end —
+PostgreSQL 19 is still a release candidate and is not a pin target.
+
+The SQL imposes no constraint either way: every construct
+`0002_postgres.sql` relies on is 9.6-or-older. This is a support-policy
+decision, and the correction follows the owner's stated intent — "no reason to
+use PostgreSQL 11" — more faithfully than my own number did.
+
+**Declared support is not a claim that older versions break.** A host on 13 or
+14 will almost certainly work, for the same reason the adapter is almost
+certainly fine on 18: the SQL is unexceptional. The range says what is tested
+and promised, not what is forbidden, and §4.4 should word it that way.
 
 ### 4.2 Pin the image explicitly, and stop inheriting it
 
@@ -78,15 +106,28 @@ Override the tag in the test fixtures rather than taking
 `testcontainers-modules`' default, so the version under test is visible in
 codlet's own source and a dependency bump cannot move it.
 
-### 4.3 Test both ends of the range
+### 4.3 Test both ends of the range: 15 and 18
 
-Run the PostgreSQL conformance suite against the **oldest supported** and the
-**current stable** version. Two jobs, or one job with a matrix.
+Run the PostgreSQL conformance suite against **15** and **18**. Two jobs, or one
+job with a matrix.
 
 Both ends, not just the newest: the floor is what the declared range promises,
 and an untested floor is the same defect in a different place.
 
 The TLS test needs to run on at least one of them, not necessarily both.
+
+### 4.3.1 The pin must verify itself
+
+Pinning a tag is not enough on its own, because the failure this RFC is about
+was an inherited default doing work nobody saw. If the override is dropped, or a
+matrix variable goes unset, or a future `testcontainers-modules` changes
+behaviour, the suite would quietly test one version twice and still be green.
+
+So the test must **assert the major version of the server it actually connected
+to** matches the one requested — `SELECT current_setting('server_version')` or
+equivalent — and fail if it does not. That turns the pin from a declaration into
+a checked property, and it is the same discipline as RFC-057's "assert the column
+is absent first" and RFC-056's control connection: prove the test could fail.
 
 ### 4.4 Say what is proven, where the claim is made
 
@@ -116,8 +157,13 @@ stable" is weaker than "we ran it".
 RFC-056's TLS evidence is also PostgreSQL 11 only. TLS negotiation is handled by
 rustls and the server's OpenSSL, both of which differ across versions.
 
-## 7. Open question for the owner
+## 7. Maintenance consequence
 
-The supported floor in §4.1. Everything else follows from it, and the SQL
-imposes no constraint, so it is a support-policy decision rather than a
-technical one.
+A declared range and a pinned pair of versions both go stale. PostgreSQL 15
+leaves support in November 2027 and a new major arrives roughly every September.
+
+This RFC deliberately does **not** build automation for that. A yearly review
+item is the honest answer, and it belongs with the M7 release checklist rather
+than in a cron job nobody reads. What matters is that §4.3.1 makes a stale pin
+*visible* — the version is named in codlet's own source and checked against the
+running server — rather than silently inherited, which is the whole defect.

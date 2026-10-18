@@ -11,15 +11,15 @@ inside each file mirrors it.
 
 Counts below are derived from the filesystem, not hand-maintained.
 
-## Proposed (1)
+## Proposed (0)
+
+No open RFCs.
+
+## Accepted (1)
 
 | ID | Title | Milestone |
 |----|-------|-----------|
-| [058](./proposed/058-the-postgresql-adapter-is-tested-only-on-an-eol-server.md) | The PostgreSQL Adapter Is Tested Only On an End-of-Life Server | M7 |
-
-## Accepted (0)
-
-No RFCs awaiting implementation.
+| [058](./accepted/058-the-postgresql-adapter-is-tested-only-on-an-eol-server.md) | The PostgreSQL Adapter Is Tested Only On an End-of-Life Server | M7 |
 
 ## Implemented (57)
 
