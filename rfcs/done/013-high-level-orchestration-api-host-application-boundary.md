@@ -119,7 +119,21 @@ If any step before claim fails, no claim occurs. If claim wins but host hook fai
 - [x] Host subject creation is a callback or explicit caller step.
 - [x] Error mapping remains generic.
 - [x] Session issuance cannot occur before claim success.
-- [x] Examples show both low-level and high-level integration paths. (`sqlite_quickstart.rs`: two-step `find`+`claim` is low-level; `callback_flow_example` uses `redeem_with_callback` for high-level.)
+- [x] Examples show the supported integration path. (`sqlite_quickstart.rs`:
+  two-step `find` + `claim`; framework adapters cover the higher-level shape.)
+
+> **Amended 2026-10-18.** This item previously read "Examples show both
+> low-level and high-level integration paths", citing `callback_flow_example`'s
+> use of `redeem_with_callback` as the high-level one. That became false when
+> `redeem_with_callback` was deprecated: the claim could then only be satisfied
+> by an example teaching a deprecated, experimental API whose own comment
+> documents an interim state where a claim is won with no subject yet.
+>
+> The example function is removed rather than preserved to satisfy a stale
+> checkbox. codlet offers **one** code-redemption path — `find` + `claim` —
+> plus framework adapters, and this checklist now says so. Whether
+> `redeem_with_callback` itself survives the M7 freeze is recorded for the M7
+> API audit; the candidate decision is removal.
 
 
 ## References
