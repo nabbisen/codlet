@@ -357,23 +357,20 @@ mod sqlite_tests {
 // CI:      see .github/workflows/ci.yml  test-postgres job
 
 #[cfg(feature = "postgres-test")]
+mod common;
+
+#[cfg(feature = "postgres-test")]
 mod postgres_tests {
     use codlet::admin::{CodeAdminStore, CodeListFilter};
     use codlet::secret::{CodeId, ScopeKey};
     use codlet::store::code::{ClaimRequest, CodeStore};
     use codlet_conformance::fixtures::{LATER, NOW, code_lk, code_record};
     use codlet_sqlx::{PostgresStore, run_postgres_migrations};
-    use testcontainers_modules::{postgres::Postgres, testcontainers::runners::AsyncRunner};
 
     async fn fresh_pg_store() -> PostgresStore {
         // Spin up a real PostgreSQL container for each test group.
         // testcontainers drops the container when the returned handle is dropped.
-        let container = Postgres::default().start().await.unwrap();
-        let url = format!(
-            "postgres://postgres:postgres@127.0.0.1:{}/postgres",
-            container.get_host_port_ipv4(5432).await.unwrap()
-        );
-        let pool = sqlx::PgPool::connect(&url).await.unwrap();
+        let (container, pool) = crate::common::start_pg().await;
         run_postgres_migrations(&pool).await.unwrap();
         // Leak the container handle so it lives for the duration of the test.
         std::mem::forget(container);
@@ -462,13 +459,9 @@ mod postgres_tests {
 
     /// A PostgreSQL container with a connected pool; the schema is not applied.
     async fn bare_pg_pool() -> sqlx::PgPool {
-        let container = Postgres::default().start().await.unwrap();
-        let url = format!(
-            "postgres://postgres:postgres@127.0.0.1:{}/postgres",
-            container.get_host_port_ipv4(5432).await.unwrap()
-        );
+        let (container, pool) = crate::common::start_pg().await;
         std::mem::forget(container);
-        sqlx::PgPool::connect(&url).await.unwrap()
+        pool
     }
 
     /// RFC-057 follow-up: PostgreSQL's `last_seen_at` upgrade rests on
@@ -559,16 +552,24 @@ mod postgres_tests {
         codlet_conformance::run_form_token_store_conformance(fresh_pg_store).await;
     }
 
+    // ── Version pin (RFC-058) ─────────────────────────────────────────────
+
+    /// The pin must verify itself: the server this suite connects to is the major
+    /// version `CODLET_TEST_PG_MAJOR` asked for (default: the supported floor, 15).
+    /// If the tag override is dropped, or the CI matrix variable goes unset, this
+    /// fails instead of letting the suite test one version twice.
+    #[tokio::test]
+    async fn postgres_server_major_matches_requested() {
+        let (container, pool) = crate::common::start_pg().await; // asserts the major
+        std::mem::forget(container);
+        drop(pool);
+    }
+
     // ── Migration idempotency ─────────────────────────────────────────────
 
     #[tokio::test]
     async fn postgres_migrations_are_idempotent() {
-        let container = Postgres::default().start().await.unwrap();
-        let url = format!(
-            "postgres://postgres:postgres@127.0.0.1:{}/postgres",
-            container.get_host_port_ipv4(5432).await.unwrap()
-        );
-        let pool = sqlx::PgPool::connect(&url).await.unwrap();
+        let (container, pool) = crate::common::start_pg().await;
         run_postgres_migrations(&pool).await.unwrap();
         // Second run must succeed (IF NOT EXISTS).
         run_postgres_migrations(&pool).await.unwrap();
@@ -578,12 +579,7 @@ mod postgres_tests {
     #[tokio::test]
     async fn postgres_schema_uses_bigint_timestamps() {
         // RFC-034 §6: timestamps must be BIGINT, not INTEGER.
-        let container = Postgres::default().start().await.unwrap();
-        let url = format!(
-            "postgres://postgres:postgres@127.0.0.1:{}/postgres",
-            container.get_host_port_ipv4(5432).await.unwrap()
-        );
-        let pool = sqlx::PgPool::connect(&url).await.unwrap();
+        let (container, pool) = crate::common::start_pg().await;
         run_postgres_migrations(&pool).await.unwrap();
 
         let row: (String,) = sqlx::query_as(

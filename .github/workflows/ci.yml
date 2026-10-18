@@ -126,27 +126,45 @@ jobs:
       - run: cargo test -p codlet-sqlx --no-default-features --features sqlite
 
   # RFC-034: PostgreSQL adapter conformance (requires Docker for testcontainers).
+  # RFC-058: run on BOTH ends of the supported range (15 and 18), pinned in
+  # codlet's own test fixtures (tests/common/mod.rs) and chosen here per leg via
+  # CODLET_TEST_PG_MAJOR. The fixtures assert the server they connected to has
+  # that major version, so a leg that ends up testing the wrong server fails
+  # instead of passing; `--show-output` keeps that line in the log.
   test-postgres:
-    name: test codlet-sqlx postgres adapter (RFC-034)
+    name: test codlet-sqlx postgres adapter (RFC-034) on PostgreSQL ${{ matrix.pg }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        pg: ["15", "18"]
+    env:
+      CODLET_TEST_PG_MAJOR: ${{ matrix.pg }}
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
       # `--no-default-features` ensures the SQLite driver is NOT compiled —
       # verifying the feature isolation that RFC-034 requires.
-      - run: cargo test -p codlet-sqlx --no-default-features --features postgres-test
+      - run: cargo test -p codlet-sqlx --no-default-features --features postgres-test -- --show-output
 
   # RFC-056: the `postgres-rustls` feature, against a real TLS-enabled PostgreSQL.
   # Runs the whole PostgreSQL suite with the feature on, plus the TLS test: a
   # sslmode=require connection, checked from the server's side (pg_stat_ssl), with
   # a real store operation over it. Needs Docker and the `openssl` binary.
+  # RFC-058: on both ends of the range too — the server's OpenSSL differs.
   test-postgres-tls:
-    name: test codlet-sqlx postgres over TLS (RFC-056)
+    name: test codlet-sqlx postgres over TLS (RFC-056) on PostgreSQL ${{ matrix.pg }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        pg: ["15", "18"]
+    env:
+      CODLET_TEST_PG_MAJOR: ${{ matrix.pg }}
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo test -p codlet-sqlx --no-default-features --features postgres-test,postgres-rustls
+      - run: cargo test -p codlet-sqlx --no-default-features --features postgres-test,postgres-rustls -- --show-output
 
   test-examples:
     name: build and run codlet examples
