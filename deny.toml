@@ -47,13 +47,18 @@ allow = [
     "Zlib",
     "Unlicense",
     "BSL-1.0",
-    # Covers `ring`, `rustls-webpki`, `untrusted` -- reached only through
-    # `codlet-sqlx`'s dev-dependency on `testcontainers-modules`
-    # (testcontainers -> bollard -> rustls). It does not ship to consumers
-    # (RFC-052; the `core-deps` CI job asserts that), but `include-dev = true`
-    # below makes this check walk dev-dependencies, so the entry is still
-    # needed. Permissive, OSI-approved, no copyleft.
+    # Covers `ring`, `rustls-webpki`, `untrusted`. Reached two ways: through
+    # `codlet-sqlx`'s dev-dependency on `testcontainers-modules` (does not ship;
+    # RFC-052), and, since RFC-056, through the published opt-in feature
+    # `postgres-rustls` -- so a `rustls` advisory is now user-relevant for
+    # anyone who enables it and cannot be dismissed the way RFC-052's four were.
+    # `include-dev = true` below also keeps this entry needed. Permissive,
+    # OSI-approved, no copyleft.
     "ISC",
+    # Covers `webpki-roots` (Mozilla's CA bundle as data), reached via
+    # `codlet-sqlx`'s `postgres-rustls` feature (RFC-056). A permissive data
+    # licence from the Linux Foundation: attribution-style, no copyleft.
+    "CDLA-Permissive-2.0",
 ]
 confidence-threshold = 0.8
 # `cargo-deny` defaults this to false ("dev-dependencies are not used by
