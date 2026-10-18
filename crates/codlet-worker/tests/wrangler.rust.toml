@@ -1,0 +1,15 @@
+# Miniflare configuration for the REAL Rust D1 stores (RFC-054 stage C).
+#
+# `main` is the output of `worker-build` for the test-only crate
+# `crates/codlet-worker-miniflare` -- see `npm run build:rust`. The JavaScript
+# harness (`worker.js`, `wrangler.toml`) remains for the D1 binding behaviour and
+# the concurrent-claim route that the Rust suite cannot run in a Worker.
+
+name               = "codlet-worker-rust-test"
+main               = "./rust-build/worker/shim.mjs"
+compatibility_date = "2024-01-01"
+
+[[d1_databases]]
+binding       = "DB"
+database_name = "codlet-test-rust"
+database_id   = "local-rust"

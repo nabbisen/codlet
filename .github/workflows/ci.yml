@@ -64,15 +64,29 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
       - run: cargo build -p codlet-worker --target wasm32-unknown-unknown
+      # RFC-054 stage B: the conformance suite (minus its tokio-based concurrency
+      # test) must keep compiling for wasm, or the D1 stores cannot be tested.
+      - run: cargo check -p codlet-conformance --target wasm32-unknown-unknown --no-default-features
 
-  # RFC-033 §14: Miniflare integration tests (local D1 + KV, no credentials).
+  # RFC-033 §14 + RFC-054: Miniflare integration tests (local D1 + KV, no
+  # credentials). Two vitest projects: the JavaScript harness (D1 binding
+  # behaviour, concurrent claim) and the REAL Rust D1 stores, built to wasm by
+  # `worker-build` from the test-only crate crates/codlet-worker-miniflare and
+  # driven by codlet-conformance (RFC-054 stage C).
   wrangler-test:
     name: codlet-worker Miniflare integration tests (RFC-033 §14)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
       - uses: actions/setup-node@v4
         with: { node-version: "24" }
+      - name: install worker-build
+        run: cargo install worker-build --version 0.8.4 --locked
+      - name: build the real Rust D1 stores for Miniflare
+        run: worker-build --dev crates/codlet-worker-miniflare --out-dir ../codlet-worker/tests/rust-build
       - run: cd crates/codlet-worker/tests && npm ci && npx vitest run
 
   # RFC-009 item 3: a Send+Sync store satisfies the trait without adapter

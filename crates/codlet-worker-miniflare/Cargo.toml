@@ -1,0 +1,29 @@
+[package]
+name        = "codlet-worker-miniflare"
+description = "Test-only Worker that runs codlet-conformance against the real D1 stores inside Miniflare (RFC-054)."
+version.workspace      = true
+edition.workspace      = true
+rust-version.workspace = true
+license.workspace      = true
+authors.workspace      = true
+repository.workspace   = true
+# Test-only. Never published: it exists so `codlet-worker` can stay a library
+# with no fetch handler (RFC-054 §6).
+publish = false
+
+[lints]
+workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+# Everything here is meaningful only on wasm32; on native targets the crate is
+# empty, so `cargo check --workspace` needs no wasm toolchain.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+codlet             = { workspace = true }
+codlet-worker      = { path = "../codlet-worker" }
+# No default features: the concurrency test needs tokio, which a Worker cannot run.
+codlet-conformance = { path = "../codlet-conformance", default-features = false }
+worker             = { workspace = true, features = ["d1"] }
+serde_json         = { workspace = true }
+console_error_panic_hook = "0.1"

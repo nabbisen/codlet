@@ -7,6 +7,48 @@ use codlet::state::TokenConsumeOutcome;
 
 // ── FormTokenStore conformance ────────────────────────────────────────────────
 
+/// Names of the sequential form-token-store conformance tests, in the order
+/// [`run_form_token_store_conformance`] runs them. Each can be run alone with [`run_form_token_store_test`], so a
+/// host (e.g. a Workers harness) can report a failure by test name.
+pub const FORM_TOKEN_STORE_TESTS: &[&str] = &[
+    "valid_consume_proceeds",
+    "replay_returns_replay",
+    "expired_token_invalid",
+    "purpose_mismatch_invalid",
+    "subject_mismatch_invalid",
+    "bound_resource_mismatch_invalid",
+    "changed_zero_never_proceeds",
+    "consume_honours_every_candidate",
+    "set_token_result_honours_every_candidate",
+    "empty_candidates_match_nothing",
+];
+
+/// Run one form-token-store conformance test by its name in [`FORM_TOKEN_STORE_TESTS`].
+/// Returns `false` if `name` is not a known test (nothing was run).
+pub async fn run_form_token_store_test<F, Fut, S>(name: &str, factory: &F) -> bool
+where
+    F: Fn() -> Fut,
+    Fut: Future<Output = S>,
+    S: FormTokenStore,
+{
+    match name {
+        "valid_consume_proceeds" => test_valid_consume_proceeds(factory).await,
+        "replay_returns_replay" => test_replay_returns_replay(factory).await,
+        "expired_token_invalid" => test_expired_token_invalid(factory).await,
+        "purpose_mismatch_invalid" => test_purpose_mismatch_invalid(factory).await,
+        "subject_mismatch_invalid" => test_subject_mismatch_invalid(factory).await,
+        "bound_resource_mismatch_invalid" => test_bound_resource_mismatch_invalid(factory).await,
+        "changed_zero_never_proceeds" => test_changed_zero_never_proceeds(factory).await,
+        "consume_honours_every_candidate" => test_consume_honours_every_candidate(factory).await,
+        "set_token_result_honours_every_candidate" => {
+            test_set_token_result_honours_every_candidate(factory).await
+        }
+        "empty_candidates_match_nothing" => test_empty_candidates_match_nothing(factory).await,
+        _ => return false,
+    }
+    true
+}
+
 /// Run the full form-token-store conformance suite.
 pub async fn run_form_token_store_conformance<F, Fut, S>(factory: F)
 where
@@ -14,16 +56,12 @@ where
     Fut: Future<Output = S>,
     S: FormTokenStore,
 {
-    test_valid_consume_proceeds(&factory).await;
-    test_replay_returns_replay(&factory).await;
-    test_expired_token_invalid(&factory).await;
-    test_purpose_mismatch_invalid(&factory).await;
-    test_subject_mismatch_invalid(&factory).await;
-    test_bound_resource_mismatch_invalid(&factory).await;
-    test_changed_zero_never_proceeds(&factory).await;
-    test_consume_honours_every_candidate(&factory).await;
-    test_set_token_result_honours_every_candidate(&factory).await;
-    test_empty_candidates_match_nothing(&factory).await;
+    for name in FORM_TOKEN_STORE_TESTS {
+        assert!(
+            run_form_token_store_test(name, &factory).await,
+            "FORM_TOKEN_STORE_TESTS lists a test that run_form_token_store_test does not know: {name}"
+        );
+    }
 }
 
 async fn test_valid_consume_proceeds<F, Fut, S>(factory: &F)

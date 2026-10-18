@@ -8,6 +8,54 @@ use codlet::state::{SessionFailure, SessionValidationOutcome, classify_session};
 
 // ── SessionStore conformance ──────────────────────────────────────────────────
 
+/// Names of the sequential session-store conformance tests, in the order
+/// [`run_session_store_conformance`] runs them. Each can be run alone with [`run_session_store_test`], so a
+/// host (e.g. a Workers harness) can report a failure by test name.
+pub const SESSION_STORE_TESTS: &[&str] = &[
+    "active_session_found",
+    "expired_session_returned_and_classifier_rejects",
+    "revoked_session_returned_and_classifier_rejects",
+    "revoked_and_expired_classifies_revoked",
+    "wrong_hmac_not_active",
+    "new_session_has_no_last_seen_at",
+    "touch_session_sets_last_seen_at",
+    "touch_session_overwrites_previous_value",
+    "rotation_overlap_then_old_revoked",
+];
+
+/// Run one session-store conformance test by its name in [`SESSION_STORE_TESTS`].
+/// Returns `false` if `name` is not a known test (nothing was run).
+pub async fn run_session_store_test<F, Fut, S>(name: &str, factory: &F) -> bool
+where
+    F: Fn() -> Fut,
+    Fut: Future<Output = S>,
+    S: SessionStore,
+{
+    match name {
+        "active_session_found" => test_active_session_found(factory).await,
+        "expired_session_returned_and_classifier_rejects" => {
+            test_expired_session_returned_and_classifier_rejects(factory).await
+        }
+        "revoked_session_returned_and_classifier_rejects" => {
+            test_revoked_session_returned_and_classifier_rejects(factory).await
+        }
+        "revoked_and_expired_classifies_revoked" => {
+            test_revoked_and_expired_classifies_revoked(factory).await
+        }
+        "wrong_hmac_not_active" => test_wrong_hmac_not_active(factory).await,
+        "new_session_has_no_last_seen_at" => test_new_session_has_no_last_seen_at(factory).await,
+        "touch_session_sets_last_seen_at" => test_touch_session_sets_last_seen_at(factory).await,
+        "touch_session_overwrites_previous_value" => {
+            test_touch_session_overwrites_previous_value(factory).await
+        }
+        "rotation_overlap_then_old_revoked" => {
+            test_rotation_overlap_then_old_revoked(factory).await
+        }
+        _ => return false,
+    }
+    true
+}
+
 /// Run the full session-store conformance suite.
 pub async fn run_session_store_conformance<F, Fut, S>(factory: F)
 where
@@ -15,15 +63,12 @@ where
     Fut: Future<Output = S>,
     S: SessionStore,
 {
-    test_active_session_found(&factory).await;
-    test_expired_session_returned_and_classifier_rejects(&factory).await;
-    test_revoked_session_returned_and_classifier_rejects(&factory).await;
-    test_revoked_and_expired_classifies_revoked(&factory).await;
-    test_wrong_hmac_not_active(&factory).await;
-    test_new_session_has_no_last_seen_at(&factory).await;
-    test_touch_session_sets_last_seen_at(&factory).await;
-    test_touch_session_overwrites_previous_value(&factory).await;
-    test_rotation_overlap_then_old_revoked(&factory).await;
+    for name in SESSION_STORE_TESTS {
+        assert!(
+            run_session_store_test(name, &factory).await,
+            "SESSION_STORE_TESTS lists a test that run_session_store_test does not know: {name}"
+        );
+    }
 }
 
 async fn test_active_session_found<F, Fut, S>(factory: &F)

@@ -9,6 +9,56 @@ use codlet::state::{ClaimOutcome, CodeLookupOutcome, classify_code_lookup};
 
 // ── CodeStore conformance ────────────────────────────────────────────────────
 
+/// Names of the sequential code-store conformance tests, in the order
+/// [`run_code_store_conformance`] runs them. Each can be run alone with [`run_code_store_test`], so a
+/// host (e.g. a Workers harness) can report a failure by test name.
+pub const CODE_STORE_TESTS: &[&str] = &[
+    "insert_and_lookup_code",
+    "nonexistent_returns_none",
+    "expired_returned_and_classifier_rejects",
+    "used_returned_and_classifier_rejects",
+    "revoked_returned_and_classifier_rejects",
+    "revoked_and_expired_classifies_revoked",
+    "scope_revoke_returned_and_classifier_rejects",
+    "wrong_scope_does_not_revoke",
+    "claim_code_scope_metacharacters_are_opaque",
+];
+
+/// Run one code-store conformance test by its name in [`CODE_STORE_TESTS`].
+/// Returns `false` if `name` is not a known test (nothing was run).
+pub async fn run_code_store_test<F, Fut, S>(name: &str, factory: &F) -> bool
+where
+    F: Fn() -> Fut,
+    Fut: Future<Output = S>,
+    S: CodeStore,
+{
+    match name {
+        "insert_and_lookup_code" => test_insert_and_lookup_code(factory).await,
+        "nonexistent_returns_none" => test_nonexistent_returns_none(factory).await,
+        "expired_returned_and_classifier_rejects" => {
+            test_expired_returned_and_classifier_rejects(factory).await
+        }
+        "used_returned_and_classifier_rejects" => {
+            test_used_returned_and_classifier_rejects(factory).await
+        }
+        "revoked_returned_and_classifier_rejects" => {
+            test_revoked_returned_and_classifier_rejects(factory).await
+        }
+        "revoked_and_expired_classifies_revoked" => {
+            test_revoked_and_expired_classifies_revoked(factory).await
+        }
+        "scope_revoke_returned_and_classifier_rejects" => {
+            test_scope_revoke_returned_and_classifier_rejects(factory).await
+        }
+        "wrong_scope_does_not_revoke" => test_wrong_scope_does_not_revoke(factory).await,
+        "claim_code_scope_metacharacters_are_opaque" => {
+            test_claim_code_scope_metacharacters_are_opaque(factory).await
+        }
+        _ => return false,
+    }
+    true
+}
+
 /// Run the sequential code-store conformance tests against a store produced by
 /// `factory`. The factory is called once per sub-test so each test starts with
 /// a clean store.
@@ -22,15 +72,12 @@ where
     Fut: Future<Output = S>,
     S: CodeStore,
 {
-    test_insert_and_lookup_code(&factory).await;
-    test_nonexistent_returns_none(&factory).await;
-    test_expired_returned_and_classifier_rejects(&factory).await;
-    test_used_returned_and_classifier_rejects(&factory).await;
-    test_revoked_returned_and_classifier_rejects(&factory).await;
-    test_revoked_and_expired_classifies_revoked(&factory).await;
-    test_scope_revoke_returned_and_classifier_rejects(&factory).await;
-    test_wrong_scope_does_not_revoke(&factory).await;
-    test_claim_code_scope_metacharacters_are_opaque(&factory).await;
+    for name in CODE_STORE_TESTS {
+        assert!(
+            run_code_store_test(name, &factory).await,
+            "CODE_STORE_TESTS lists a test that run_code_store_test does not know: {name}"
+        );
+    }
 }
 
 /// Run the concurrent single-winner test (RFC-022, RFC-023): `CONCURRENCY` tasks

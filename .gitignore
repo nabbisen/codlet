@@ -32,3 +32,7 @@ node_modules/
 # Regression cases are not curated for commit; a real regression is recorded
 # in the test's assertion output, not this directory.
 **/proptest-regressions/
+
+# RFC-054: worker-build output for the test-only Rust Worker (rebuilt, never committed)
+crates/codlet-worker/tests/rust-build/
+crates/codlet-worker-miniflare/build/

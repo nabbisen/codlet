@@ -29,6 +29,8 @@ pub mod token;
 
 #[cfg(feature = "concurrency")]
 pub use code::run_code_store_concurrency_conformance;
-pub use code::run_code_store_conformance;
-pub use session::run_session_store_conformance;
-pub use token::run_form_token_store_conformance;
+pub use code::{CODE_STORE_TESTS, run_code_store_conformance, run_code_store_test};
+pub use session::{SESSION_STORE_TESTS, run_session_store_conformance, run_session_store_test};
+pub use token::{
+    FORM_TOKEN_STORE_TESTS, run_form_token_store_conformance, run_form_token_store_test,
+};

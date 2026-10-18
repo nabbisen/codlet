@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "test": "vitest run",
+    "build:rust": "worker-build --dev ../../codlet-worker-miniflare --out-dir ../codlet-worker/tests/rust-build",
+    "test": "npm run build:rust && vitest run",
     "test:watch": "vitest"
   },
   "devDependencies": {

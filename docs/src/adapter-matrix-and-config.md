@@ -23,6 +23,21 @@ requirement are not production-safe for codlet's core use case.
 | `PostgresStore` (codlet-sqlx, `--features postgres`) | ✓ (cond. UPDATE, READ COMMITTED row-lock) | ✓ (cond. UPDATE) | ✓ | Multi-instance production. No `RETURNING`, no `FOR UPDATE`. Also implements `CodeAdminStore`. See note below. |
 | `D1CodeStore` / `D1SessionStore` / `D1FormTokenStore` (codlet-worker) | ✓ (cond. UPDATE + `meta().changes`) | ✓ (cond. UPDATE + `meta().changes`) | ✓ (D1 global) | wasm32 target only; timestamp columns are `INTEGER`, bound through `f64` (exact for Unix seconds). Also implements `CodeAdminStore`. |
 
+> **What is proven for D1, and by what (RFC-054).** The real Rust
+> `D1CodeStore`, `D1SessionStore` and `D1FormTokenStore` run
+> `codlet-conformance`'s sequential suites inside Miniflare against a real D1
+> binding — one test per conformance test, in the CI job *codlet-worker
+> Miniflare integration tests*. That is **not** parity with the other adapters:
+> (1) the concurrent single-winner test needs `tokio` and cannot run in a
+> Worker, so for D1 it is covered only by the JavaScript harness's concurrent
+> `UPDATE` route, which runs SQL mirrored from the Rust code, not the Rust code;
+> (2) `run_d1_migrations` is currently **rejected by D1** — it hands the whole
+> file to `D1Database::exec` — so apply `migrations/0001_initial.sql` one
+> statement at a time (strip comments first; the file has a `;` inside one)
+> until that is fixed, and note nothing upgrades a D1 database created before
+> RFC-044 with its `last_seen_at` column; (3) Miniflare simulates D1 locally and
+> is not Cloudflare's production service.
+
 > **`PostgresStore` conformance status (RFC-038).** Until v0.17.1,
 > `run_postgres_migrations` could not create its own schema: a hand-rolled SQL
 > splitter mishandled a semicolon inside a migration comment, so every call

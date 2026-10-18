@@ -5,6 +5,7 @@ members = [
     "crates/codlet-conformance",
     "crates/codlet-sqlx",
     "crates/codlet-worker",
+    "crates/codlet-worker-miniflare",
     "xtask",
     "examples/*",
 ]
