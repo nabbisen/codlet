@@ -51,7 +51,8 @@ async fn fetch(req: Request, env: Env, _ctx: Context) -> Result<Response> {
     // D1Database is not Clone; Workers are single-threaded so Rc is correct.
     let db = std::rc::Rc::new(env.d1("DB")?);
 
-    // Run migrations on every deploy (idempotent — IF NOT EXISTS).
+    // Safe to run on every startup: creates missing tables and indexes, and adds
+    // `codlet_sessions.last_seen_at` to a database created before RFC-044.
     run_d1_migrations(&db).await?;
 
     // Load HMAC keys from Wrangler secrets. Fails closed if missing (INV-2).
@@ -106,10 +107,14 @@ id      = "<your-kv-id>"
 Integration tests use Miniflare (no Cloudflare account required):
 
 ```sh
+cargo install worker-build --version 0.8.4 --locked   # once
 cd crates/codlet-worker/tests
 npm install
-npx vitest run
+npm test        # builds the Rust test Worker, then runs both vitest projects
 ```
+
+The real Rust D1 stores are built from `crates/codlet-worker-miniflare`; see
+`tests/README.md` for what each project covers.
 
 ## Building
 

@@ -16,39 +16,34 @@
  * from the Rust implementation so any divergence is a test failure.
  */
 
-// The schema is NOT defined here. `/migrate` receives the text of the shipped
-// `crates/codlet-worker/migrations/0001_initial.sql` in the request body (the
-// vitest file reads it from disk). A copy of
-// the schema in this file is exactly how the harness once came to test a table
-// shape whose eleven timestamp columns had a different type from the ones codlet
-// ships.
+// The schema is NOT defined here, and neither is any way of applying it. `/migrate`
+// calls the SHIPPED Rust runner (`run_d1_migrations`, compiled to wasm in
+// crates/codlet-worker-miniflare and built into ./rust-build) with this Worker's
+// own D1 binding. That removes the JavaScript copy of the schema this harness
+// once carried (11 timestamp columns of the wrong type) AND the second copy of the
+// statement splitter that would otherwise be needed here (RFC-057 §3: one
+// splitter in the codebase). Requires `npm run build:rust` first.
+import rust from './rust-build/worker/shim.mjs';
 
 export default {
-  async fetch(req, env) {
+  async fetch(req, env, ctx) {
     const url = new URL(req.url);
     const db = env.DB;
     const kv = env.CODLET_RL;
 
-    // POST /migrate  body: the shipped migration SQL (text/plain)
-    // Applies the shipped file statement by statement. D1's `exec` cannot take
-    // the file as written (see /migrate-exec), so comments are stripped first
-    // and the text split on `;` -- stripping BEFORE splitting matters: the
-    // shipped file has a `;` inside a `--` comment.
+    // POST /migrate  (body ignored)
+    // Applies the shipped schema by running the shipped Rust `run_d1_migrations`.
+    // The built Worker's default export is a WorkerEntrypoint class: construct it
+    // with this Worker's ctx/env, so it sees the same D1 binding.
     if (url.pathname === '/migrate') {
-      const sql = await req.text();
-      if (!sql.trim()) {
-        return new Response('/migrate needs the shipped migration SQL as its body', { status: 400 });
+      const entry = new rust(ctx, env);
+      // Called twice to verify idempotency.
+      for (let call = 1; call <= 2; call++) {
+        const res = await entry.fetch(new Request('http://rust/run_d1_migrations', { method: 'POST' }));
+        const body = await res.json();
+        if (!body.ok) return new Response(`run_d1_migrations call ${call} failed: ${body.error}`, { status: 500 });
       }
-      const statements = sql
-        .replace(/--[^\n]*/g, '')
-        .split(';')
-        .map((st) => st.trim())
-        .filter(Boolean);
-      // Run twice to verify idempotency
-      for (let pass = 0; pass < 2; pass++) {
-        for (const st of statements) await db.prepare(st).run();
-      }
-      return Response.json({ ok: true, statements: statements.length });
+      return Response.json({ ok: true });
     }
 
     // POST /migrate-exec  body: the shipped migration SQL (text/plain)
@@ -166,20 +161,6 @@ export default {
          WHERE id = ? AND revoked_at IS NULL`
       ).bind(b.now, b.id).run();
       return Response.json({ ok: true });
-    }
-
-    // POST /sessions/simulate-pre-rfc-044  body: {}
-    // Takes the *shipped* codlet_sessions table back to its pre-RFC-044 shape
-    // by dropping the column, rather than re-declaring the table here.
-    if (url.pathname === '/sessions/simulate-pre-rfc-044' && req.method === 'POST') {
-      await db.prepare('ALTER TABLE codlet_sessions DROP COLUMN last_seen_at').run();
-      return Response.json({ ok: true });
-    }
-
-    // POST /sessions/columns  body: {}  -> {columns: [...]}
-    if (url.pathname === '/sessions/columns' && req.method === 'POST') {
-      const { results } = await db.prepare("PRAGMA table_info('codlet_sessions')").run();
-      return Response.json({ columns: results.map((r) => r.name) });
     }
 
     // POST /tokens/insert  body: {lookup_key, key_version, subject_kind, purpose, issued_at, expires_at}

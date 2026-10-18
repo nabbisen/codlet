@@ -122,6 +122,22 @@ semantic versioning once it reaches a stable release.
 
 ### Fixed
 
+- **`codlet-worker`: `run_d1_migrations` now works, and upgrades a pre-RFC-044
+  database (RFC-057).** Two defects found the day the D1 code first ran in a test
+  (RFC-054), both present since the code was added. (1) The function handed the
+  whole migration file to `D1Database::exec`, which D1 treats line by line, so it
+  was rejected (`D1_EXEC_ERROR … did not contain a statement`) and could not
+  succeed on any call, although the README and crate docs show it as the setup
+  step. It now splits the file into statements — comments are scanned out as it
+  goes, so the `;` inside a `--` comment (RFC-038's trap) cannot cut a statement
+  in half — and applies them with `D1Database::batch`. (2) A D1 database created
+  before RFC-044 never gained `codlet_sessions.last_seen_at`, although the schema
+  file's comment promised an idempotent `ALTER` that did not exist, so
+  `D1SessionStore` could not work against it. The runner now checks
+  `pragma_table_info` and adds the column only when absent, as `codlet-sqlx`'s
+  SQLite runner does. Verified in Miniflare against the shipped runner;
+  Cloudflare's production D1 has not been tried.
+
 - **A form token issued under a previous key can now be consumed after a key
   rotation (RFC-051).** All four `FormTokenStore` adapters (in-memory, SQLite,
   PostgreSQL, D1) used only the *first* lookup-key candidate in

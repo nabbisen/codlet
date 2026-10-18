@@ -28,14 +28,16 @@ npx vitest run
 
 (`npm test` does both steps.)
 
-## Known gaps, recorded as `it.fails` tests
+## What the migration tests pin (RFC-057)
 
-These pass today *because* they fail; when the underlying defect is fixed they
-flip and tell you to remove `.fails`. See `conformance.test.ts` and
-`rust_d1.test.ts`.
-
-- `run_d1_migrations` is rejected by D1 (one `exec` of a multi-line file).
-- Nothing adds `last_seen_at` to a `codlet_sessions` table created before RFC-044.
+- `rust_d1.test.ts` runs the shipped `run_d1_migrations` for real: it applies, it is
+  idempotent, and it upgrades a pre-RFC-044 `codlet_sessions` (the whole session
+  suite is also run against such an upgraded database).
+- `conformance.test.ts` pins *why* the runner splits the file: D1's `exec`
+  rejects the shipped multi-line file, and this test says so if D1 ever changes.
+- The statement splitter lives in one place, `crates/codlet-worker/src/sql_statements.rs`,
+  with native unit tests (including a `;` inside a `--` comment). Nothing else in the
+  workspace splits SQL: the JS harness migrates by calling the shipped Rust runner.
 
 ## npm advisories
 

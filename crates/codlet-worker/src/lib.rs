@@ -49,6 +49,11 @@
 
 #![forbid(unsafe_code)]
 
+// The statement splitter has no `worker` dependency, so its tests run natively.
+// Outside tests it is used only by the wasm32-only migration runner.
+#[cfg(any(target_arch = "wasm32", test))]
+mod sql_statements;
+
 // All implementation is wasm32-only.
 #[cfg(target_arch = "wasm32")]
 pub mod d1;

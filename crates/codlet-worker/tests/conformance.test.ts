@@ -14,7 +14,8 @@
 
 import { SELF } from "cloudflare:test";
 import { describe, it, expect, beforeEach } from "vitest";
-// The schema under test is the file codlet ships, read from disk -- never a copy.
+// Used only to pin how D1's `exec` treats the shipped file (RFC-057); the schema itself
+// is applied by the shipped Rust runner, never by a copy of it here.
 import MIGRATION_SQL from "../migrations/0001_initial.sql?raw";
 
 const NOW = Math.floor(Date.now() / 1000);
@@ -40,13 +41,9 @@ async function fetch_migrate_exec(): Promise<{ ok: boolean; error?: string }> {
   return res.json() as Promise<{ ok: boolean; error?: string }>;
 }
 
-/** Run the shipped migration (twice, to prove idempotency) via the worker's /migrate. */
+/** Run the shipped Rust `run_d1_migrations` (twice, to prove idempotency) via the worker's /migrate. */
 async function migrate(): Promise<{ ok: boolean }> {
-  const res = await SELF.fetch("http://worker/migrate", {
-    method: "POST",
-    headers: { "Content-Type": "text/plain" },
-    body: MIGRATION_SQL,
-  });
+  const res = await SELF.fetch("http://worker/migrate", { method: "POST" });
   if (!res.ok) throw new Error(`/migrate => ${res.status}: ${await res.text()}`);
   return res.json() as Promise<{ ok: boolean }>;
 }
@@ -66,38 +63,21 @@ describe("migration", () => {
     expect(res.ok).toBe(true);
   });
 
-  // FINDING (RFC-054 stage A). `run_d1_migrations` (crates/codlet-worker/src/
-  // migration.rs) applies the shipped file with ONE `D1Database::exec` of the whole
-  // text. D1's exec treats each line as a statement; the file's first line is a
-  // comment, and its CREATE TABLE statements span lines. This test asserts what the
-  // Rust runner needs to be true and is `it.fails` because it is not: the day the
-  // runner is fixed (or the migration reshaped) it flips to a failure that says
-  // "remove .fails". Until then it is the executable record of the defect.
-  it.fails("the shipped migration applies via a single db.exec, as run_d1_migrations does it", async () => {
+  // Why `run_d1_migrations` splits the shipped file into statements (RFC-057).
+  // D1's `exec` treats each LINE as a statement; the file's first line is a
+  // comment and its CREATE TABLEs span lines, so one `exec` of the whole file is
+  // rejected. This pins that behaviour of the D1 binding: if it ever starts
+  // accepting the file, the splitter in crates/codlet-worker/src/sql_statements.rs
+  // may no longer be needed, and this test says so.
+  it("RFC-057: D1 `exec` rejects the shipped multi-line migration file (so it must be split)", async () => {
     const res = await fetch_migrate_exec();
-    expect(res.error ?? "").toBe("");
-    expect(res.ok).toBe(true);
+    expect(res.ok, "exec now accepts the shipped file: RFC-057's statement splitter may be unnecessary").toBe(false);
+    expect(res.error ?? "").toContain("did not contain a statement");
   });
 
-  // FINDING (RFC-054 stage A), second. The old harness ran its own migration,
-  // which contained an idempotent `ALTER TABLE .. ADD COLUMN last_seen_at` and
-  // called itself a mirror of migration.rs. Rust's migration.rs has no ALTER at
-  // all, and the shipped SQL's `CREATE TABLE IF NOT EXISTS` is a no-op on an
-  // existing table. So a D1 database created before RFC-044 never gains the
-  // column, and `D1SessionStore` (which SELECTs/UPDATEs `last_seen_at`) would
-  // fail against it. `it.fails` for the same reason as above.
-  it.fails("RFC-044: adds last_seen_at to a pre-existing codlet_sessions table", async () => {
-    await migrate();
-    // Take the shipped table back to its pre-RFC-044 shape (no last_seen_at).
-    await post("/sessions/simulate-pre-rfc-044", {});
-    const before = await post("/sessions/columns", {}) as { columns: string[] };
-    expect(before.columns).not.toContain("last_seen_at"); // the setup worked
-
-    await migrate();
-
-    const after = await post("/sessions/columns", {}) as { columns: string[] };
-    expect(after.columns).toContain("last_seen_at"); // <- fails: nothing adds it
-  });
+  // The upgrade path ("RFC-044: adds last_seen_at to a pre-existing table") is
+  // exercised against the REAL Rust runner in rust_d1.test.ts (RFC-057). The old
+  // test here ran a JavaScript migration that no longer exists.
 });
 
 // ── D1CodeStore ───────────────────────────────────────────────────────────────
