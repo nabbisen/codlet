@@ -150,7 +150,7 @@ where
         rate_key: Option<&RateLimitKey>,
     ) -> Result<(), RedeemError> {
         if self.rate_limit_policy.is_some() && rate_key.is_none() {
-            return Err(RedeemError::Internal {
+            return Err(RedeemError::Misconfigured {
                 cause: "a rate-limit policy is configured but no rate_key was supplied; \
                         pass the caller's RateLimitKey"
                     .to_string(),
@@ -170,7 +170,7 @@ where
     ///
     /// Rate limiting is applied here if configured. A manager built with
     /// [`Self::new`] has a rate-limit policy, so it **requires** `rate_key`:
-    /// passing `None` returns [`RedeemError::Internal`] before any work is
+    /// passing `None` returns [`RedeemError::Misconfigured`] before any work is
     /// done, because a limiter that is configured but cannot act would
     /// otherwise be skipped silently (RFC-055). Only a manager built with the
     /// deprecated `without_rate_limit` accepts `None`.
@@ -295,13 +295,14 @@ where
     ///
     /// Rate-limit failures are recorded on a failed claim, and cleared on a
     /// successful one. As with [`Self::find`], a manager with a rate-limit
-    /// policy requires `rate_key`; `None` returns [`RedeemError::Internal`]
+    /// policy requires `rate_key`; `None` returns [`RedeemError::Misconfigured`]
     /// before the claim is attempted (RFC-055).
     ///
     /// # Errors
     /// Returns [`RedeemError::ClaimLost`] if the atomic claim was lost, or
-    /// [`RedeemError::Internal`] on store failure or a rate-limit policy
-    /// configured without a `rate_key`.
+    /// [`RedeemError::Internal`] on store failure, or
+    /// [`RedeemError::Misconfigured`] for a rate-limit policy configured without
+    /// a `rate_key`.
     pub async fn claim(
         &self,
         record: &StoredCode,

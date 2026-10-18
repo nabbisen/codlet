@@ -155,11 +155,11 @@ async fn issue(auth: &Limited) -> String {
 
 fn assert_misconfiguration(err: &RedeemError) {
     match err {
-        RedeemError::Internal { cause, public } => {
+        RedeemError::Misconfigured { cause, public } => {
             assert!(cause.contains("rate_key"), "cause should name the problem");
             assert_eq!(*public, PublicRedemptionError::TemporarilyUnavailable);
         }
-        other => panic!("expected RedeemError::Internal, got {other:?}"),
+        other => panic!("expected RedeemError::Misconfigured, got {other:?}"),
     }
 }
 

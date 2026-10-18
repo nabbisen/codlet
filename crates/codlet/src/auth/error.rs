@@ -43,11 +43,24 @@ pub enum RedeemError {
         /// Public-safe mapping.
         public: PublicRedemptionError,
     },
-    /// A store or key failure, or a host configuration error (e.g. a
-    /// rate-limit policy configured without a `rate_key`, RFC-055), prevented
-    /// the operation. Never a client problem.
+    /// A transient store or key failure prevented the operation.
     Internal {
         /// Internal diagnostic (log, do not display).
+        cause: String,
+        /// Public-safe mapping.
+        public: PublicRedemptionError,
+    },
+    /// The manager is configured in a way that cannot work, and will keep
+    /// failing until the host changes its code — e.g. a rate-limit policy is
+    /// configured but the call supplied no `rate_key` (RFC-055). Not a client
+    /// problem and not transient, so a retry cannot help.
+    ///
+    /// Distinct from [`Self::Internal`] so a host can tell a misconfiguration
+    /// from a store outage without reading `cause`. The `public` mapping is the
+    /// same opaque [`PublicRedemptionError::TemporarilyUnavailable`] and
+    /// discloses nothing about the configuration.
+    Misconfigured {
+        /// What is misconfigured (log, do not display).
         cause: String,
         /// Public-safe mapping.
         public: PublicRedemptionError,
@@ -63,6 +76,7 @@ impl RedeemError {
             | Self::NotRedeemable { public, .. }
             | Self::ClaimLost { public }
             | Self::Internal { public, .. }
+            | Self::Misconfigured { public, .. }
             | Self::RateLimited { public } => public,
         }
     }

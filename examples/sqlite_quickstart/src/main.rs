@@ -136,32 +136,3 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
-
-/// Demonstrate the callback-based (high-level) flow.
-///
-/// This satisfies RFC-013 §10.4 item 5: "Examples show both low-level
-/// and high-level integration paths." The two-step `find` + `claim` is the
-/// low-level path above; this is the high-level path.
-///
-/// The callback only runs after a confirmed won claim (INV-7).
-#[allow(dead_code)]
-#[allow(deprecated)] // demonstrates the experimental redeem_with_callback API (RFC-D)
-async fn callback_flow_example(
-    code_auth: &codlet::auth::CodeAuth<
-        SqliteStore,
-        MemRateLimitStore,
-        StaticKeyProvider,
-        codlet::clock::SystemClock,
-        codlet::audit::NoopAuditSink,
-    >,
-    raw_code: &str,
-    rate_key: &RateLimitKey,
-) -> Result<codlet::auth::RedeemSuccess, codlet::auth::RedeemError> {
-    code_auth
-        .redeem_with_callback(raw_code, Some(rate_key), |_record| async {
-            // The host creates or resolves its subject here, *after* the claim
-            // is won. codlet does not create users — the host owns that step.
-            Ok::<_, std::convert::Infallible>(codlet::secret::SubjectId::new("user-99".into()))
-        })
-        .await
-}

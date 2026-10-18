@@ -127,7 +127,9 @@ pub enum PublicRedemptionError {
     /// hint (does not reveal code existence).
     #[error("too many attempts — please wait and try again")]
     RateLimited,
-    /// A transient problem prevented the check. The code was not consumed.
+    /// The service could not perform the check: usually a transient problem,
+    /// but it can also be a host misconfiguration that no retry will fix. The
+    /// code was not consumed. Deliberately says nothing about which.
     #[error("service temporarily unavailable")]
     TemporarilyUnavailable,
 }

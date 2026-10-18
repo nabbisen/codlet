@@ -21,9 +21,12 @@ semantic versioning once it reaches a stable release.
   the limiter only when given *both* a policy and a `RateLimitKey`, so a host
   that built the manager with `CodeAuth::new(.., rate_limit_policy)` and then
   passed `rate_key: None` ran with no rate limiting, no error and no audit
-  event. They now return `RedeemError::Internal` before doing any work (no
-  limiter check, no store access); its public mapping is the existing opaque
-  `TemporarilyUnavailable`. A manager built with the deprecated
+  event. They now return the new `RedeemError::Misconfigured` before doing any
+  work (no limiter check, no store access); its public mapping is the existing
+  opaque `TemporarilyUnavailable`, and no public variant was added.
+  **`RedeemError` has no `#[non_exhaustive]`, so adding the variant breaks a
+  host that matches it exhaustively without a wildcard arm** (nothing in this
+  repository does). A manager built with the deprecated
   `without_rate_limit` has no policy and still accepts `None`. Signatures are
   unchanged. Callers that passed `None` to a rate-limited manager must now pass
   the caller's `RateLimitKey`.
