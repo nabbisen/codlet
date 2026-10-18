@@ -80,7 +80,8 @@ pub use error::{
     PublicSessionError, RandomError, RedemptionFailReason,
 };
 pub use hashing::{
-    HmacKeyRef, KeyProvider, KeyVersion, LookupKey, SecretDomain, SecretHasher, StaticKeyProvider,
+    HmacKeyRef, KeyProvider, KeyVersion, LookupKey, MIN_HMAC_KEY_BYTES, SecretDomain, SecretHasher,
+    StaticKeyProvider,
 };
 pub use metrics::{MetricsObserver, NoopMetrics, Outcome, counter};
 pub use rng::{RandomSource, SystemRandom};

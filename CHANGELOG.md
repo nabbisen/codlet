@@ -6,6 +6,14 @@ semantic versioning once it reaches a stable release.
 
 ## [Unreleased]
 
+### Added
+
+- **`codlet::hashing::MIN_HMAC_KEY_BYTES` (also `codlet::MIN_HMAC_KEY_BYTES`)
+  (RFC-053 follow-up).** The 32-byte key minimum `StaticKeyProvider::new`
+  enforces, now public so a custom `KeyProvider` can check its key lengths
+  against it instead of hardcoding the number. `KeyProvider`'s contract docs
+  cite it.
+
 ### Changed
 
 - **Rate limiting is documented as required for every code policy, and

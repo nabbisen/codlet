@@ -141,7 +141,8 @@ impl core::fmt::Debug for HmacKeyRef<'_> {
 /// # Contract for implementations
 ///
 /// Every key an implementation returns — active and historical — **must be at
-/// least 32 bytes** of random material (the HMAC-SHA-256 output length).
+/// least [`MIN_HMAC_KEY_BYTES`] (32) bytes** of random material (the
+/// HMAC-SHA-256 output length).
 /// [`StaticKeyProvider`] enforces this at construction. [`SecretHasher::new`]
 /// is infallible and does **not** check it, so a custom provider that returns a
 /// shorter key is accepted silently; this requirement is the only safeguard.
@@ -168,8 +169,13 @@ pub trait KeyProvider {
 }
 
 /// The minimum length, in bytes, of any HMAC key: the HMAC-SHA-256 output
-/// length. Enforced by [`StaticKeyProvider::new`].
-const MIN_HMAC_KEY_BYTES: usize = 32;
+/// length.
+///
+/// [`StaticKeyProvider::new`] enforces it. A custom [`KeyProvider`] is expected
+/// to honour it too — nothing checks it there, because [`SecretHasher::new`] is
+/// infallible — so an implementation can compare its key lengths against this
+/// constant rather than hardcoding the number.
+pub const MIN_HMAC_KEY_BYTES: usize = 32;
 
 /// A key provider holding an active key and zero or more previous keys, in
 /// memory. Suitable for production when constructed from real secret material
