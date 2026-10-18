@@ -159,7 +159,7 @@ mod rfc_c_purpose_scope {
         mem::{MemCodeStore, MemRateLimitStore},
         rng::SystemRandom,
         secret::{CodeId, SubjectId},
-        store::ratelimit::RateLimitPolicy,
+        store::ratelimit::{RateLimitKey, RateLimitPolicy},
     };
     use std::time::Duration;
 
@@ -183,6 +183,8 @@ mod rfc_c_purpose_scope {
     #[tokio::test]
     async fn purpose_and_scope_surface_on_found_record() {
         let a = auth();
+        // RFC-055: this manager has a rate-limit policy, so it needs a key.
+        let key = RateLimitKey::new("test-client");
         let mut rng = SystemRandom::new();
         let (_, plain) = a
             .issue_code(
@@ -194,7 +196,7 @@ mod rfc_c_purpose_scope {
             )
             .await
             .unwrap();
-        let found = a.find(plain.expose(), None).await.unwrap();
+        let found = a.find(plain.expose(), Some(&key)).await.unwrap();
         assert_eq!(found.purpose.as_deref(), Some("invite"));
         assert_eq!(found.scope.as_deref(), Some("community-1"));
     }
@@ -202,6 +204,8 @@ mod rfc_c_purpose_scope {
     #[tokio::test]
     async fn claim_with_matching_purpose_and_scope_succeeds() {
         let a = auth();
+        // RFC-055: this manager has a rate-limit policy, so it needs a key.
+        let key = RateLimitKey::new("test-client");
         let mut rng = SystemRandom::new();
         let (_, plain) = a
             .issue_code(
@@ -213,8 +217,10 @@ mod rfc_c_purpose_scope {
             )
             .await
             .unwrap();
-        let found = a.find(plain.expose(), None).await.unwrap();
-        let r = a.claim(&found, SubjectId::new("user-1".into()), None).await;
+        let found = a.find(plain.expose(), Some(&key)).await.unwrap();
+        let r = a
+            .claim(&found, SubjectId::new("user-1".into()), Some(&key))
+            .await;
         assert!(
             r.is_ok(),
             "correct purpose/scope must allow claim: {:?}",
@@ -225,13 +231,17 @@ mod rfc_c_purpose_scope {
     #[tokio::test]
     async fn code_without_purpose_is_claimable() {
         let a = auth();
+        // RFC-055: this manager has a rate-limit policy, so it needs a key.
+        let key = RateLimitKey::new("test-client");
         let mut rng = SystemRandom::new();
         let (_, plain) = a
             .issue_code(&mut rng, CodeId::new("c3".into()), None, None, None)
             .await
             .unwrap();
-        let found = a.find(plain.expose(), None).await.unwrap();
-        let r = a.claim(&found, SubjectId::new("user-2".into()), None).await;
+        let found = a.find(plain.expose(), Some(&key)).await.unwrap();
+        let r = a
+            .claim(&found, SubjectId::new("user-2".into()), Some(&key))
+            .await;
         assert!(r.is_ok());
     }
 }

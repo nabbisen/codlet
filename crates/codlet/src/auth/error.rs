@@ -43,7 +43,9 @@ pub enum RedeemError {
         /// Public-safe mapping.
         public: PublicRedemptionError,
     },
-    /// A transient store or key failure prevented the operation.
+    /// A store or key failure, or a host configuration error (e.g. a
+    /// rate-limit policy configured without a `rate_key`, RFC-055), prevented
+    /// the operation. Never a client problem.
     Internal {
         /// Internal diagnostic (log, do not display).
         cause: String,

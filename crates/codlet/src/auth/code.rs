@@ -137,6 +137,29 @@ where
         Ok((id, plain))
     }
 
+    /// RFC-055: a configured rate-limit policy cannot act without a key, and
+    /// skipping it silently would switch off the control the host configured.
+    /// Reject the call before any work — no limiter check, no store access.
+    ///
+    /// This is a host configuration error, not a client problem, so it maps to
+    /// the same opaque public error as any other internal failure and says
+    /// nothing about server configuration. A manager with no policy (the
+    /// deprecated `without_rate_limit`) is unaffected.
+    fn require_rate_key_if_limited(
+        &self,
+        rate_key: Option<&RateLimitKey>,
+    ) -> Result<(), RedeemError> {
+        if self.rate_limit_policy.is_some() && rate_key.is_none() {
+            return Err(RedeemError::Internal {
+                cause: "a rate-limit policy is configured but no rate_key was supplied; \
+                        pass the caller's RateLimitKey"
+                    .to_string(),
+                public: PublicRedemptionError::TemporarilyUnavailable,
+            });
+        }
+        Ok(())
+    }
+
     // ── Two-step redemption ──────────────────────────────────────────────────
 
     /// Step 1: validate and look up a submitted code without claiming it.
@@ -145,15 +168,22 @@ where
     /// display a confirmation or collect additional user input) before
     /// committing the claim in [`Self::claim`].
     ///
-    /// Rate limiting is applied here if configured.
+    /// Rate limiting is applied here if configured. A manager built with
+    /// [`Self::new`] has a rate-limit policy, so it **requires** `rate_key`:
+    /// passing `None` returns [`RedeemError::Internal`] before any work is
+    /// done, because a limiter that is configured but cannot act would
+    /// otherwise be skipped silently (RFC-055). Only a manager built with the
+    /// deprecated `without_rate_limit` accepts `None`.
     ///
     /// # Errors
-    /// Returns [`RedeemError`] on validation failure, rate limit, or lookup miss.
+    /// Returns [`RedeemError`] on validation failure, rate limit, lookup miss,
+    /// or a rate-limit policy configured without a `rate_key`.
     pub async fn find(
         &self,
         raw_input: &str,
         rate_key: Option<&RateLimitKey>,
     ) -> Result<StoredCode, RedeemError> {
+        self.require_rate_key_if_limited(rate_key)?;
         // Step 1: rate-limit check. Honour unavailable policy on store error.
         if let (Some(key), Some(rl_policy)) = (rate_key, &self.rate_limit_policy) {
             match self.rate_limit_store.check(key, rl_policy).await {
@@ -264,17 +294,21 @@ where
     /// A `Lost` result means a concurrent caller already claimed the code.
     ///
     /// Rate-limit failures are recorded on a failed claim, and cleared on a
-    /// successful one, when a `rate_key` is provided.
+    /// successful one. As with [`Self::find`], a manager with a rate-limit
+    /// policy requires `rate_key`; `None` returns [`RedeemError::Internal`]
+    /// before the claim is attempted (RFC-055).
     ///
     /// # Errors
     /// Returns [`RedeemError::ClaimLost`] if the atomic claim was lost, or
-    /// [`RedeemError::Internal`] on store failure.
+    /// [`RedeemError::Internal`] on store failure or a rate-limit policy
+    /// configured without a `rate_key`.
     pub async fn claim(
         &self,
         record: &StoredCode,
         subject: SubjectId,
         rate_key: Option<&RateLimitKey>,
     ) -> Result<RedeemSuccess, RedeemError> {
+        self.require_rate_key_if_limited(rate_key)?;
         let now = self.clock.unix_now();
         let outcome = self
             .store

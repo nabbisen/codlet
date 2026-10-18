@@ -16,6 +16,17 @@ semantic versioning once it reaches a stable release.
 
 ### Changed
 
+- **A configured rate limit with no key is now an error, not a silent opt-out
+  (RFC-055). Behavioural change, pre-v1.** `CodeAuth::find` and `claim` applied
+  the limiter only when given *both* a policy and a `RateLimitKey`, so a host
+  that built the manager with `CodeAuth::new(.., rate_limit_policy)` and then
+  passed `rate_key: None` ran with no rate limiting, no error and no audit
+  event. They now return `RedeemError::Internal` before doing any work (no
+  limiter check, no store access); its public mapping is the existing opaque
+  `TemporarilyUnavailable`. A manager built with the deprecated
+  `without_rate_limit` has no policy and still accepts `None`. Signatures are
+  unchanged. Callers that passed `None` to a rate-limited manager must now pass
+  the caller's `RateLimitKey`.
 - **Rate limiting is documented as required for every code policy, and
   `CodeAuth::without_rate_limit` is now `#[deprecated]` (RFC-053).** The
   Secure Configuration Guide said 8-symbol codes "do not require rate limiting
