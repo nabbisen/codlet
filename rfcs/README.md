@@ -15,13 +15,11 @@ Counts below are derived from the filesystem, not hand-maintained.
 
 No open RFCs.
 
-## Accepted (1)
+## Accepted (0)
 
-| ID | Title | Milestone |
-|----|-------|-----------|
-| [058](./accepted/058-the-postgresql-adapter-is-tested-only-on-an-eol-server.md) | The PostgreSQL Adapter Is Tested Only On an End-of-Life Server | M7 |
+No RFCs awaiting implementation.
 
-## Implemented (57)
+## Implemented (58)
 
 | ID | Title | Version |
 |----|-------|---------|
@@ -82,6 +80,7 @@ No open RFCs.
 | [055](./done/055-a-configured-rate-limit-with-no-key-is-a-silent-opt-out.md) | **Security:** A Configured Rate Limit With No Key Is a Silent Opt-Out | *(Unreleased)* |
 | [057](./done/057-the-d1-migration-runner-does-not-work.md) | The D1 Migration Runner Does Not Work | *(Unreleased)* |
 | [056](./done/056-postgresql-connections-must-be-able-to-use-tls.md) | **Security:** PostgreSQL Connections Must Be Able To Use TLS | *(Unreleased)* |
+| [058](./done/058-the-postgresql-adapter-is-tested-only-on-an-eol-server.md) | The PostgreSQL Adapter Is Tested Only On an End-of-Life Server | *(Unreleased)* |
 
 RFC-002 describes `crates/codlet-axum` and `crates/codlet-test` in its
 workspace layout; neither was built. `codlet-test`'s role was filled by
