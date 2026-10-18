@@ -5,47 +5,59 @@
 - **Date:** 2026-10-19
 - **Governing RFC:** [`../../done/058-the-postgresql-adapter-is-tested-only-on-an-eol-server.md`](../../done/058-the-postgresql-adapter-is-tested-only-on-an-eol-server.md)
 - **Review result:** `.git-exclude/reviewed/058-postgres-version-range.md` §3 and §4
-- **Baseline:** `7b08aa7`
+- **Baseline:** `0f68d14`
 - **Size:** two lines of logic and a flag removal.
 
 ## 1. Why
 
 RFC-058 is approved and merged. One hole survives, and it is the same shape as
 the defect the RFC closed: `requested_pg_major()` defaults to
-`DEFAULT_PG_MAJOR` when the variable is unset, so if
+`DEFAULT_PG_MAJOR` when the variable is unset. So if
 `env: CODLET_TEST_PG_MAJOR: ${{ matrix.pg }}` were ever dropped from the
-workflow, **both matrix legs would request 15, pull `15-alpine`, assert
-15 == 15, and pass** — in jobs still named "on PostgreSQL 15" and "on
-PostgreSQL 18".
+workflow — a refactor, or a copy-paste that keeps the matrix and loses the env —
+then:
 
-The version assertion cannot catch it, because the image and the expectation
-both come from the same defaulted value. It closes "image ≠ request"; this
+- the `pg: 15` leg requests 15, pulls `15-alpine`, asserts 15 == 15 → passes;
+- the `pg: 18` leg requests **15**, pulls `15-alpine`, asserts 15 == 15 →
+  **passes**, in a job still named "on PostgreSQL 18".
+
+Both legs test 15, CI is green, and the job names are wrong.
+
+`assert_server_major` cannot catch it, because the image *and* the expectation
+both derive from the same defaulted value. It closes "image ≠ request"; this
 closes "request ≠ intent".
 
 ## 2. The change
 
-Keep the default for local runs; make an unset variable fatal in CI:
+Keep the default for local runs; make an unset variable fatal in CI. In
+`crates/codlet-sqlx/tests/common/mod.rs`, `requested_pg_major()`'s match gains
+an arm before the existing fallback:
 
+```rust
+Err(_) if std::env::var_os("CI").is_some() => panic!(
+    "{PG_MAJOR_ENV} must be set in CI (one value per matrix leg); \
+     the default of {DEFAULT_PG_MAJOR} exists only for local runs"
+),
+Err(_) => DEFAULT_PG_MAJOR,
+```
 
-
-Word the panic so it says what to do: the variable must be set per matrix leg,
-and the default exists only for local runs.
+Guard-arm order matters: the CI arm must come first, or the fallback swallows
+the case.
 
 **Confirm GitHub Actions sets `CI=true`** rather than taking my word. The entire
-value of this change is that it fires, so a wrong environment-variable name
-would make it decorative — which is worse than not doing it, because it would
-look like a guard.
+value of this change is that it fires, so a wrong variable name would make it
+decorative — worse than not doing it, because it would look like a guard.
 
 If `CI` turns out to be unreliable, an explicit marker the workflow sets itself
-is just as good. Say which you used.
+is just as good. Say which you used and how you confirmed it.
 
 ## 3. Then drop `--show-output`
 
-Both PostgreSQL jobs pass `-- --show-output` so the version `println!` survives
-in the log. Once §2 is in, the machine checks what that line existed for a human
-to check, and the flag's cost — the whole job's passing output in the log — is
-no longer worth paying. Reading CI logs is how several real findings were made;
-keep them readable.
+Both PostgreSQL job commands pass `-- --show-output` so the version `println!`
+survives in the log. Once §2 is in, the machine checks what that line existed
+for a human to check, and the flag's cost — the whole job's passing output in
+the log — is no longer worth paying. Reading CI logs is how several real
+findings were made; keep them readable.
 
 **Order matters: do §2 first.** Removing the flag before the guard exists would
 make the hole worse, since the printed line is currently the only signal.
@@ -55,11 +67,11 @@ output is the human-legible signal and costs nothing.
 
 ## 4. Demonstrate it, as you did last time
 
-Delete the `env:` mapping from one job on a branch, push, and confirm that
-leg now **fails** rather than silently testing 15. Then restore it. Quote the
+Delete the `env:` mapping from one job on a branch, push, and confirm that leg
+now **fails** rather than silently testing 15. Then restore it. Quote the
 failure.
 
-That is the same trial you ran for the tag mismatch, against the failure mode
+That is the same trial you ran for the tag mismatch, aimed at the failure mode
 that one could not reach. A pull request is pre-authorised.
 
 ## 5. Non-change scope
@@ -67,21 +79,20 @@ that one could not reach. A pull request is pre-authorised.
 - No change to `DEFAULT_PG_MAJOR`, the 15–18 range, the tag format, or
   `assert_server_major`.
 - No change to the matrix values or the job names.
-- No change to the documentation — it is approved as written.
-- `std::mem::forget` on the containers stays as it is; it is parked on RFC-057's
-  open Ryuk question and needs Docker to settle.
+- No change to the documentation — approved as written.
+- `std::mem::forget` on the containers stays; it is parked on RFC-057's open
+  Ryuk question and needs Docker to settle.
 
 ## 6. Acceptance criteria
 
 1. An unset `CODLET_TEST_PG_MAJOR` fails in CI and still defaults locally.
-2. The environment marker used is confirmed, not assumed, and named in the
-   review request.
+2. The environment marker is confirmed, not assumed, and named in the review
+   request.
 3. `--show-output` is gone from both PostgreSQL job commands.
 4. The §4 trial was run and its failure output is quoted.
 5. `cargo test -p codlet-sqlx --no-default-features --features postgres-test`
-   still works locally with no variable set (it will skip on a machine without
-   Docker; that is fine).
-6. All blocking CI jobs green, both legs of both PostgreSQL jobs.
+   still works locally with no variable set.
+6. All blocking CI jobs green, all four PostgreSQL legs.
 
 ## 7. Required evidence
 
