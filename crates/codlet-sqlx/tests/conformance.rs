@@ -449,6 +449,111 @@ mod postgres_tests {
         codlet_conformance::run_session_store_conformance(fresh_pg_store).await;
     }
 
+    /// Column names of `codlet_sessions`, as PostgreSQL reports them.
+    async fn session_columns(pool: &sqlx::PgPool) -> Vec<String> {
+        sqlx::query_scalar(
+            "SELECT column_name FROM information_schema.columns
+             WHERE table_name = 'codlet_sessions'",
+        )
+        .fetch_all(pool)
+        .await
+        .unwrap()
+    }
+
+    /// A PostgreSQL container with a connected pool; the schema is not applied.
+    async fn bare_pg_pool() -> sqlx::PgPool {
+        let container = Postgres::default().start().await.unwrap();
+        let url = format!(
+            "postgres://postgres:postgres@127.0.0.1:{}/postgres",
+            container.get_host_port_ipv4(5432).await.unwrap()
+        );
+        std::mem::forget(container);
+        sqlx::PgPool::connect(&url).await.unwrap()
+    }
+
+    /// RFC-057 follow-up: PostgreSQL's `last_seen_at` upgrade rests on
+    /// `ADD COLUMN IF NOT EXISTS`, which is a server guarantee — and an untested
+    /// migration path is exactly how RFC-038 and RFC-057 happened. Start from a
+    /// `codlet_sessions` table without the column, prove it is absent, run the
+    /// shipped runner, prove it is present, and keep the existing row's NULL.
+    #[tokio::test]
+    async fn postgres_last_seen_at_is_added_to_a_pre_rfc_044_sessions_table() {
+        let pool = bare_pg_pool().await;
+        run_postgres_migrations(&pool).await.unwrap();
+
+        // Take the shipped table back to its pre-RFC-044 shape, holding a row a
+        // real deployment would already have.
+        sqlx::query("ALTER TABLE codlet_sessions DROP COLUMN last_seen_at")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query(
+            "INSERT INTO codlet_sessions (id, lookup_key, key_version, subject, created_at, expires_at)
+             VALUES ('s1', 'lk1', 'v1', 'user-1', 1000, 2000)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        // The setup must have worked, or the assertion below proves nothing.
+        assert!(
+            !session_columns(&pool)
+                .await
+                .contains(&"last_seen_at".to_string()),
+            "setup: last_seen_at must be absent before the runner is called"
+        );
+
+        run_postgres_migrations(&pool).await.unwrap();
+
+        assert!(
+            session_columns(&pool)
+                .await
+                .contains(&"last_seen_at".to_string()),
+            "last_seen_at was not added"
+        );
+        // Additive, no backfill (RFC-044 §5): the old row reads back NULL.
+        let last_seen_at: Option<i64> =
+            sqlx::query_scalar("SELECT last_seen_at FROM codlet_sessions WHERE id = 's1'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(last_seen_at, None);
+        // Idempotent: every host startup calls it again.
+        run_postgres_migrations(&pool)
+            .await
+            .expect("second run must be a no-op");
+    }
+
+    /// The whole session suite against a database that was upgraded from the
+    /// pre-RFC-044 shape by the shipped runner (one container; each sub-test
+    /// starts from an emptied table whose column is dropped and re-added).
+    #[tokio::test]
+    async fn postgres_session_store_conformance_on_an_upgraded_database() {
+        let pool = bare_pg_pool().await;
+        run_postgres_migrations(&pool).await.unwrap();
+        codlet_conformance::run_session_store_conformance(|| {
+            let pool = pool.clone();
+            async move {
+                sqlx::query("TRUNCATE codlet_sessions")
+                    .execute(&pool)
+                    .await
+                    .unwrap();
+                sqlx::query("ALTER TABLE codlet_sessions DROP COLUMN last_seen_at")
+                    .execute(&pool)
+                    .await
+                    .unwrap();
+                assert!(
+                    !session_columns(&pool)
+                        .await
+                        .contains(&"last_seen_at".to_string()),
+                    "setup: the column must be absent before the upgrade"
+                );
+                run_postgres_migrations(&pool).await.unwrap();
+                PostgresStore::new(pool)
+            }
+        })
+        .await;
+    }
+
     #[tokio::test]
     async fn postgres_form_token_store_conformance() {
         codlet_conformance::run_form_token_store_conformance(fresh_pg_store).await;

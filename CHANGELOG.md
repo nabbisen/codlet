@@ -125,6 +125,15 @@ semantic versioning once it reaches a stable release.
 
 ### Fixed
 
+- **Migration robustness follow-ups (RFC-057).** `codlet-worker`'s statement splitter
+  now also understands `"…"` quoted identifiers (a `;` or `--` inside one, and a
+  doubled `""`), and its module doc lists what it still does not understand
+  (backtick and bracket identifiers, dollar-quoted strings). `codlet-sqlx`'s SQLite
+  runner no longer fails startup when two instances race to add
+  `codlet_sessions.last_seen_at`: on an `ALTER` failure it re-checks the column and
+  treats "now present" as success. Tests added: the splitter's quoting forms, and
+  PostgreSQL upgrading a pre-RFC-044 `codlet_sessions` (column asserted absent
+  first) followed by the session conformance suite against the upgraded database.
 - **`codlet-worker`: `run_d1_migrations` now works, and upgrades a pre-RFC-044
   database (RFC-057).** Two defects found the day the D1 code first ran in a test
   (RFC-054), both present since the code was added. (1) The function handed the

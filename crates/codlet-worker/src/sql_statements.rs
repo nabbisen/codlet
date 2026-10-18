@@ -12,9 +12,14 @@
 //! rather than splitting first and cleaning up after, and it has its own tests.
 //! `codlet-sqlx` never needs this: its drivers parse the whole script.
 //!
-//! Understands exactly what codlet's migration files use: `--` line comments,
-//! `/* */` block comments, and `'…'` string literals (with `''` as an escaped
-//! quote). Anything else is passed through unchanged.
+//! Understands `--` line comments, `/* */` block comments, `'…'` string literals
+//! and `"…"` quoted identifiers (in both quoted forms, a doubled quote character
+//! is an escaped one). Everything else is passed through unchanged, which means
+//! the following are **not** understood, and a `;` or `--` inside them would be
+//! misread as a boundary or a comment: backtick-quoted identifiers (`` `x` ``),
+//! bracket-quoted identifiers (`[x]`), and dollar-quoted strings (`$$ … $$`).
+//! codlet's migration files use none of them; if a future edit needs one, extend
+//! the scanner and add a test, rather than working around it in the SQL.
 //!
 //! This module has no `worker` dependency, so its tests run on native targets.
 
@@ -51,20 +56,12 @@ pub(crate) fn split_statements(sql: &str) -> Vec<String> {
                 }
                 current.push(' ');
             }
-            // A string literal runs to its closing quote; `''` is an escaped
-            // quote and stays inside it. Nothing in it is a comment or a `;`.
-            '\'' => {
+            // A string literal (`'…'`) or quoted identifier (`"…"`) runs to its
+            // closing quote; a doubled quote is an escaped one and stays inside.
+            // Nothing in it is a comment or a `;`.
+            '\'' | '"' => {
                 current.push(c);
-                while let Some(next) = chars.next() {
-                    current.push(next);
-                    if next == '\'' {
-                        if chars.peek() == Some(&'\'') {
-                            current.push(chars.next().unwrap_or('\''));
-                        } else {
-                            break;
-                        }
-                    }
-                }
+                copy_quoted(&mut chars, &mut current, c);
             }
             ';' => {
                 push_trimmed(&mut statements, &mut current);
@@ -74,6 +71,26 @@ pub(crate) fn split_statements(sql: &str) -> Vec<String> {
     }
     push_trimmed(&mut statements, &mut current);
     statements
+}
+
+/// Copy a quoted run to `out`, up to and including its closing `quote`, treating
+/// a doubled `quote` as an escaped one. The opening quote has been consumed.
+fn copy_quoted(
+    chars: &mut std::iter::Peekable<std::str::Chars<'_>>,
+    out: &mut String,
+    quote: char,
+) {
+    while let Some(next) = chars.next() {
+        out.push(next);
+        if next == quote {
+            if chars.peek() == Some(&quote) {
+                out.push(quote);
+                chars.next();
+            } else {
+                return;
+            }
+        }
+    }
 }
 
 fn push_trimmed(statements: &mut Vec<String>, current: &mut String) {

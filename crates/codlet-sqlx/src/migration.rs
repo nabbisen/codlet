@@ -39,18 +39,33 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::Error> {
 
 /// Add `codlet_sessions.last_seen_at` if the table exists without it.
 /// Idempotent: a no-op if the column is already present.
+///
+/// Safe when several instances run migrations at boot: two of them can both see
+/// the column absent, and the loser's `ALTER` then fails with "duplicate column
+/// name". On any `ALTER` failure the column is checked again, and if it is now
+/// present that is success — keyed on the observed state, not on the error text.
 async fn ensure_session_last_seen_at_column(pool: &SqlitePool) -> Result<(), sqlx::Error> {
+    if session_has_last_seen_at(pool).await? {
+        return Ok(());
+    }
+    let added = sqlx::query("ALTER TABLE codlet_sessions ADD COLUMN last_seen_at INTEGER")
+        .execute(pool)
+        .await;
+    match added {
+        Ok(_) => Ok(()),
+        // Lost a race with another instance adding the same column.
+        Err(_) if session_has_last_seen_at(pool).await? => Ok(()),
+        Err(e) => Err(e),
+    }
+}
+
+/// Whether `codlet_sessions` already has its `last_seen_at` column.
+async fn session_has_last_seen_at(pool: &SqlitePool) -> Result<bool, sqlx::Error> {
     let columns: Vec<(i64, String)> =
         sqlx::query_as("SELECT cid, name FROM pragma_table_info('codlet_sessions')")
             .fetch_all(pool)
             .await?;
-    let has_column = columns.iter().any(|(_, name)| name == "last_seen_at");
-    if !has_column {
-        sqlx::query("ALTER TABLE codlet_sessions ADD COLUMN last_seen_at INTEGER")
-            .execute(pool)
-            .await?;
-    }
-    Ok(())
+    Ok(columns.iter().any(|(_, name)| name == "last_seen_at"))
 }
 
 /// Execute a multi-statement SQL script against `pool` as a single call.

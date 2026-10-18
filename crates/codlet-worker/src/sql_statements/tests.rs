@@ -48,6 +48,59 @@ fn escaped_quote_does_not_end_the_string() {
 }
 
 #[test]
+fn semicolon_inside_a_quoted_identifier_does_not_split() {
+    let sql = r#"CREATE TABLE "a;b" (x INTEGER); SELECT 7;"#;
+    assert_eq!(
+        split_statements(sql),
+        vec![r#"CREATE TABLE "a;b" (x INTEGER)"#, "SELECT 7"]
+    );
+}
+
+#[test]
+fn comment_marker_inside_a_quoted_identifier_is_text() {
+    let sql = r#"CREATE TABLE "a--b" (x INTEGER); SELECT 8;"#;
+    assert_eq!(
+        split_statements(sql),
+        vec![r#"CREATE TABLE "a--b" (x INTEGER)"#, "SELECT 8"]
+    );
+}
+
+#[test]
+fn doubled_double_quote_is_an_escaped_quote_in_an_identifier() {
+    // `"a""b;c"` is one identifier, `a"b;c`: the `""` must not end it.
+    let sql = r#"CREATE TABLE "a""b;c" (x INTEGER); SELECT 9;"#;
+    assert_eq!(
+        split_statements(sql),
+        vec![r#"CREATE TABLE "a""b;c" (x INTEGER)"#, "SELECT 9"]
+    );
+}
+
+#[test]
+fn the_two_quote_characters_do_not_interfere() {
+    // A `"` inside a string, and a `'` inside an identifier, are plain text.
+    let sql = r#"INSERT INTO t VALUES ('say "hi; there"'); CREATE TABLE "it's;" (x INTEGER);"#;
+    assert_eq!(
+        split_statements(sql),
+        vec![
+            r#"INSERT INTO t VALUES ('say "hi; there"')"#,
+            r#"CREATE TABLE "it's;" (x INTEGER)"#
+        ]
+    );
+}
+
+#[test]
+fn backtick_identifiers_are_a_documented_limitation() {
+    // Not understood (see the module doc): the `;` inside backticks splits. This
+    // pins the limitation so extending the scanner is a deliberate change that
+    // updates the doc and this test together.
+    let sql = "CREATE TABLE `a;b` (x INTEGER);";
+    assert_eq!(
+        split_statements(sql),
+        vec!["CREATE TABLE `a", "b` (x INTEGER)"]
+    );
+}
+
+#[test]
 fn block_comments_are_removed_and_may_contain_semicolons() {
     let sql = "SELECT /* a; b */ 5; /* whole; statement; */ SELECT 6;";
     assert_eq!(split_statements(sql), vec!["SELECT   5", "SELECT 6"]);
