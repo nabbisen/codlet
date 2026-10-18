@@ -15,14 +15,13 @@ Counts below are derived from the filesystem, not hand-maintained.
 
 No open RFCs.
 
-## Accepted (2)
+## Accepted (1)
 
 | ID | Title | Milestone |
 |----|-------|-----------|
-| [057](./accepted/057-the-d1-migration-runner-does-not-work.md) | The D1 Migration Runner Does Not Work | M7 |
 | [056](./accepted/056-postgresql-connections-must-be-able-to-use-tls.md) | **Security:** PostgreSQL Connections Must Be Able To Use TLS | M7 |
 
-## Implemented (55)
+## Implemented (56)
 
 | ID | Title | Version |
 |----|-------|---------|
@@ -81,6 +80,7 @@ No open RFCs.
 | [053](./done/053-a-documented-security-requirement-must-be-enforced.md) | **Security:** A Documented Security Requirement Must Be Enforced, Not Described | *(Unreleased)* |
 | [054](./done/054-the-d1-adapter-must-execute-in-a-test.md) | The D1 Adapter Must Execute In a Test | *(Unreleased)* |
 | [055](./done/055-a-configured-rate-limit-with-no-key-is-a-silent-opt-out.md) | **Security:** A Configured Rate Limit With No Key Is a Silent Opt-Out | *(Unreleased)* |
+| [057](./done/057-the-d1-migration-runner-does-not-work.md) | The D1 Migration Runner Does Not Work | *(Unreleased)* |
 
 RFC-002 describes `crates/codlet-axum` and `crates/codlet-test` in its
 workspace layout; neither was built. `codlet-test`'s role was filled by

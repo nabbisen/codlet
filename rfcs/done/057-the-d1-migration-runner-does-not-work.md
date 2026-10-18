@@ -1,6 +1,6 @@
 # RFC-057: The D1 Migration Runner Does Not Work
 
-- **Status:** Accepted (architect, under delegated authority, 2026-10-18)
+- **Status:** Implemented (Unreleased) — reviewed and approved 2026-10-18
 - **Target milestone:** M7 — **these are published defects; ahead of other M7 work**
 - **Primary crate(s):** `codlet-worker`
 - **Source basis:** RFC-054 stages A and C; both reproduced and extended 2026-10-18
