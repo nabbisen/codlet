@@ -37,7 +37,7 @@ pub fn requested_pg_major() -> u32 {
 /// The PostgreSQL image to start, with the tag set here — never inherited from
 /// `testcontainers-modules`' default.
 pub fn postgres_image() -> ContainerRequest<Postgres> {
-    Postgres::default().with_tag("18-alpine") // TRIAL: ignores the request
+    Postgres::default().with_tag(format!("{}-alpine", requested_pg_major()))
 }
 
 /// Fail unless the server behind `pool` is the major version that was requested.
