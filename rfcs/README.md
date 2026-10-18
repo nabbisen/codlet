@@ -11,17 +11,17 @@ inside each file mirrors it.
 
 Counts below are derived from the filesystem, not hand-maintained.
 
-## Proposed (0)
-
-No open RFCs.
-
-## Accepted (1)
+## Proposed (1)
 
 | ID | Title | Milestone |
 |----|-------|-----------|
-| [056](./accepted/056-postgresql-connections-must-be-able-to-use-tls.md) | **Security:** PostgreSQL Connections Must Be Able To Use TLS | M7 |
+| [058](./proposed/058-the-postgresql-adapter-is-tested-only-on-an-eol-server.md) | The PostgreSQL Adapter Is Tested Only On an End-of-Life Server | M7 |
 
-## Implemented (56)
+## Accepted (0)
+
+No RFCs awaiting implementation.
+
+## Implemented (57)
 
 | ID | Title | Version |
 |----|-------|---------|
@@ -81,6 +81,7 @@ No open RFCs.
 | [054](./done/054-the-d1-adapter-must-execute-in-a-test.md) | The D1 Adapter Must Execute In a Test | *(Unreleased)* |
 | [055](./done/055-a-configured-rate-limit-with-no-key-is-a-silent-opt-out.md) | **Security:** A Configured Rate Limit With No Key Is a Silent Opt-Out | *(Unreleased)* |
 | [057](./done/057-the-d1-migration-runner-does-not-work.md) | The D1 Migration Runner Does Not Work | *(Unreleased)* |
+| [056](./done/056-postgresql-connections-must-be-able-to-use-tls.md) | **Security:** PostgreSQL Connections Must Be Able To Use TLS | *(Unreleased)* |
 
 RFC-002 describes `crates/codlet-axum` and `crates/codlet-test` in its
 workspace layout; neither was built. `codlet-test`'s role was filled by
