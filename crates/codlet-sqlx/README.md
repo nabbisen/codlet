@@ -13,8 +13,13 @@ the full `codlet-conformance` suite, including the concurrent-claim race test:
 | Feature | Store | Use case |
 |---------|-------|----------|
 | `sqlite` (default) | `SqliteStore` | Local development, single-server |
-| `postgres` | `PostgresStore` | Multi-instance production. **No TLS stack**: see below |
+| `postgres` | `PostgresStore` | Multi-instance production. Supported and tested on PostgreSQL **15–18**. **No TLS stack**: see below |
 | `postgres-rustls` | `PostgresStore` + TLS | Implies `postgres`; adds rustls (ring, webpki roots) so `sslmode=require` works |
+
+PostgreSQL 15 to 18 is the supported range: CI runs the conformance suite on
+15 and 18, the two ends, and asserts the server version it reached. Older
+servers are untested rather than unsupported by design. See the version note in
+`docs/src/adapter-matrix-and-config.md`.
 
 A remote PostgreSQL connection is production-safe only with `postgres-rustls`
 **and** `sslmode=require` (or stronger) in the connection string; without the
