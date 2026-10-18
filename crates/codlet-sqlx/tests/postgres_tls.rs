@@ -14,6 +14,8 @@
 //! (`pg_stat_ssl.ssl`), not inferred from the connect call succeeding.
 #![cfg(feature = "postgres-test")]
 
+mod common;
+
 use sqlx::postgres::PgPoolOptions;
 use testcontainers_modules::{
     postgres::Postgres,
@@ -32,11 +34,14 @@ async fn url(container: &ContainerAsync<Postgres>, sslmode: Option<&str>) -> Str
 
 /// One connection (so `pg_backend_pid()` is stable), failing the test on error.
 async fn connect(url: &str) -> sqlx::PgPool {
-    PgPoolOptions::new()
+    let pool = PgPoolOptions::new()
         .max_connections(1)
         .connect(url)
         .await
-        .unwrap_or_else(|e| panic!("connect to {url} failed: {e}"))
+        .unwrap_or_else(|e| panic!("connect to {url} failed: {e}"));
+    // The server must be the version this run was asked to test (RFC-058).
+    common::assert_server_major(&pool).await;
+    pool
 }
 
 /// The server's own report of whether *this* connection is encrypted.
@@ -56,7 +61,7 @@ mod without_postgres_rustls {
     /// `sslmode=require` cannot be honoured, and says so rather than falling back.
     #[tokio::test]
     async fn sslmode_require_fails_closed() {
-        let container = Postgres::default().start().await.unwrap();
+        let container = common::postgres_image().start().await.unwrap();
         let url = url(&container, Some("require")).await;
         let err = PgPoolOptions::new()
             .max_connections(1)
@@ -74,7 +79,7 @@ mod without_postgres_rustls {
     /// no error. A host that does nothing gets this.
     #[tokio::test]
     async fn default_sslmode_silently_connects_in_plaintext() {
-        let container = Postgres::default().start().await.unwrap();
+        let container = common::postgres_image().start().await.unwrap();
         let pool = connect(&url(&container, None).await).await;
         assert!(
             !server_says_encrypted(&pool).await,
@@ -135,7 +140,7 @@ mod with_postgres_rustls {
             exec docker-entrypoint.sh postgres -c fsync=off -c ssl=on \
               -c ssl_cert_file=/var/lib/postgresql-tls/server.crt \
               -c ssl_key_file=/var/lib/postgresql-tls/server.key";
-        Postgres::default()
+        common::postgres_image()
             .with_copy_to("/tmp/tls/server.crt", crt)
             .with_copy_to("/tmp/tls/server.key", key)
             .with_cmd(["sh", "-c", script])

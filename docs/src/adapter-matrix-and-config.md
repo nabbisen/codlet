@@ -21,7 +21,7 @@ requirement are not production-safe for codlet's core use case.
 |---------|:-----------:|:--------------:|:-------------:|-------|
 | `MemCodeStore` (test-utils) | ✓ (Mutex) | ✓ (Mutex) | ✗ | In-process only; not for production. |
 | `SqliteStore` (codlet-sqlx) | ✓ (cond. UPDATE) | ✓ (cond. UPDATE) | ✓ (WAL mode) | SQLite serialises writes; WAL recommended for concurrent reads. Also implements `CodeAdminStore`. |
-| `PostgresStore` (codlet-sqlx, `--features postgres`) | ✓ (cond. UPDATE, READ COMMITTED row-lock) | ✓ (cond. UPDATE) | ✓ | Multi-instance production. No `RETURNING`, no `FOR UPDATE`. Also implements `CodeAdminStore`. See note below. |
+| `PostgresStore` (codlet-sqlx, `--features postgres`) | ✓ (cond. UPDATE, READ COMMITTED row-lock) | ✓ (cond. UPDATE) | ✓ | Multi-instance production. No `RETURNING`, no `FOR UPDATE`. Also implements `CodeAdminStore`. Supported and tested on PostgreSQL **15–18**; this row's ✓ marks were established on 15 and 18 (see the version note below). See note below. |
 | `D1CodeStore` / `D1SessionStore` / `D1FormTokenStore` (codlet-worker) | ✓ (cond. UPDATE + `meta().changes`) | ✓ (cond. UPDATE + `meta().changes`) | ✓ (D1 global) | wasm32 target only; timestamp columns are `INTEGER`, bound through `f64` (exact for Unix seconds). Also implements `CodeAdminStore`. |
 
 ## Transport security (PostgreSQL)
@@ -78,6 +78,24 @@ OS-only CA.
 > `last_seen_at`); both are tested in Miniflare, including the session suite
 > against an upgraded database; (3) Miniflare simulates D1 locally and is not
 > Cloudflare's production service, and `run_d1_migrations` has not been run there.
+
+> **Supported PostgreSQL versions (RFC-058): 15 to 18.** The PostgreSQL
+> conformance suite, including the concurrent single-winner claim test, and the
+> TLS test run in CI on **both ends of the range, 15 and 18**
+> ([CI run 39168665623](https://github.com/nabbisen/codlet/actions/runs/39168665623):
+> `test codlet-sqlx postgres adapter … on PostgreSQL 15` and `… on PostgreSQL 18`,
+> and the same two for the TLS job, all green). 16 and 17 are promised on the
+> strength of those two ends; they are not run individually. The floor is 15
+> because it is the oldest major still within upstream support with a long
+> remaining window (13 reached end of life in November 2025, and 14 does in
+> November 2026); the ceiling is the newest generally available release. **Older
+> servers are untested, not unsupported by design**: `0002_postgres.sql` uses
+> nothing newer than PostgreSQL 9.6 features, so they will very likely work, but
+> codlet makes no promise there. Before RFC-058 every PostgreSQL test ran on
+> PostgreSQL 11, an end-of-life server, because the test-container library's
+> default tag was inherited unnoticed. The tag is now set in codlet's own test
+> fixtures, and each test asserts the major version of the server it connected
+> to, so a wrong or collapsed pin fails the build instead of passing.
 
 > **`PostgresStore` conformance status (RFC-038).** Until v0.17.1,
 > `run_postgres_migrations` could not create its own schema: a hand-rolled SQL

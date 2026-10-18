@@ -31,6 +31,16 @@ semantic versioning once it reaches a stable release.
 
 ### Changed
 
+- **PostgreSQL is now tested on 15 and 18, with the version pinned in codlet's own
+  source and asserted (RFC-058).** Every PostgreSQL test used to run on PostgreSQL
+  11 — end of life since November 2023 — because `testcontainers-modules` hardcodes
+  that tag and nothing overrode it. The supported range is now stated as **15 to
+  18**: CI runs the PostgreSQL conformance suite and the TLS test on both ends, the
+  tag comes from one fixture (`CODLET_TEST_PG_MAJOR`, default 15, the floor), and
+  every test connection checks the server's major version and fails on a mismatch
+  (demonstrated: forcing the wrong version failed all 15 legs). Older servers are
+  untested, not unsupported by design. No adapter code changed.
+
 - **A configured rate limit with no key is now an error, not a silent opt-out
   (RFC-055). Behavioural change, pre-v1.** `CodeAuth::find` and `claim` applied
   the limiter only when given *both* a policy and a `RateLimitKey`, so a host
