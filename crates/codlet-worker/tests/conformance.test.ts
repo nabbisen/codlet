@@ -6,7 +6,7 @@
  *
  * Coverage unique to these tests:
  *   - D1 binding API (prepare/bind/run/meta.changes) in the live Workers runtime
- *   - REAL timestamp storage and comparison in D1 (D1Type::Real semantics)
+ *   - timestamps bound as f64 (D1Type::Real) into the shipped INTEGER columns, and compared there
  *   - KV put/get/delete with TTL
  *   - COALESCE(bound_resource,'') in form-token consume
  *   - Concurrent UPDATE race → exactly one winner (INV-5, INV-6)
@@ -14,6 +14,8 @@
 
 import { SELF } from "cloudflare:test";
 import { describe, it, expect, beforeEach } from "vitest";
+// The schema under test is the file codlet ships, read from disk -- never a copy.
+import MIGRATION_SQL from "../migrations/0001_initial.sql?raw";
 
 const NOW = Math.floor(Date.now() / 1000);
 const LATER = NOW + 3600;
@@ -28,48 +30,80 @@ async function post(path: string, body: unknown): Promise<unknown> {
   return res.json();
 }
 
+/** POST the shipped SQL to /migrate-exec: one db.exec of the whole file, like the Rust runner. */
+async function fetch_migrate_exec(): Promise<{ ok: boolean; error?: string }> {
+  const res = await SELF.fetch("http://worker/migrate-exec", {
+    method: "POST",
+    headers: { "Content-Type": "text/plain" },
+    body: MIGRATION_SQL,
+  });
+  return res.json() as Promise<{ ok: boolean; error?: string }>;
+}
+
+/** Run the shipped migration (twice, to prove idempotency) via the worker's /migrate. */
+async function migrate(): Promise<{ ok: boolean }> {
+  const res = await SELF.fetch("http://worker/migrate", {
+    method: "POST",
+    headers: { "Content-Type": "text/plain" },
+    body: MIGRATION_SQL,
+  });
+  if (!res.ok) throw new Error(`/migrate => ${res.status}: ${await res.text()}`);
+  return res.json() as Promise<{ ok: boolean }>;
+}
+
 // ── Migration ─────────────────────────────────────────────────────────────────
 
 describe("migration", () => {
   it("creates all three tables", async () => {
-    const res = await post("/migrate", {}) as { ok: boolean };
+    const res = await migrate();
     expect(res.ok).toBe(true);
   });
 
   it("is idempotent (IF NOT EXISTS semantics in D1)", async () => {
     // Run twice — must not throw
-    await post("/migrate", {});
-    const res = await post("/migrate", {}) as { ok: boolean };
+    await migrate();
+    const res = await migrate();
     expect(res.ok).toBe(true);
   });
 
-  it("RFC-044: adds last_seen_at to a pre-existing codlet_sessions table", async () => {
-    // Simulate a database created before RFC-044 (no last_seen_at column),
-    // then run the real /migrate path -- proving PRAGMA table_info and the
-    // idempotent ALTER TABLE both work against a real D1 binding, not just
-    // documented SQLite behaviour.
-    await post("/sessions/simulate-pre-rfc-044", {});
-    const res = await post("/migrate", {}) as { ok: boolean };
+  // FINDING (RFC-054 stage A). `run_d1_migrations` (crates/codlet-worker/src/
+  // migration.rs) applies the shipped file with ONE `D1Database::exec` of the whole
+  // text. D1's exec treats each line as a statement; the file's first line is a
+  // comment, and its CREATE TABLE statements span lines. This test asserts what the
+  // Rust runner needs to be true and is `it.fails` because it is not: the day the
+  // runner is fixed (or the migration reshaped) it flips to a failure that says
+  // "remove .fails". Until then it is the executable record of the defect.
+  it.fails("the shipped migration applies via a single db.exec, as run_d1_migrations does it", async () => {
+    const res = await fetch_migrate_exec();
+    expect(res.error ?? "").toBe("");
     expect(res.ok).toBe(true);
+  });
 
-    // The column must now exist and be usable: insert a row (leaving
-    // last_seen_at unset, as insert_session always does) and read it back.
-    const id = `sess-migrated-${Date.now()}`;
-    const lk = id.padEnd(64, "x");
-    await post("/sessions/insert", { id, lookup_key: lk, key_version: "v1", subject: "carol", created_at: NOW, expires_at: LATER });
-    const row = await post("/sessions/find", { lookup_key: lk, now: NOW }) as { last_seen_at: number | null } | null;
-    expect(row?.last_seen_at ?? null).toBeNull();
+  // FINDING (RFC-054 stage A), second. The old harness ran its own migration,
+  // which contained an idempotent `ALTER TABLE .. ADD COLUMN last_seen_at` and
+  // called itself a mirror of migration.rs. Rust's migration.rs has no ALTER at
+  // all, and the shipped SQL's `CREATE TABLE IF NOT EXISTS` is a no-op on an
+  // existing table. So a D1 database created before RFC-044 never gains the
+  // column, and `D1SessionStore` (which SELECTs/UPDATEs `last_seen_at`) would
+  // fail against it. `it.fails` for the same reason as above.
+  it.fails("RFC-044: adds last_seen_at to a pre-existing codlet_sessions table", async () => {
+    await migrate();
+    // Take the shipped table back to its pre-RFC-044 shape (no last_seen_at).
+    await post("/sessions/simulate-pre-rfc-044", {});
+    const before = await post("/sessions/columns", {}) as { columns: string[] };
+    expect(before.columns).not.toContain("last_seen_at"); // the setup worked
 
-    // Migrating again (the ALTER path already applied) must still not throw.
-    const res2 = await post("/migrate", {}) as { ok: boolean };
-    expect(res2.ok).toBe(true);
+    await migrate();
+
+    const after = await post("/sessions/columns", {}) as { columns: string[] };
+    expect(after.columns).toContain("last_seen_at"); // <- fails: nothing adds it
   });
 });
 
 // ── D1CodeStore ───────────────────────────────────────────────────────────────
 
 describe("D1CodeStore", () => {
-  beforeEach(async () => { await post("/migrate", {}); });
+  beforeEach(async () => { await migrate(); });
 
   it("inserts and finds a redeemable code", async () => {
     const id = `code-find-${Date.now()}`;
@@ -79,12 +113,12 @@ describe("D1CodeStore", () => {
     expect(row?.id).toBe(id);
   });
 
-  it("RFC-047: expired code is returned (not excluded), with expires_at intact — REAL timestamp (D1Type::Real)", async () => {
+  it("RFC-047: expired code is returned (not excluded), with expires_at intact — f64-bound timestamp in an INTEGER column", async () => {
     // Inverted per RFC-047 §4.3: the store must return the row, not exclude
     // it — codlet's classify_code_lookup is what rejects it. A backend that
     // kept its old exclusion filter would return null here.
     const lk = `exp-${Date.now()}`.padEnd(64, "x");
-    const expiresAt = NOW - 1; // stored as REAL (f64) per RFC-033 §6
+    const expiresAt = NOW - 1; // bound as f64 per RFC-033 §6, stored in an INTEGER column
     await post("/codes/insert", {
       id: `exp-${Date.now()}`, lookup_key: lk, key_version: "v1",
       created_at: NOW - 7200,
@@ -208,7 +242,7 @@ describe("D1CodeStore", () => {
 // ── D1SessionStore ────────────────────────────────────────────────────────────
 
 describe("D1SessionStore", () => {
-  beforeEach(async () => { await post("/migrate", {}); });
+  beforeEach(async () => { await migrate(); });
 
   it("inserts and finds an active session", async () => {
     const id = `sess-${Date.now()}`;
@@ -305,7 +339,7 @@ describe("D1SessionStore", () => {
 // ── D1FormTokenStore ──────────────────────────────────────────────────────────
 
 describe("D1FormTokenStore", () => {
-  beforeEach(async () => { await post("/migrate", {}); });
+  beforeEach(async () => { await migrate(); });
 
   it("consume: exactly one Proceed under concurrency (INV-6)", async () => {
     const lk = `tok-${Date.now()}`.padEnd(64, "x");

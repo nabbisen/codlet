@@ -16,58 +16,12 @@
  * from the Rust implementation so any divergence is a test failure.
  */
 
-const MIGRATION_SQL = `
-CREATE TABLE IF NOT EXISTS codlet_codes (
-  id TEXT NOT NULL PRIMARY KEY,
-  lookup_key TEXT NOT NULL UNIQUE,
-  key_version TEXT NOT NULL,
-  purpose TEXT, scope TEXT, grant_payload TEXT,
-  created_at REAL NOT NULL, expires_at REAL NOT NULL,
-  used_at REAL, used_by_subject TEXT, revoked_at REAL
-);
-CREATE TABLE IF NOT EXISTS codlet_sessions (
-  id TEXT NOT NULL PRIMARY KEY,
-  lookup_key TEXT NOT NULL UNIQUE,
-  key_version TEXT NOT NULL,
-  subject TEXT NOT NULL,
-  created_at REAL NOT NULL, expires_at REAL NOT NULL,
-  revoked_at REAL,
-  last_seen_at REAL
-);
-CREATE TABLE IF NOT EXISTS codlet_form_tokens (
-  lookup_key TEXT NOT NULL PRIMARY KEY,
-  key_version TEXT NOT NULL,
-  subject_kind TEXT NOT NULL,
-  purpose TEXT NOT NULL,
-  bound_resource TEXT,
-  issued_at REAL NOT NULL, expires_at REAL NOT NULL,
-  consumed_at REAL, result_ref TEXT
-);
-`;
-
-async function migrate(db) {
-  // D1's exec() only accepts one statement at a time.
-  // Split on semicolons and run each statement via prepare().run().
-  for (const stmt of MIGRATION_SQL.split(';')) {
-    const s = stmt.replace(/--[^\n]*/g, '').trim();
-    if (s) await db.prepare(s).run();
-  }
-  await ensureSessionLastSeenAtColumn(db);
-}
-
-// Mirrors codlet-worker's Rust migration.rs: RFC-044's last_seen_at column is
-// additive, so a codlet_sessions table created before this ran (this
-// function's own CREATE TABLE IF NOT EXISTS is a no-op on it) needs the
-// column added explicitly. D1 has no `ADD COLUMN IF NOT EXISTS`, so this
-// checks column presence first via PRAGMA table_info -- proving that pragma
-// is actually usable against a real D1 binding, not assumed from SQLite docs.
-async function ensureSessionLastSeenAtColumn(db) {
-  const { results } = await db.prepare("PRAGMA table_info('codlet_sessions')").run();
-  const hasColumn = results.some((r) => r.name === 'last_seen_at');
-  if (!hasColumn) {
-    await db.prepare('ALTER TABLE codlet_sessions ADD COLUMN last_seen_at REAL').run();
-  }
-}
+// The schema is NOT defined here. `/migrate` receives the text of the shipped
+// `crates/codlet-worker/migrations/0001_initial.sql` in the request body (the
+// vitest file reads it from disk). A copy of
+// the schema in this file is exactly how the harness once came to test a table
+// shape whose eleven timestamp columns had a different type from the ones codlet
+// ships.
 
 export default {
   async fetch(req, env) {
@@ -75,18 +29,46 @@ export default {
     const db = env.DB;
     const kv = env.CODLET_RL;
 
-    // POST /migrate
+    // POST /migrate  body: the shipped migration SQL (text/plain)
+    // Applies the shipped file statement by statement. D1's `exec` cannot take
+    // the file as written (see /migrate-exec), so comments are stripped first
+    // and the text split on `;` -- stripping BEFORE splitting matters: the
+    // shipped file has a `;` inside a `--` comment.
     if (url.pathname === '/migrate') {
-      await migrate(db);
+      const sql = await req.text();
+      if (!sql.trim()) {
+        return new Response('/migrate needs the shipped migration SQL as its body', { status: 400 });
+      }
+      const statements = sql
+        .replace(/--[^\n]*/g, '')
+        .split(';')
+        .map((st) => st.trim())
+        .filter(Boolean);
       // Run twice to verify idempotency
-      await migrate(db);
-      return Response.json({ ok: true });
+      for (let pass = 0; pass < 2; pass++) {
+        for (const st of statements) await db.prepare(st).run();
+      }
+      return Response.json({ ok: true, statements: statements.length });
+    }
+
+    // POST /migrate-exec  body: the shipped migration SQL (text/plain)
+    // Does exactly what the Rust `run_d1_migrations` does: ONE `D1Database::exec`
+    // of the whole file. Reports the outcome instead of throwing.
+    if (url.pathname === '/migrate-exec') {
+      const sql = await req.text();
+      try {
+        await db.exec(sql);
+        return Response.json({ ok: true });
+      } catch (e) {
+        return Response.json({ ok: false, error: String(e && e.message ? e.message : e) });
+      }
     }
 
     // POST /codes/insert  body: {id, lookup_key, key_version, created_at, expires_at, scope?}
     if (url.pathname === '/codes/insert' && req.method === 'POST') {
       const b = await req.json();
-      // Timestamps stored as REAL (f64) — same as D1Type::Real(t as f64) in Rust
+      // Timestamps are bound as f64 — same as D1Type::Real(t as f64) in Rust — into the
+      // shipped INTEGER columns.
       await db.prepare(
         'INSERT INTO codlet_codes (id, lookup_key, key_version, created_at, expires_at, scope) VALUES (?,?,?,?,?,?)'
       ).bind(b.id, b.lookup_key, b.key_version, b.created_at, b.expires_at, b.scope ?? null).run();
@@ -187,23 +169,17 @@ export default {
     }
 
     // POST /sessions/simulate-pre-rfc-044  body: {}
-    // Drops and recreates codlet_sessions in its pre-RFC-044 shape (no
-    // last_seen_at), so /migrate's idempotent-ALTER path can be exercised
-    // against a table that predates this column, exactly like the Rust
-    // migration.rs test does against a real SQLite pool.
+    // Takes the *shipped* codlet_sessions table back to its pre-RFC-044 shape
+    // by dropping the column, rather than re-declaring the table here.
     if (url.pathname === '/sessions/simulate-pre-rfc-044' && req.method === 'POST') {
-      await db.prepare('DROP TABLE IF EXISTS codlet_sessions').run();
-      await db.prepare(
-        `CREATE TABLE codlet_sessions (
-          id TEXT NOT NULL PRIMARY KEY,
-          lookup_key TEXT NOT NULL UNIQUE,
-          key_version TEXT NOT NULL,
-          subject TEXT NOT NULL,
-          created_at REAL NOT NULL, expires_at REAL NOT NULL,
-          revoked_at REAL
-        )`
-      ).run();
+      await db.prepare('ALTER TABLE codlet_sessions DROP COLUMN last_seen_at').run();
       return Response.json({ ok: true });
+    }
+
+    // POST /sessions/columns  body: {}  -> {columns: [...]}
+    if (url.pathname === '/sessions/columns' && req.method === 'POST') {
+      const { results } = await db.prepare("PRAGMA table_info('codlet_sessions')").run();
+      return Response.json({ columns: results.map((r) => r.name) });
     }
 
     // POST /tokens/insert  body: {lookup_key, key_version, subject_kind, purpose, issued_at, expires_at}
