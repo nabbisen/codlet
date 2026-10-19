@@ -24,12 +24,22 @@ pub const DEFAULT_PG_MAJOR: u32 = 15;
 /// Environment variable CI sets per matrix leg to choose the major version.
 pub const PG_MAJOR_ENV: &str = "CODLET_TEST_PG_MAJOR";
 
-/// The major version these tests are asked to run against.
+/// The major version these tests are asked to run against: `CODLET_TEST_PG_MAJOR`
+/// if set; otherwise the floor for a local run, and a failure in CI.
 pub fn requested_pg_major() -> u32 {
     match std::env::var(PG_MAJOR_ENV) {
         Ok(v) => v.trim().parse().unwrap_or_else(|_| {
             panic!("{PG_MAJOR_ENV} must be a PostgreSQL major version number, got {v:?}")
         }),
+        // In CI an unset variable is a broken workflow, not a request for the default:
+        // if the `env:` mapping were dropped, every matrix leg would silently test the
+        // floor and stay green under a job name claiming another version. `assert_server_major`
+        // cannot catch that, because the image and the expectation would both come from
+        // this same defaulted value. This arm must stay *before* the fallback.
+        Err(_) if std::env::var_os("CI").is_some() => panic!(
+            "{PG_MAJOR_ENV} must be set in CI (one value per matrix leg); \
+             the default of {DEFAULT_PG_MAJOR} exists only for local runs"
+        ),
         Err(_) => DEFAULT_PG_MAJOR,
     }
 }
