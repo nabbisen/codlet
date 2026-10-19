@@ -70,6 +70,23 @@ check to something that already runs, or it will be forgotten.
 Equally, a finished-work report that leaves something releasable on `main` says
 so and recommends a version.
 
+### 3.4a Version-bearing documentation is part of release scope
+
+Every release must update the places that name a version in prose or in a
+copy-pasteable example — at minimum the root `README.md`'s dependency examples
+and any git-dependency `tag = "…"` lines.
+
+This is in the policy because it has now been missed twice. The 0.20.0 handoff
+omitted it, which let `README.md` go stale enough for the **owner** to notice
+(`codlet = "0.17"`, 2026-10-17); the 0.21.0 handoff inherited the omission and
+the dev team caught it at the last moment. A release checklist that does not
+include the front page will keep producing a front page advertising the previous
+release.
+
+The RFC-016 rule still holds — do not pin a version in a prose *status* line —
+but a dependency example must name a version to be usable, so it has to be
+maintained rather than avoided.
+
 ### 3.5 Authorization is unchanged
 
 Each release is authorized by the owner. The architect proposes version, timing
