@@ -6,6 +6,8 @@ semantic versioning once it reaches a stable release.
 
 ## [Unreleased]
 
+## [0.21.0] — 2026-10-20
+
 ### Added
 
 - **`codlet-sqlx`: opt-in TLS for PostgreSQL, the `postgres-rustls` feature

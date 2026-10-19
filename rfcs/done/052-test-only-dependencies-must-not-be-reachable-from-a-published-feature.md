@@ -1,6 +1,6 @@
 # RFC-052: Test-Only Dependencies Must Not Be Reachable From a Published Feature
 
-- **Status:** Implemented (Unreleased) — reviewed and approved 2026-10-18
+- **Status:** Implemented (v0.21.0) — reviewed and approved 2026-10-18
 - **Target milestone:** M7 — **required before the next release tag**
 - **Primary crate(s):** `codlet-sqlx`, `xtask`, CI
 - **Source basis:** CI run 39005981164; four RUSTSEC advisories; verified independently 2026-10-17

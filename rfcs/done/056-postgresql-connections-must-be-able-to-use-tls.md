@@ -1,6 +1,6 @@
 # RFC-056: PostgreSQL Connections Must Be Able To Use TLS
 
-- **Status:** Implemented (Unreleased) — PR #1, `6359643` and `bfbf028`; reviewed and approved 2026-10-19
+- **Status:** Implemented (v0.21.0) — PR #1, `6359643` and `bfbf028`; reviewed and approved 2026-10-19
 - **Target milestone:** M7 — **before the API freeze**
 - **Primary crate(s):** `codlet-sqlx`, CI, `docs/`
 - **Source basis:** found while verifying RFC-052's dependency graph, 2026-10-18

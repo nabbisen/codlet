@@ -73,16 +73,16 @@ No open RFCs.
 | [046](./done/046-host-visible-session-failure-reasons.md) | Host-Visible Session Failure Reasons | v0.20.0 |
 | [047](./done/047-the-classifier-should-own-record-state.md) | The Classifier Should Own Record State, Not the Adapter's WHERE Clause | v0.20.0 |
 | [048](./done/048-bind-purpose-and-scope-in-claim-code.md) | **Security:** Bind `purpose` and `scope` — SQL Injection in `claim_code` | v0.19.1 |
-| [049](./done/049-supply-chain-carried-items.md) | Resolving RFC-039's Deferred Questions — Yanked Crates and Duplicate Versions | *(Unreleased)* |
-| [050](./done/050-the-store-surface-must-describe-what-it-does.md) | The Store Surface Must Describe What It Does | *(Unreleased)* |
-| [051](./done/051-form-tokens-must-honour-every-candidate.md) | Form Tokens Must Honour Every Lookup-Key Candidate | *(Unreleased)* |
-| [052](./done/052-test-only-dependencies-must-not-be-reachable-from-a-published-feature.md) | **Security:** Test-Only Dependencies Must Not Be Reachable From a Published Feature | *(Unreleased)* |
-| [053](./done/053-a-documented-security-requirement-must-be-enforced.md) | **Security:** A Documented Security Requirement Must Be Enforced, Not Described | *(Unreleased)* |
-| [054](./done/054-the-d1-adapter-must-execute-in-a-test.md) | The D1 Adapter Must Execute In a Test | *(Unreleased)* |
-| [055](./done/055-a-configured-rate-limit-with-no-key-is-a-silent-opt-out.md) | **Security:** A Configured Rate Limit With No Key Is a Silent Opt-Out | *(Unreleased)* |
-| [057](./done/057-the-d1-migration-runner-does-not-work.md) | The D1 Migration Runner Does Not Work | *(Unreleased)* |
-| [056](./done/056-postgresql-connections-must-be-able-to-use-tls.md) | **Security:** PostgreSQL Connections Must Be Able To Use TLS | *(Unreleased)* |
-| [058](./done/058-the-postgresql-adapter-is-tested-only-on-an-eol-server.md) | The PostgreSQL Adapter Is Tested Only On an End-of-Life Server | *(Unreleased)* |
+| [049](./done/049-supply-chain-carried-items.md) | Resolving RFC-039's Deferred Questions — Yanked Crates and Duplicate Versions | v0.21.0 |
+| [050](./done/050-the-store-surface-must-describe-what-it-does.md) | The Store Surface Must Describe What It Does | v0.21.0 |
+| [051](./done/051-form-tokens-must-honour-every-candidate.md) | Form Tokens Must Honour Every Lookup-Key Candidate | v0.21.0 |
+| [052](./done/052-test-only-dependencies-must-not-be-reachable-from-a-published-feature.md) | **Security:** Test-Only Dependencies Must Not Be Reachable From a Published Feature | v0.21.0 |
+| [053](./done/053-a-documented-security-requirement-must-be-enforced.md) | **Security:** A Documented Security Requirement Must Be Enforced, Not Described | v0.21.0 |
+| [054](./done/054-the-d1-adapter-must-execute-in-a-test.md) | The D1 Adapter Must Execute In a Test | v0.21.0 |
+| [055](./done/055-a-configured-rate-limit-with-no-key-is-a-silent-opt-out.md) | **Security:** A Configured Rate Limit With No Key Is a Silent Opt-Out | v0.21.0 |
+| [057](./done/057-the-d1-migration-runner-does-not-work.md) | The D1 Migration Runner Does Not Work | v0.21.0 |
+| [056](./done/056-postgresql-connections-must-be-able-to-use-tls.md) | **Security:** PostgreSQL Connections Must Be Able To Use TLS | v0.21.0 |
+| [058](./done/058-the-postgresql-adapter-is-tested-only-on-an-eol-server.md) | The PostgreSQL Adapter Is Tested Only On an End-of-Life Server | v0.21.0 |
 
 RFC-002 describes `crates/codlet-axum` and `crates/codlet-test` in its
 workspace layout; neither was built. `codlet-test`'s role was filled by

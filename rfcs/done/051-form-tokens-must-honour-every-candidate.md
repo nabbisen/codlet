@@ -1,6 +1,6 @@
 # RFC-051: Form Tokens Must Honour Every Lookup-Key Candidate
 
-- **Status:** Implemented (Unreleased) — reviewed and approved 2026-10-18
+- **Status:** Implemented (v0.21.0) — reviewed and approved 2026-10-18
 - **Target milestone:** M7
 - **Primary crate(s):** `codlet`, `codlet-sqlx`, `codlet-worker`, `codlet-conformance`
 - **Source basis:** RFC-016 accuracy sweep review request §5 item 6; verified independently 2026-10-17

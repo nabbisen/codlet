@@ -1,6 +1,6 @@
 # RFC-055: A Configured Rate Limit With No Key Is a Silent Opt-Out
 
-- **Status:** Implemented (Unreleased) — reviewed and approved 2026-10-18
+- **Status:** Implemented (v0.21.0) — reviewed and approved 2026-10-18
 - **Target milestone:** M7 — **before the API freeze**
 - **Primary crate(s):** `codlet`
 - **Source basis:** RFC-053 review request §2.1; verified 2026-10-18

@@ -1,6 +1,6 @@
 # RFC-058: The PostgreSQL Adapter Is Tested Only On an End-of-Life Server
 
-- **Status:** Implemented (Unreleased) — PR #2, `7b08aa7`; reviewed and approved 2026-10-19
+- **Status:** Implemented (v0.21.0) — PR #2, `7b08aa7`; reviewed and approved 2026-10-19
 - **Target milestone:** M7 — **before the API freeze**
 - **Primary crate(s):** `codlet-sqlx`, CI, `docs/`
 - **Source basis:** noticed in the RFC-056 review request's closing note; established 2026-10-19

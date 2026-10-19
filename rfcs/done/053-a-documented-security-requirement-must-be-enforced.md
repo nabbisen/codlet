@@ -1,6 +1,6 @@
 # RFC-053: A Documented Security Requirement Must Be Enforced, Not Described
 
-- **Status:** Implemented (Unreleased) — reviewed and approved 2026-10-18
+- **Status:** Implemented (v0.21.0) — reviewed and approved 2026-10-18
 - **Target milestone:** M7 — **before the API freeze**
 - **Primary crate(s):** `codlet`, `docs/`
 - **Source basis:** RFC-016 accuracy sweep review request §5 items 2 and 3; verified independently 2026-10-17
