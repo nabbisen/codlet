@@ -15,9 +15,11 @@ Counts below are derived from the filesystem, not hand-maintained.
 
 No open RFCs.
 
-## Accepted (0)
+## Accepted (1)
 
-No RFCs awaiting implementation.
+| ID | Title | Milestone |
+|----|-------|-----------|
+| [059](./accepted/059-release-cadence.md) | Release Cadence | standing policy |
 
 ## Implemented (58)
 
