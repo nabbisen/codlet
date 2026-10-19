@@ -140,8 +140,6 @@ jobs:
       fail-fast: false
       matrix:
         pg: ["15", "18"]
-    env:
-      CODLET_TEST_PG_MAJOR: ${{ matrix.pg }}
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
