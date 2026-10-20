@@ -1,6 +1,6 @@
 # RFC-059: Release Cadence
 
-- **Status:** Accepted (architect, under delegated authority, 2026-10-20)
+- **Status:** In force (architect, under delegated authority, 2026-10-20) — applied to 0.21.0
 - **Target milestone:** standing policy
 - **Primary crate(s):** none — process
 - **Source basis:** ten RFCs unreleased for six weeks, four of them security fixes
