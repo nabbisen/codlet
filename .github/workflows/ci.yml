@@ -68,7 +68,9 @@ jobs:
       # these two crates (and any intra-doc link in it, e.g. one to a private
       # module, which broke `cargo doc` for codlet-worker in RFC-057) is checked
       # nowhere else. Checked here, with warnings as errors.
-      - run: RUSTDOCFLAGS="-D warnings" cargo doc -p codlet-worker -p codlet-worker-miniflare --no-deps --target wasm32-unknown-unknown
+      - env:
+          RUSTDOCFLAGS: "-D warnings"
+        run: cargo doc -p codlet-worker -p codlet-worker-miniflare --no-deps --target wasm32-unknown-unknown
       # RFC-054 stage B: the conformance suite (minus its tokio-based concurrency
       # test) must keep compiling for wasm, or the D1 stores cannot be tested.
       - run: cargo check -p codlet-conformance --target wasm32-unknown-unknown --no-default-features
