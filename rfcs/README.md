@@ -15,13 +15,11 @@ Counts below are derived from the filesystem, not hand-maintained.
 
 No open RFCs.
 
-## Accepted (1)
+## Accepted (0)
 
-| ID | Title | Milestone |
-|----|-------|-----------|
-| [059](./accepted/059-release-cadence.md) | Release Cadence | standing policy |
+No RFCs awaiting implementation.
 
-## Implemented (58)
+## Implemented (59)
 
 | ID | Title | Version |
 |----|-------|---------|
@@ -83,6 +81,7 @@ No open RFCs.
 | [057](./done/057-the-d1-migration-runner-does-not-work.md) | The D1 Migration Runner Does Not Work | v0.21.0 |
 | [056](./done/056-postgresql-connections-must-be-able-to-use-tls.md) | **Security:** PostgreSQL Connections Must Be Able To Use TLS | v0.21.0 |
 | [058](./done/058-the-postgresql-adapter-is-tested-only-on-an-eol-server.md) | The PostgreSQL Adapter Is Tested Only On an End-of-Life Server | v0.21.0 |
+| [059](./done/059-release-cadence.md) | Release Cadence | *(process)* |
 
 RFC-002 describes `crates/codlet-axum` and `crates/codlet-test` in its
 workspace layout; neither was built. `codlet-test`'s role was filled by
