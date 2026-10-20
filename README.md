@@ -76,11 +76,11 @@ Add the core crate and your chosen adapter to `Cargo.toml`:
 
 ```toml
 [dependencies]
-codlet = "0.20"
+codlet = "0.21"
 
 # SQLite or PostgreSQL (native targets):
-# codlet-sqlx = "0.20"
-# codlet-sqlx = { version = "0.20", default-features = false, features = ["postgres"] }
+# codlet-sqlx = "0.21"
+# codlet-sqlx = { version = "0.21", default-features = false, features = ["postgres"] }
 ```
 
 `codlet-worker` (Cloudflare Workers, `wasm32` target only) is **not published
@@ -90,10 +90,10 @@ git `codlet-worker` would be two different crates):
 
 ```toml
 [dependencies]
-codlet        = { git = "https://github.com/nabbisen/codlet", tag = "0.20.0" }
+codlet        = { git = "https://github.com/nabbisen/codlet", tag = "0.21.0" }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-codlet-worker = { git = "https://github.com/nabbisen/codlet", tag = "0.20.0" }
+codlet-worker = { git = "https://github.com/nabbisen/codlet", tag = "0.21.0" }
 ```
 
 The shape of the core primitives:

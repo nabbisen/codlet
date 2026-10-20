@@ -44,7 +44,7 @@ semantic versioning once it reaches a stable release.
   untested, not unsupported by design. No adapter code changed.
 
 - **A configured rate limit with no key is now an error, not a silent opt-out
-  (RFC-055). Behavioural change, pre-v1.** `CodeAuth::find` and `claim` applied
+  (RFC-055). Breaking and behavioural, pre-v1.** `CodeAuth::find` and `claim` applied
   the limiter only when given *both* a policy and a `RateLimitKey`, so a host
   that built the manager with `CodeAuth::new(.., rate_limit_policy)` and then
   passed `rate_key: None` ran with no rate limiting, no error and no audit
@@ -77,16 +77,19 @@ semantic versioning once it reaches a stable release.
   enforced, `threat-model.md` agrees, and `KeyProvider`'s docs state the same
   minimum as a contract for custom providers (which `SecretHasher::new` does
   not check). `KeyError::InvalidKeyMaterial`'s message now names the minimum.
+  **A host whose key is shorter now fails at construction, not at first use:
+  supply at least 32 bytes.**
   Also corrected: the D1 timestamp columns are `INTEGER` (bound through `f64`),
   not `REAL`, and `docs/src/introduction.md` no longer calls existing material
   "forthcoming".
 - **`codlet-sqlx`'s `postgres-test` feature no longer pulls any dependency into a
-  consumer's graph (RFC-052).** `testcontainers-modules` — and with it a Docker
+  consumer's graph (RFC-052). Breaking, pre-v1.** `testcontainers-modules` — and with it a Docker
   client, an HTTP stack and a TLS stack — was an optional *normal* dependency
   enabled by `postgres-test`, so a host choosing that feature (one word away
   from `postgres`) shipped test tooling to production. It is now a
   dev-dependency, and `postgres-test = ["postgres"]` only gates the
-  Docker-backed tests. The `core dependency gate` CI job now asserts that no
+  Docker-backed tests. **If you enabled `postgres-test` to obtain
+  `testcontainers-modules`, add it to your own `[dev-dependencies]`.** The `core dependency gate` CI job now asserts that no
   test-only crate is reachable from `codlet-sqlx`'s published features. Also
   `cargo update -p rustls` (0.23.41 → 0.23.46), which clears RUSTSEC-2026-0285,
   -0346, -0348 and -0349; none was reachable from a default or `postgres`
