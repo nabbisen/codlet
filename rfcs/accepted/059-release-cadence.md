@@ -87,6 +87,27 @@ The RFC-016 rule still holds — do not pin a version in a prose *status* line �
 but a dependency example must name a version to be usable, so it has to be
 maintained rather than avoided.
 
+### 3.4b The tag is cut once, after the notes are audited
+
+A release runs in this order, and the tag is the **last** step before the gate:
+
+1. version bumps, CHANGELOG heading conversion, RFC statuses;
+2. version-bearing documentation (§3.4a);
+3. **the release-notes audit** — every breaking change labelled and carrying a
+   migration line — with any gap fixed *before* step 4;
+4. CI green, then tag, then `release-gates.yml` on the tag, then the dry-run.
+
+The audit must not be a report delivered after the tag exists. 0.21.0's handoff
+asked for the audit and for the tag in one pass, so three labelling gaps were
+correctly reported *and* the tag was correctly cut, and fixing them then required
+force-pushing a moved tag — which needed the owner, because the tooling treats a
+tag force-push as destructive and rightly so.
+
+Moving a tag is defensible only while nothing has consumed it. Not needing to is
+better. If a release-notes gap is found after tagging, the gap is fixed and the
+tag moved **only** before publication; after publication it is a note in the
+next release.
+
 ### 3.5 Authorization is unchanged
 
 Each release is authorized by the owner. The architect proposes version, timing
