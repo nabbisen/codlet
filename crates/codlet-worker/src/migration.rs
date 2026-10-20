@@ -22,8 +22,6 @@ struct ColumnName {
 
 /// Apply codlet's schema migrations to a D1 database.
 ///
-/// See also [`crate::sql_statements`] for how the file is split.
-///
 /// 1. Every statement of the shipped migration (`CREATE … IF NOT EXISTS`) is
 ///    applied in one `D1Database::batch`, which D1 runs atomically.
 /// 2. `codlet_sessions.last_seen_at` was added after the table's initial
