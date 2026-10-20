@@ -66,8 +66,9 @@ a report.
 Coordinated disclosure. We ask reporters to allow us to prepare a fix before
 public disclosure. We will credit reporters unless they request anonymity.
 
-Advisories will be published via the GitHub Security Advisory tab after a fix
-is available.
+Advisories will be published after a fix is available, to both the GitHub
+Security Advisory tab and `rustsec/advisory-db`: the first reaches Dependabot,
+the second reaches `cargo audit` and `cargo deny check advisories`.
 
 ## Remediation of a defective published release
 
